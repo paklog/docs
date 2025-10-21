@@ -1,0 +1,122 @@
+# Jekyll Configuration for GitHub Pages
+title: PakLog WMS/WES Documentation
+description: Enterprise Warehouse Management & Execution System - Architecture, Design, and Implementation Guide
+author: PakLog Team
+email: your-email@example.com
+
+# Theme and styling
+theme: jekyll-theme-cayman
+# Alternative themes you can try:
+# theme: jekyll-theme-minimal
+# theme: jekyll-theme-slate
+# theme: jekyll-theme-architect
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+
+# Kramdown options for better GitHub Flavored Markdown support
+kramdown:
+  input: GFM
+  auto_ids: true
+  hard_wrap: false
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+    span:
+      line_numbers: false
+    block:
+      line_numbers: true
+
+# Plugins
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-feed
+  - jekyll-relative-links
+
+# Relative links configuration
+relative_links:
+  enabled: true
+  collections: true
+
+# Include/Exclude
+include:
+  - README.md
+  - decoupling_wes_wms.md
+  - detailed_plan.md
+  - diagrams
+  - business-capababilities
+  - domain-driven-design
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+
+# Collections for organizing documentation
+collections:
+  diagrams:
+    output: true
+    permalink: /diagrams/:name
+  business_capabilities:
+    output: true
+    permalink: /business-capabilities/:path
+  ddd:
+    output: true
+    permalink: /domain-driven-design/:path
+
+# Default values
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "default"
+  - scope:
+      path: "diagrams"
+      type: "pages"
+    values:
+      layout: "default"
+      category: "Architecture & Design"
+  - scope:
+      path: "business-capababilities"
+      type: "pages"
+    values:
+      layout: "default"
+      category: "Business Capabilities"
+  - scope:
+      path: "domain-driven-design"
+      type: "pages"
+    values:
+      layout: "default"
+      category: "Domain-Driven Design"
+
+# Navigation
+navigation:
+  - title: Home
+    url: /
+  - title: Architecture
+    url: /diagrams/
+  - title: Business Capabilities
+    url: /business-capababilities/
+  - title: Domain Design
+    url: /domain-driven-design/
+  - title: Decoupling Strategy
+    url: /decoupling_wes_wms
+  - title: Implementation Plan
+    url: /detailed_plan
+
+# SEO and metadata
+tagline: Modern WMS/WES System Architecture
+google_analytics: # Add your Google Analytics tracking ID here if needed
+show_downloads: false
+show_repository: true
+
+# Social links (update with your actual links)
+github_username: your-github-username
+twitter_username: your-twitter-handle

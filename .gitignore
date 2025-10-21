@@ -1,1 +1,25 @@
+# Jekyll build files
+_site/
+.sass-cache/
+.jekyll-cache/
+.jekyll-metadata
+
+# Ruby dependencies
+Gemfile.lock
+vendor/
+
+# IDE files
 .idea
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Local development
+*.log
+node_modules/
+npm-debug.log*

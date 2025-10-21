@@ -1,0 +1,187 @@
+<!-- Mermaid.js Support for GitHub Pages -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  // Initialize Mermaid with custom configuration
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'default',
+    themeVariables: {
+      primaryColor: '#fff',
+      primaryTextColor: '#000',
+      primaryBorderColor: '#7C0000',
+      lineColor: '#5D5D5D',
+      secondaryColor: '#006100',
+      tertiaryColor: '#fff',
+      background: '#f4f4f4',
+      mainBkg: '#fff',
+      secondBkg: '#006100',
+      tertiaryBkg: '#fff',
+      primaryBorderColor: '#7C0000',
+      secondaryBorderColor: '#006100',
+      tertiaryBorderColor: '#7C0000',
+      noteBkgColor: '#fff5ad',
+      noteTextColor: '#333',
+      darkMode: false
+    },
+    flowchart: {
+      useMaxWidth: true,
+      htmlLabels: true,
+      curve: 'basis',
+      padding: 15
+    },
+    sequence: {
+      useMaxWidth: true,
+      diagramMarginX: 50,
+      diagramMarginY: 10,
+      actorMargin: 50,
+      width: 150,
+      height: 65,
+      boxMargin: 10,
+      boxTextMargin: 5,
+      noteMargin: 10,
+      messageMargin: 35
+    },
+    gantt: {
+      useMaxWidth: true,
+      numberSectionStyles: 4,
+      fontSize: 12,
+      gridLineStartPadding: 200
+    },
+    er: {
+      useMaxWidth: true,
+      fontSize: 12,
+      layoutDirection: 'TB'
+    },
+    pie: {
+      useMaxWidth: true
+    },
+    journey: {
+      useMaxWidth: true,
+      diagramMarginX: 50,
+      diagramMarginY: 10
+    }
+  });
+
+  // Handle dynamic content and re-render mermaid diagrams
+  document.addEventListener('DOMContentLoaded', function() {
+    // Find all code blocks with mermaid class
+    const mermaidBlocks = document.querySelectorAll('pre > code.language-mermaid');
+
+    mermaidBlocks.forEach(function(block) {
+      // Create a div to hold the rendered diagram
+      const div = document.createElement('div');
+      div.className = 'mermaid';
+      div.textContent = block.textContent;
+
+      // Replace the code block with the mermaid div
+      const pre = block.parentElement;
+      pre.parentElement.replaceChild(div, pre);
+    });
+
+    // Re-render all mermaid diagrams
+    mermaid.init();
+  });
+
+  // Support for dark mode toggle if implemented
+  function toggleMermaidTheme(isDark) {
+    mermaid.initialize({
+      theme: isDark ? 'dark' : 'default'
+    });
+
+    // Re-render all diagrams
+    const mermaidDivs = document.querySelectorAll('.mermaid');
+    mermaidDivs.forEach(function(div) {
+      const graphDefinition = div.textContent;
+      div.textContent = graphDefinition;
+      div.removeAttribute('data-processed');
+    });
+
+    mermaid.init();
+  }
+</script>
+
+<style>
+  /* Mermaid diagram container styles */
+  .mermaid {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f9f9;
+    border: 1px solid #e1e4e8;
+    border-radius: 6px;
+    padding: 16px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+
+  /* Responsive mermaid diagrams */
+  @media (max-width: 768px) {
+    .mermaid {
+      overflow-x: scroll;
+      max-width: 100%;
+    }
+  }
+
+  /* Mermaid SVG styling */
+  .mermaid svg {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Fix for GitHub Pages theme conflicts */
+  .mermaid .node rect,
+  .mermaid .node circle,
+  .mermaid .node ellipse,
+  .mermaid .node polygon {
+    fill: #fff;
+    stroke: #333;
+    stroke-width: 1.5px;
+  }
+
+  .mermaid .node.clickable {
+    cursor: pointer;
+  }
+
+  .mermaid .arrowheadPath {
+    fill: #333;
+  }
+
+  .mermaid .edgePath .path {
+    stroke: #333;
+    stroke-width: 1.5px;
+  }
+
+  .mermaid .flowchart-link {
+    stroke: #333;
+    fill: none;
+  }
+
+  .mermaid .edgeLabel {
+    background-color: #fff;
+    text-align: center;
+  }
+
+  .mermaid .cluster rect {
+    fill: #ffffde;
+    stroke: #aaaa33;
+    stroke-width: 1px;
+  }
+
+  .mermaid .cluster text {
+    fill: #333;
+  }
+
+  .mermaid div.mermaidTooltip {
+    position: absolute;
+    text-align: center;
+    max-width: 200px;
+    padding: 2px;
+    font-size: 12px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 1px solid rgba(0, 0, 0, 0.8);
+    border-radius: 2px;
+    pointer-events: none;
+    z-index: 100;
+  }
+</style>
