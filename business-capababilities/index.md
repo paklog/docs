@@ -10,7 +10,9 @@ This section provides detailed documentation of business capabilities across all
 
 ## Business Domains
 
-### 1. [Warehouse Operations](warehouse-operations/)
+### Phase 1: Foundation Services
+
+#### 1. [Warehouse Operations](warehouse-operations/)
 Core warehouse management capabilities including:
 - **Wave Planning**: Optimization of order grouping and release
 - **Task Management**: Work assignment and tracking
@@ -19,7 +21,7 @@ Core warehouse management capabilities including:
 - **Quality Control**: Inspection and verification processes
 - [View Summary](warehouse-operations/warehouse-operations-summary) | [View Details](warehouse-operations/warehouse-operations-detailed)
 
-### 2. [Inventory Management](inventory/)
+#### 2. [Inventory Management](inventory/)
 Comprehensive inventory control capabilities:
 - **Stock Management**: Real-time inventory tracking
 - **Location Management**: Warehouse location control
@@ -28,7 +30,7 @@ Comprehensive inventory control capabilities:
 - **Replenishment**: Automated stock replenishment
 - [View Summary](inventory/inventory-management-summary) | [View Details](inventory/inventory-management-detailed)
 
-### 3. [Order Management](order-management/)
+#### 3. [Order Management](order-management/)
 End-to-end order processing capabilities:
 - **Order Processing**: Order receipt and validation
 - **Allocation**: Inventory reservation and allocation
@@ -37,7 +39,9 @@ End-to-end order processing capabilities:
 - **Returns**: Return merchandise authorization
 - [View Summary](order-management/order-management-summary) | [View Details](order-management/order-management-detailed)
 
-### 4. [Cartonization](cartonization/)
+### Phase 2: Optimization Services
+
+#### 4. [Cartonization](cartonization/)
 Intelligent packing and containerization:
 - **Container Selection**: Optimal box size selection
 - **Packing Optimization**: Multi-item packing algorithms
@@ -46,7 +50,7 @@ Intelligent packing and containerization:
 - **Packing Rules**: Business rule enforcement
 - [View Summary](cartonization/cartonization-summary) | [View Details](cartonization/cartonization-detailed)
 
-### 5. [Product Catalog](product-catalog/)
+#### 5. [Product Catalog](product-catalog/)
 Product information management:
 - **SKU Management**: Product master data
 - **Attributes**: Product characteristics and properties
@@ -55,7 +59,7 @@ Product information management:
 - **Compatibility Rules**: Product combination constraints
 - [View Summary](product-catalog/product-catalog-summary) | [View Details](product-catalog/product-catalog-detailed)
 
-### 6. [Shipment & Transportation](shipment-transportation/)
+#### 6. [Shipment & Transportation](shipment-transportation/)
 Outbound logistics and carrier management:
 - **Carrier Integration**: Multi-carrier support
 - **Rate Shopping**: Cost optimization
@@ -63,6 +67,132 @@ Outbound logistics and carrier management:
 - **Tracking**: Shipment visibility
 - **Dock Management**: Loading dock coordination
 - [View Summary](shipment-transportation/shipment-transportation-summary) | [View Details](shipment-transportation/shipment-transportation-detailed)
+
+### Phase 3: Execution Services
+
+#### 7. [Task Execution Service](task-execution-service/)
+Task orchestration with intelligent priority-based execution:
+- **Task Queue Management**: Redis-based distributed queuing
+- **Intelligent Assignment**: ML-based worker selection
+- **Priority Calculation**: Multi-factor scoring engine
+- **Worker Management**: Real-time availability and performance tracking
+- [View Details](task-execution-service/business-capabilities)
+
+#### 8. [Pick Execution Service](pick-execution-service/)
+Multi-strategy picking operations with path optimization:
+- **Picking Strategies**: Single, batch, zone, and wave picking
+- **Path Optimization**: Dynamic routing and shortest path calculation
+- **Pick Verification**: Barcode scanning and quality gates
+- **Guided Picking**: Mobile device integration with real-time instructions
+- [View Details](pick-execution-service/business-capabilities)
+
+#### 9. [Pack & Ship Service](pack-ship-service/)
+Packing operations and carrier integration:
+- **Packing Station Management**: Multi-station orchestration
+- **Carrier Integration**: Rate shopping and label generation
+- **Documentation**: Labels, invoices, and manifests
+- **Quality Verification**: Weight and dimension validation
+- [View Details](pack-ship-service/business-capabilities)
+
+#### 10. [Physical Tracking Service](physical-tracking-service/)
+Real-time asset tracking with IoT and computer vision:
+- **Multi-Technology Tracking**: RFID, barcode, IoT sensors, computer vision
+- **Movement Events**: Real-time location and transition tracking
+- **Location Intelligence**: Indoor positioning and geofencing
+- **Environmental Monitoring**: Temperature, humidity, and condition tracking
+- [View Details](physical-tracking-service/business-capabilities)
+
+#### 11. [Location Master Service](location-master-service/)
+Warehouse space optimization and slotting:
+- **Location Hierarchy**: Multi-level warehouse structure management
+- **Slotting Optimization**: ABC analysis and velocity-based placement
+- **Capacity Planning**: Real-time space allocation
+- **Storage Rules**: Product-location compatibility and constraints
+- [View Details](location-master-service/business-capabilities)
+
+#### 12. [Workload Planning Service](workload-planning-service/)
+Labor forecasting and workforce optimization:
+- **Workload Forecasting**: ML-based demand prediction
+- **Labor Planning**: Shift scheduling and skill matching
+- **Real-Time Monitoring**: Live productivity and variance tracking
+- **Resource Allocation**: Equipment and zone coverage planning
+- [View Details](workload-planning-service/business-capabilities)
+
+### Phase 4: Customer-Centric Services
+
+#### 13. [Last Mile Delivery](last-mile-delivery/)
+Final-stage delivery operations and tracking:
+- **Route Optimization**: Dynamic multi-stop sequencing
+- **Driver Management**: Assignment, tracking, and performance
+- **Delivery Execution**: Real-time tracking and proof of delivery
+- **Exception Management**: Failed delivery handling and rescheduling
+- [View Details](last-mile-delivery/business-capabilities)
+
+#### 14. [Value-Added Services](value-added-services/)
+Specialized warehouse operations and customization:
+- **Kitting & Assembly**: Multi-component kit creation
+- **Customization**: Labeling, gift wrapping, personalization
+- **Workflow Management**: Configurable service definitions
+- **Quality Control**: Service standards and documentation
+- [View Details](value-added-services/business-capabilities)
+
+#### 15. [Quality & Compliance](quality-compliance/)
+Quality assurance and regulatory compliance:
+- **Quality Inspection**: Configurable inspection workflows
+- **Regulatory Compliance**: FDA, USDA, OSHA, EPA tracking
+- **Audit Trail**: Chain of custody and documentation
+- **Safety Management**: Hazmat handling and employee safety
+- [View Details](quality-compliance/business-capabilities)
+
+### Phase 5: Advanced Intelligence Services
+
+#### 16. [Digital Twin & Simulation](digital-twin-simulation/)
+Virtual warehouse modeling and scenario testing:
+- **Digital Twin Sync**: Real-time state mirroring
+- **Scenario Analysis**: What-if modeling and layout optimization
+- **Discrete Event Simulation**: Order flow and resource modeling
+- **Predictive Analytics**: Throughput and capacity forecasting
+- [View Details](digital-twin-simulation/business-capabilities)
+
+#### 17. [Sustainability Management](sustainability-management/)
+Environmental impact tracking and ESG reporting:
+- **Carbon Footprint**: Scope 1, 2, 3 emissions tracking
+- **Resource Optimization**: Packaging, waste, energy reduction
+- **Circular Economy**: Reusable packaging and recycling programs
+- **ESG Reporting**: Regulatory compliance and analytics
+- [View Details](sustainability-management/business-capabilities)
+
+#### 18. [Customer Experience Hub](customer-experience-hub/)
+Unified customer-facing capabilities:
+- **Order Tracking**: Real-time visibility and delivery predictions
+- **Self-Service Portal**: Order modifications and returns
+- **Omnichannel Communication**: Multi-channel notifications
+- **Personalization**: Delivery preferences and instructions
+- [View Details](customer-experience-hub/business-capabilities)
+
+#### 19. [Performance Intelligence](performance-intelligence/)
+Advanced analytics and ML-driven insights:
+- **Real-Time Analytics**: Executive dashboards and KPIs
+- **Predictive Analytics**: Demand forecasting and anomaly detection
+- **Prescriptive Recommendations**: Process optimization suggestions
+- **Reporting & Alerting**: Automated insights and threshold alerts
+- [View Details](performance-intelligence/business-capabilities)
+
+#### 20. [Equipment & Asset Management](equipment-asset-management/)
+Equipment lifecycle and maintenance management:
+- **Asset Tracking**: Inventory and real-time location
+- **Predictive Maintenance**: IoT-based condition monitoring
+- **Utilization Analytics**: Performance benchmarking
+- **Compliance & Safety**: Inspection and certification tracking
+- [View Details](equipment-asset-management/business-capabilities)
+
+#### 21. [Financial Settlement](financial-settlement/)
+3PL billing and financial operations:
+- **Activity-Based Costing**: Real-time cost capture and allocation
+- **Billing & Invoicing**: Automated invoice generation
+- **Chargeback Management**: Dispute workflow and resolution
+- **Financial Reconciliation**: ERP integration and payment tracking
+- [View Details](financial-settlement/business-capabilities)
 
 ## Documentation Structure
 
