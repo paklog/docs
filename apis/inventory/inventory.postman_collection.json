@@ -1,0 +1,407 @@
+{
+  "info": {
+    "_postman_id": "7034ff82-e30f-499f-b14d-36d3ee4089c2",
+    "name": "Inventory Management API",
+    "description": "# Overview\nAPI for managing and querying logical inventory levels across the fulfillment network.\n\n## Features\n- **Real-time Stock Queries**: Get current stock levels with caching for performance\n- **Stock Adjustments**: Manual adjustments with audit trail\n- **Bulk Allocations**: High-performance allocation processing (10,000+ items)\n- **Inventory Health**: Turnover analysis and dead stock detection\n- **CloudEvents Integration**: Event-driven architecture with standardized events\n\n## Performance\n- L1 Cache (Caffeine): Sub-millisecond response times\n- L2 Cache (Redis): Distributed caching across instances\n- Async Processing: Non-blocking operations for metrics and events\n- MongoDB Aggregation: Server-side processing for complex queries\n\n## Observability\n- OpenTelemetry distributed tracing\n- Prometheus metrics exposition\n- Structured logging with correlation IDs\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Bulk Operations",
+      "item": [
+        {
+          "name": "bulk_allocate_stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/allocations/bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "allocations",
+                "bulk"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Bulk Allocate Stock\n\nHigh-performance bulk allocation endpoint for processing large order batches.\nOptimized to handle 10,000+ allocation requests in a single API call.\n\n**Performance Characteristics:**\n- Batch processing with parallel execution\n- Database connection pooling\n- Optimistic locking for concurrency\n- Partial success handling\n\n**Use Cases:**\n- Order wave processing\n- Batch order import\n- Marketplace bulk fulfillment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requests\": [\n    {\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"order_id\": \"string\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "OK. Bulk allocation completed with results for each item.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"successful_allocations\": 0,\n  \"failed_allocations\": 0,\n  \"processing_time_ms\": 0,\n  \"results\": [\n    {\n      \"sku\": \"string\",\n      \"order_id\": \"string\",\n      \"success\": true,\n      \"allocated_quantity\": 0,\n      \"error_message\": \"string\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "OK. Bulk allocation completed with results for each item."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad Request. Invalid request format.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"trace_id\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad Request. Invalid request format."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal Server Error.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"trace_id\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal Server Error."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Bulk Operations`."
+    },
+    {
+      "name": "Stock Operations",
+      "item": [
+        {
+          "name": "create_reservation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock_levels/{{sku}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock_levels",
+                "{{sku}}",
+                "reservations"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create Stock Reservation\n\nReserves (allocates) stock for a specific order.\nThis reduces the available-to-promise quantity without physically picking the item.\n\n**Parameters**\n- `sku` (path, required, string): The unique seller SKU to reserve stock for",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 0,\n  \"order_id\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 response",
+              "originalRequest": null,
+              "status": "Accepted. Stock reservation is being processed.",
+              "code": 202,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Accepted. Stock reservation is being processed."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad Request. Invalid request or insufficient stock.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"trace_id\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad Request. Invalid request or insufficient stock."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Not Found. SKU does not exist.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"trace_id\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Not Found. SKU does not exist."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal Server Error.",
+              "code": 500,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Internal Server Error."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Stock Operations`."
+    },
+    {
+      "name": "inventory_health_metrics",
+      "item": [
+        {
+          "name": "get_inventory_health_metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inventory_health_metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inventory_health_metrics"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "",
+                  "description": "Filter by product category",
+                  "disabled": true
+                },
+                {
+                  "key": "start_date",
+                  "value": "",
+                  "description": "Start date for the analysis period (ISO 8601 format)",
+                  "disabled": true
+                },
+                {
+                  "key": "end_date",
+                  "value": "",
+                  "description": "End date for the analysis period (ISO 8601 format)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get Inventory Health Metrics\n\nRetrieves inventory health metrics including turnover rates and dead stock analysis.\nThis corresponds to the user story INV-11.\n\n**Parameters**\n- `category` (query, optional, string): Filter by product category\n- `start_date` (query, optional, string): Start date for the analysis period (ISO 8601 format)\n- `end_date` (query, optional, string): End date for the analysis period (ISO 8601 format)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "OK. Inventory health metrics are returned.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"inventory_turnover\": 0.0,\n  \"dead_stock_skus\": [\n    \"string\"\n  ],\n  \"total_skus\": 0,\n  \"out_of_stock_skus\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "OK. Inventory health metrics are returned."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad Request. Invalid query parameters.",
+              "code": 400,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Bad Request. Invalid query parameters."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal Server Error.",
+              "code": 500,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Internal Server Error."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `inventory_health_metrics`."
+    },
+    {
+      "name": "stock_levels",
+      "item": [
+        {
+          "name": "get_stock_level_by_sku",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock_levels/{{sku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock_levels",
+                "{{sku}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get Stock Level for a SKU\n\nRetrieves the current inventory levels for a specific SKU.\nThis corresponds to the user story INV-10.\n\n**Parameters**\n- `sku` (path, required, string): The unique seller SKU to query."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "OK. The current stock level is returned.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sku\": \"string\",\n  \"quantity_on_hand\": 0,\n  \"quantity_allocated\": 0,\n  \"available_to_promise\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "OK. The current stock level is returned."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Not Found. No stock record found for the given SKU.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"trace_id\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Not Found. No stock record found for the given SKU."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal Server Error.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"trace_id\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal Server Error."
+            }
+          ]
+        },
+        {
+          "name": "adjust_stock_level",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/stock_levels/{{sku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "stock_levels",
+                "{{sku}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Adjust a Stock Level\n\nAllows an authorized user, like an Inventory Manager, to make a manual adjustment to the quantity on hand for a SKU.\nThis corresponds to the user story INV-08.\n\n**Parameters**\n- `sku` (path, required, string): The unique seller SKU to adjust.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity_change\": 0,\n  \"reason_code\": \"damaged\",\n  \"comment\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "OK. The adjustment was successful and the updated stock level is returned.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sku\": \"string\",\n  \"quantity_on_hand\": 0,\n  \"quantity_allocated\": 0,\n  \"available_to_promise\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "OK. The adjustment was successful and the updated stock level is returned."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad Request. The request body is invalid or business rules violated.",
+              "code": 400,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Bad Request. The request body is invalid or business rules violated."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Not Found. No stock record found for the SKU to be adjusted.",
+              "code": 404,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Not Found. No stock record found for the SKU to be adjusted."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal Server Error.",
+              "code": 500,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Internal Server Error."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `stock_levels`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.paklog.com/fulfillment/inventory/v1",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

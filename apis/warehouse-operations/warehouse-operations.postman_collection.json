@@ -1,0 +1,1987 @@
+{
+  "info": {
+    "_postman_id": "6773900d-de23-49f7-9c3b-29d5e0561a63",
+    "name": "Warehouse Operations Service API",
+    "description": "REST API for managing pick lists, packages, and mobile work execution flows",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Mobile Work",
+      "item": [
+        {
+          "name": "listAssignedWork",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/assigned/{{workerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "assigned",
+                "{{workerId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: List work currently assigned to a worker\n\n**Parameters**\n- `workerId` (path, required, string): Worker identifier"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Assigned work retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"workId\": \"string\",\n    \"workType\": \"PICK\",\n    \"status\": \"CREATED\",\n    \"priority\": \"LOW\",\n    \"location\": \"string\",\n    \"item\": \"string\",\n    \"quantity\": 0,\n    \"assignedTo\": \"string\",\n    \"assignedAt\": \"2024-01-01T00:00:00Z\",\n    \"dueDate\": \"2024-01-01T00:00:00Z\",\n    \"totalSteps\": 0,\n    \"completedSteps\": 0,\n    \"urgent\": true,\n    \"description\": \"string\"\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Assigned work retrieved successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Worker not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Worker not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "listAvailableWork",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/available/{{workerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "available",
+                "{{workerId}}"
+              ],
+              "query": [
+                {
+                  "key": "workType",
+                  "value": "",
+                  "description": "Filter by work type",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Maximum number of records to return",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List work available for a worker to take\n\n**Parameters**\n- `workerId` (path, required, string): Worker identifier\n- `workType` (query, optional, None): Filter by work type\n- `limit` (query, optional, integer): Maximum number of records to return"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Available work retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"workId\": \"string\",\n    \"workType\": \"PICK\",\n    \"status\": \"CREATED\",\n    \"priority\": \"LOW\",\n    \"location\": \"string\",\n    \"item\": \"string\",\n    \"quantity\": 0,\n    \"assignedTo\": \"string\",\n    \"assignedAt\": \"2024-01-01T00:00:00Z\",\n    \"dueDate\": \"2024-01-01T00:00:00Z\",\n    \"totalSteps\": 0,\n    \"completedSteps\": 0,\n    \"urgent\": true,\n    \"description\": \"string\"\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Available work retrieved successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid query parameters",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid query parameters"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "createBatchPick",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/batch-picks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "batch-picks"
+              ],
+              "query": [
+                {
+                  "key": "workerId",
+                  "value": "",
+                  "description": "Worker identifier",
+                  "disabled": false
+                },
+                {
+                  "key": "maxItems",
+                  "value": "",
+                  "description": "Maximum items to include in the batch",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Start a batch pick operation for a worker\n\n**Parameters**\n- `workerId` (query, required, string): Worker identifier\n- `maxItems` (query, optional, integer): Maximum items to include in the batch"
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Batch pick created successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"batchId\": \"string\",\n  \"workerId\": \"string\",\n  \"assignedWork\": [\n    {\n      \"workId\": \"string\",\n      \"workType\": \"PICK\",\n      \"status\": \"CREATED\",\n      \"priority\": \"LOW\",\n      \"location\": \"string\",\n      \"item\": \"string\",\n      \"quantity\": 0,\n      \"assignedTo\": \"string\",\n      \"assignedAt\": \"2024-01-01T00:00:00Z\",\n      \"dueDate\": \"2024-01-01T00:00:00Z\",\n      \"totalSteps\": 0,\n      \"completedSteps\": 0,\n      \"urgent\": true,\n      \"description\": \"string\"\n    }\n  ],\n  \"optimizedRoute\": \"string\",\n  \"routeStops\": [\n    \"string\"\n  ],\n  \"totalItems\": 0,\n  \"estimatedDurationMinutes\": 0,\n  \"batchAttributes\": {},\n  \"specialInstructions\": [\n    \"string\"\n  ],\n  \"status\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Batch pick created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid batch pick parameters",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid batch pick parameters"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "createEmergencyAlert",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/emergency-alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "emergency-alerts"
+              ],
+              "query": [
+                {
+                  "key": "workerId",
+                  "value": "",
+                  "description": "Worker identifier",
+                  "disabled": false
+                },
+                {
+                  "key": "reason",
+                  "value": "",
+                  "description": "Emergency reason provided by the worker",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Raise an emergency alert for a worker\n\n**Parameters**\n- `workerId` (query, required, string): Worker identifier\n- `reason` (query, required, string): Emergency reason provided by the worker"
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Emergency alert created successfully",
+              "code": 201,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Emergency alert created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid emergency alert parameters",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid emergency alert parameters"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "validateMobileLocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/location-validations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "location-validations"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Validate a location for a mobile work task",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workerId\": \"string\",\n  \"workId\": \"string\",\n  \"stepNumber\": 0,\n  \"location\": \"string\",\n  \"workType\": \"string\",\n  \"item\": \"string\",\n  \"quantity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Location validation created successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"valid\": true,\n  \"location\": \"string\",\n  \"message\": \"string\",\n  \"suitabilityScore\": 0.0,\n  \"violations\": [\n    \"string\"\n  ],\n  \"warnings\": [\n    \"string\"\n  ],\n  \"locationAttributes\": {},\n  \"suggestions\": [\n    \"string\"\n  ],\n  \"requiresConfirmation\": true\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location validation created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid location validation payload",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid location validation payload"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "createMobileScan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/scans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "scans"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Process a barcode or QR scan for mobile work validation",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workerId\": \"string\",\n  \"workId\": \"string\",\n  \"stepNumber\": 0,\n  \"scannedCode\": \"string\",\n  \"scanType\": \"BARCODE\",\n  \"expectedType\": \"ITEM\",\n  \"context\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Scan processed successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"valid\": true,\n  \"scannedValue\": \"string\",\n  \"resolvedValue\": \"string\",\n  \"type\": \"ITEM\",\n  \"message\": \"string\",\n  \"additionalData\": {},\n  \"warnings\": [\n    \"string\"\n  ],\n  \"suggestions\": [\n    \"string\"\n  ],\n  \"requiresConfirmation\": true,\n  \"confirmationMessage\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Scan processed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid scan payload",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid scan payload"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "getWorkerMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/workers/{{workerId}}/metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "workers",
+                "{{workerId}}",
+                "metrics"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "",
+                  "description": "Reporting window (e.g. TODAY, WEEK, MONTH)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Retrieve performance metrics for a worker\n\n**Parameters**\n- `workerId` (path, required, string): Worker identifier\n- `period` (query, optional, string): Reporting window (e.g. TODAY, WEEK, MONTH)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Worker metrics retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"workerId\": \"string\",\n  \"period\": \"string\",\n  \"completedTasks\": 0,\n  \"totalTasks\": 0,\n  \"completionRate\": 0.0,\n  \"averageTaskDurationMinutes\": 0.0,\n  \"performanceScore\": 0.0,\n  \"totalItemsPicked\": 0,\n  \"totalItemsPacked\": 0,\n  \"totalItemsCounted\": 0,\n  \"accuracyRate\": 0.0,\n  \"lastActivity\": \"2024-01-01T00:00:00Z\",\n  \"taskTypeBreakdown\": {\n    \"additionalPropertyKey\": 0\n  },\n  \"performanceByType\": {\n    \"additionalPropertyKey\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Worker metrics retrieved successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Worker not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Worker not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "updateWorkStatus",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/{{workId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "{{workId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update work status for a worker assignment\n\n**Parameters**\n- `workId` (path, required, string): Work identifier",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"workerId\": \"string\",\n  \"reason\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Work updated successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"workId\": \"string\",\n  \"workType\": \"PICK\",\n  \"status\": \"CREATED\",\n  \"priority\": \"LOW\",\n  \"location\": \"string\",\n  \"item\": \"string\",\n  \"itemDescription\": \"string\",\n  \"quantity\": 0,\n  \"assignedTo\": \"string\",\n  \"assignedAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"steps\": [\n    {\n      \"stepNumber\": 0,\n      \"name\": \"string\",\n      \"instruction\": \"string\",\n      \"location\": \"string\",\n      \"action\": \"string\",\n      \"parameters\": {},\n      \"completed\": true,\n      \"skippable\": true,\n      \"requiresScan\": true,\n      \"expectedScans\": [\n        \"string\"\n      ],\n      \"validationRule\": \"string\",\n      \"completedAt\": \"2024-01-01T00:00:00Z\",\n      \"completedBy\": \"string\",\n      \"notes\": \"string\",\n      \"estimatedDurationMinutes\": 0\n    }\n  ],\n  \"currentStepNumber\": 0,\n  \"urgent\": true,\n  \"description\": \"string\",\n  \"attributes\": {},\n  \"instructions\": [\n    \"string\"\n  ],\n  \"nextAction\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Work updated successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid work status update payload",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid work status update payload"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Work item not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Work item not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Work cannot transition to requested status",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Work cannot transition to requested status"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "completeMobileWorkStep",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/work/{{workId}}/steps/{{stepNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "work",
+                "{{workId}}",
+                "steps",
+                "{{stepNumber}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Complete a work step for a mobile workflow\n\n**Parameters**\n- `workId` (path, required, string): Work identifier\n- `stepNumber` (path, required, integer): Step sequence number",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workerId\": \"string\",\n  \"scannedCodes\": [\n    \"string\"\n  ],\n  \"parameters\": {},\n  \"notes\": \"string\",\n  \"forceComplete\": true,\n  \"actualQuantity\": 0,\n  \"actualLocation\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Work step completed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"string\",\n  \"completedStepNumber\": 0,\n  \"nextStepNumber\": 0,\n  \"workCompleted\": true,\n  \"warnings\": [\n    \"string\"\n  ],\n  \"validationErrors\": [\n    \"string\"\n  ],\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"nextAction\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Work step completed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid work step completion payload",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid work step completion payload"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Work item or step not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Work item or step not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Step cannot be completed in the current state",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Step cannot be completed in the current state"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Mobile Work`."
+    },
+    {
+      "name": "Packages",
+      "item": [
+        {
+          "name": "createPackage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packages"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create a new package from a fulfillment order",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderType\": \"string\",\n  \"street\": \"string\",\n  \"city\": \"string\",\n  \"state\": \"string\",\n  \"postalCode\": \"string\",\n  \"country\": \"string\",\n  \"items\": [\n    {\n      \"skuCode\": \"string\",\n      \"quantity\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Package created successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"packageId\": \"00000000-0000-0000-0000-000000000000\",\n  \"orderId\": \"string\",\n  \"orderType\": \"string\",\n  \"items\": [\n    {\n      \"skuCode\": \"string\",\n      \"quantity\": 0\n    }\n  ],\n  \"status\": \"PENDING\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Package created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid package payload",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid package payload"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "getPackageByOrderId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packages/order/{{orderId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packages",
+                "order",
+                "{{orderId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get a package by its originating order ID\n\n**Parameters**\n- `orderId` (path, required, string): Fulfillment order identifier"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Package associated with the order",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"packageId\": \"00000000-0000-0000-0000-000000000000\",\n  \"orderId\": \"string\",\n  \"orderType\": \"string\",\n  \"items\": [\n    {\n      \"skuCode\": \"string\",\n      \"quantity\": 0\n    }\n  ],\n  \"status\": \"PENDING\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Package associated with the order"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Package not found for the order ID",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Package not found for the order ID"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "confirmPackage",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packages/{{packageId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packages",
+                "{{packageId}}",
+                "confirm"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Confirm that a package is ready for shipping\n\n**Parameters**\n- `packageId` (path, required, string): Package identifier"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Package confirmed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"packageId\": \"00000000-0000-0000-0000-000000000000\",\n  \"orderId\": \"string\",\n  \"orderType\": \"string\",\n  \"items\": [\n    {\n      \"skuCode\": \"string\",\n      \"quantity\": 0\n    }\n  ],\n  \"status\": \"PENDING\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Package confirmed successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Package not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Package not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Package cannot transition to confirmed state",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Package cannot transition to confirmed state"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Packages`."
+    },
+    {
+      "name": "Pick Lists",
+      "item": [
+        {
+          "name": "getNextPickListForPicker",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/picklists/picker/{{pickerId}}/next",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picklists",
+                "picker",
+                "{{pickerId}}",
+                "next"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Fetch the next pick list assigned to a picker\n\n**Parameters**\n- `pickerId` (path, required, string): Picker identifier"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Next pick list available for the picker",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n  \"status\": \"PENDING\",\n  \"pickerId\": \"string\",\n  \"instructions\": [\n    {\n      \"skuCode\": \"string\",\n      \"quantityToPick\": 0,\n      \"pickedQuantity\": 0,\n      \"binLocation\": \"string\",\n      \"completed\": true\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Next pick list available for the picker"
+            },
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "No pick list currently assigned to the picker",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "No pick list currently assigned to the picker"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "listPickListsByPicker",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/picklists/pickers/{{pickerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picklists",
+                "pickers",
+                "{{pickerId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: List pick lists assigned to a picker\n\n**Parameters**\n- `pickerId` (path, required, string): Picker identifier"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick lists retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"id\": \"00000000-0000-0000-0000-000000000000\",\n    \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n    \"status\": \"PENDING\",\n    \"pickerId\": \"string\",\n    \"instructions\": [\n      {\n        \"skuCode\": \"string\",\n        \"quantityToPick\": 0,\n        \"pickedQuantity\": 0,\n        \"binLocation\": \"string\",\n        \"completed\": true\n      }\n    ]\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Pick lists retrieved successfully"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "listPickListsByStatus",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/picklists/status/{{status}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picklists",
+                "status",
+                "{{status}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: List pick lists by status\n\n**Parameters**\n- `status` (path, required, None): Pick list status filter"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick lists retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"id\": \"00000000-0000-0000-0000-000000000000\",\n    \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n    \"status\": \"PENDING\",\n    \"pickerId\": \"string\",\n    \"instructions\": [\n      {\n        \"skuCode\": \"string\",\n        \"quantityToPick\": 0,\n        \"pickedQuantity\": 0,\n        \"binLocation\": \"string\",\n        \"completed\": true\n      }\n    ]\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Pick lists retrieved successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid status supplied",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid status supplied"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "getPickListById",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/picklists/{{pickListId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picklists",
+                "{{pickListId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get pick list by ID\n\n**Parameters**\n- `pickListId` (path, required, string): Pick list identifier"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick list found",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n  \"status\": \"PENDING\",\n  \"pickerId\": \"string\",\n  \"instructions\": [\n    {\n      \"skuCode\": \"string\",\n      \"quantityToPick\": 0,\n      \"pickedQuantity\": 0,\n      \"binLocation\": \"string\",\n      \"completed\": true\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick list found"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Pick list not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick list not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "confirmPickListInstruction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/picklists/{{pickListId}}/confirm-pick",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "picklists",
+                "{{pickListId}}",
+                "confirm-pick"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Confirm picking of an instruction on a pick list\n\n**Parameters**\n- `pickListId` (path, required, string): Pick list identifier",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skuCode\": \"string\",\n  \"quantity\": 0,\n  \"binLocation\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick instruction confirmed successfully",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Pick instruction confirmed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid pick confirmation payload",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid pick confirmation payload"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Pick list not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick list not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Pick confirmation conflicts with current state",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick confirmation conflicts with current state"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Pick Lists`."
+    },
+    {
+      "name": "Put Wall Metrics",
+      "item": [
+        {
+          "name": "getAllPutWallMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "metrics"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get all put wall metrics"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "All metrics retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"putWallId\": \"00000000-0000-0000-0000-000000000000\",\n    \"totalOrdersProcessed\": 0,\n    \"totalItemsPlaced\": 0,\n    \"averageOrderCompletionTimeMinutes\": 0.0,\n    \"throughputOrdersPerHour\": 0.0,\n    \"utilizationPercentage\": 0.0,\n    \"currentActiveOrders\": 0,\n    \"lastUpdated\": \"2024-01-01T00:00:00Z\"\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "All metrics retrieved successfully"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "clearPutWallMetrics",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/metrics/{{putWallId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "metrics",
+                "{{putWallId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Clear put wall metrics\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID"
+          },
+          "response": [
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "Metrics cleared successfully",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Metrics cleared successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "getPutWallMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/metrics/{{putWallId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "metrics",
+                "{{putWallId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get put wall metrics\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Metrics retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"putWallId\": \"00000000-0000-0000-0000-000000000000\",\n  \"totalOrdersProcessed\": 0,\n  \"totalItemsPlaced\": 0,\n  \"averageOrderCompletionTimeMinutes\": 0.0,\n  \"throughputOrdersPerHour\": 0.0,\n  \"utilizationPercentage\": 0.0,\n  \"currentActiveOrders\": 0,\n  \"lastUpdated\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Metrics retrieved successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "getPutWallPerformanceReport",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/metrics/{{putWallId}}/performance-report",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "metrics",
+                "{{putWallId}}",
+                "performance-report"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get performance report\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Performance report generated successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"putWallId\": \"00000000-0000-0000-0000-000000000000\",\n  \"totalOrdersProcessed\": 0,\n  \"totalItemsPlaced\": 0,\n  \"averageOrderCompletionTimeMinutes\": 0.0,\n  \"throughputOrdersPerHour\": 0.0,\n  \"utilizationPercentage\": 0.0,\n  \"currentActiveOrders\": 0,\n  \"efficiencyScore\": 0.0,\n  \"recommendations\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Performance report generated successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Put Wall Metrics`."
+    },
+    {
+      "name": "Put Walls",
+      "item": [
+        {
+          "name": "getAllPutWalls",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get all put walls"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Put walls retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"putWallId\": \"00000000-0000-0000-0000-000000000000\",\n    \"location\": \"string\",\n    \"capacity\": 0,\n    \"availableCapacity\": 0,\n    \"slots\": [\n      {\n        \"slotId\": \"string\",\n        \"status\": \"FREE\",\n        \"assignedOrderId\": \"00000000-0000-0000-0000-000000000000\",\n        \"itemsRequired\": {\n          \"additionalPropertyKey\": 0\n        },\n        \"itemsPlaced\": {\n          \"additionalPropertyKey\": 0\n        }\n      }\n    ]\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Put walls retrieved successfully"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "createPutWall",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create a new put wall",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slotIds\": [\n    \"string\"\n  ],\n  \"location\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Put wall created successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"putWallId\": \"00000000-0000-0000-0000-000000000000\",\n  \"location\": \"string\",\n  \"capacity\": 0,\n  \"availableCapacity\": 0,\n  \"slots\": [\n    {\n      \"slotId\": \"string\",\n      \"status\": \"FREE\",\n      \"assignedOrderId\": \"00000000-0000-0000-0000-000000000000\",\n      \"itemsRequired\": {\n        \"additionalPropertyKey\": 0\n      },\n      \"itemsPlaced\": {\n        \"additionalPropertyKey\": 0\n      }\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request data",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request data"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "getPutWall",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/{{putWallId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "{{putWallId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get put wall details\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Put wall details retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"putWallId\": \"00000000-0000-0000-0000-000000000000\",\n  \"location\": \"string\",\n  \"capacity\": 0,\n  \"availableCapacity\": 0,\n  \"slots\": [\n    {\n      \"slotId\": \"string\",\n      \"status\": \"FREE\",\n      \"assignedOrderId\": \"00000000-0000-0000-0000-000000000000\",\n      \"itemsRequired\": {\n        \"additionalPropertyKey\": 0\n      },\n      \"itemsPlaced\": {\n        \"additionalPropertyKey\": 0\n      }\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall details retrieved successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "assignOrderToSlot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/{{putWallId}}/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "{{putWallId}}",
+                "assignments"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Assign order to slot\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n  \"requiredItems\": {\n    \"additionalPropertyKey\": 0\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Order assigned successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"slotId\": \"string\",\n  \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Order assigned successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "No available slots",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"slotId\": \"string\",\n  \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n  \"message\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "No available slots"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "getReadyForPackSlots",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/{{putWallId}}/ready-slots",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "{{putWallId}}",
+                "ready-slots"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get ready for pack slots\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Ready slots retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "[\n  \"string\"\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Ready slots retrieved successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "scanItemForSortation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/{{putWallId}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "{{putWallId}}",
+                "scan"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Scan item for sortation\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skuCode\": \"string\",\n  \"quantity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Sortation target determined",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"targetSlotId\": \"string\",\n  \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n  \"quantityNeeded\": 0,\n  \"message\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Sortation target determined"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall not found or no target slot found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"targetSlotId\": \"string\",\n  \"orderId\": \"00000000-0000-0000-0000-000000000000\",\n  \"quantityNeeded\": 0,\n  \"message\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall not found or no target slot found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "releaseSlot",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/{{putWallId}}/slots/{{slotId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "{{putWallId}}",
+                "slots",
+                "{{slotId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Release slot\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID\n- `slotId` (path, required, string): Slot ID"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Slot released successfully",
+              "code": 200,
+              "header": [],
+              "body": "\"string\"",
+              "_postman_previewlanguage": "text",
+              "description": "Slot released successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Slot cannot be released",
+              "code": 400,
+              "header": [],
+              "body": "\"string\"",
+              "_postman_previewlanguage": "text",
+              "description": "Slot cannot be released"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall or slot not found",
+              "code": 404,
+              "header": [],
+              "body": "\"string\"",
+              "_postman_previewlanguage": "text",
+              "description": "Put wall or slot not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        },
+        {
+          "name": "confirmPutInSlot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "text/plain",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/putwalls/{{putWallId}}/slots/{{slotId}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "putwalls",
+                "{{putWallId}}",
+                "slots",
+                "{{slotId}}",
+                "items"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Confirm item placement\n\n**Parameters**\n- `putWallId` (path, required, string): Put wall ID\n- `slotId` (path, required, string): Slot ID",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"skuCode\": \"string\",\n  \"quantity\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Item placed successfully",
+              "code": 200,
+              "header": [],
+              "body": "\"string\"",
+              "_postman_previewlanguage": "text",
+              "description": "Item placed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid placement",
+              "code": 400,
+              "header": [],
+              "body": "\"string\"",
+              "_postman_previewlanguage": "text",
+              "description": "Invalid placement"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Put wall or slot not found",
+              "code": 404,
+              "header": [],
+              "body": "\"string\"",
+              "_postman_previewlanguage": "text",
+              "description": "Put wall or slot not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"status\": 0,\n  \"error\": \"string\",\n  \"message\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\",\n  \"path\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected server error"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Put Walls`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

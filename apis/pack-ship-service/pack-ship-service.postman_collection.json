@@ -1,0 +1,1252 @@
+{
+  "info": {
+    "_postman_id": "7eb2a622-edb4-43b7-89d9-0777bec5e1fe",
+    "name": "Pack and Ship Service API",
+    "description": "The Pack and Ship Service manages packing station operations, quality control, and shipping preparation.\nIt handles packing session management, item scanning and verification, carton selection using 3D bin packing\nalgorithms, weight verification, quality checks, and shipping label generation. The service ensures accurate\nand efficient order packing with quality control checkpoints.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Cartons",
+      "item": [
+        {
+          "name": "listCartons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cartons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cartons"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List available cartons\n\nGet list of available carton types\n\n**Parameters**\n- `warehouseId` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Available cartons",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"cartonId\": \"string\",\n    \"name\": \"string\",\n    \"dimensions\": {\n      \"length\": 0.0,\n      \"width\": 0.0,\n      \"height\": 0.0,\n      \"volume\": 0.0\n    },\n    \"maxWeight\": 0.0,\n    \"tareWeight\": 0.0,\n    \"material\": \"string\",\n    \"cost\": 0.0\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Available cartons"
+            }
+          ]
+        },
+        {
+          "name": "recommendCarton",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}/recommend-carton",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}",
+                "recommend-carton"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Recommend carton\n\nGet carton recommendation using 3D bin packing algorithm\n\n**Parameters**\n- `sessionId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Carton recommendations",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"recommendations\": [\n    {\n      \"carton\": {\n        \"cartonId\": \"string\",\n        \"name\": \"string\",\n        \"dimensions\": {\n          \"length\": 0.0,\n          \"width\": 0.0,\n          \"height\": 0.0,\n          \"volume\": 0.0\n        },\n        \"maxWeight\": 0.0,\n        \"tareWeight\": 0.0,\n        \"material\": \"string\",\n        \"cost\": 0.0\n      },\n      \"score\": 0.0,\n      \"utilization\": 0.0,\n      \"packingPlan\": [\n        {\n          \"itemId\": \"string\",\n          \"position\": {\n            \"x\": 0.0,\n            \"y\": 0.0,\n            \"z\": 0.0\n          },\n          \"orientation\": \"string\"\n        }\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Carton recommendations"
+            }
+          ]
+        },
+        {
+          "name": "selectCarton",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}/select-carton",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}",
+                "select-carton"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Select carton\n\nSelect a carton for packing (manual or auto-selected)\n\n**Parameters**\n- `sessionId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartonId\": \"string\",\n  \"autoSelect\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Carton selected",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"carton\": {\n    \"cartonId\": \"string\",\n    \"name\": \"string\",\n    \"dimensions\": {\n      \"length\": 0.0,\n      \"width\": 0.0,\n      \"height\": 0.0,\n      \"volume\": 0.0\n    },\n    \"maxWeight\": 0.0,\n    \"tareWeight\": 0.0,\n    \"material\": \"string\",\n    \"cost\": 0.0\n  },\n  \"packingInstructions\": [\n    \"string\"\n  ],\n  \"estimatedUtilization\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Carton selected"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Cartons`."
+    },
+    {
+      "name": "Labels",
+      "item": [
+        {
+          "name": "getShippingLabel",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/pdf",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments/{{shipmentId}}/label",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments",
+                "{{shipmentId}}",
+                "label"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get shipping label\n\nRetrieve generated shipping label\n\n**Parameters**\n- `shipmentId` (path, required, string)\n- `format` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Shipping label",
+              "code": 200,
+              "header": [],
+              "body": "\"string\"",
+              "_postman_previewlanguage": "text",
+              "description": "Shipping label"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "generateShippingLabel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments/{{shipmentId}}/label",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments",
+                "{{shipmentId}}",
+                "label"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Generate shipping label\n\nGenerate shipping label for shipment\n\n**Parameters**\n- `shipmentId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"labelFormat\": \"ZPL\",\n  \"printer\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Label generated",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"labelId\": \"string\",\n  \"trackingNumber\": \"string\",\n  \"carrier\": \"string\",\n  \"format\": \"ZPL\",\n  \"content\": \"string\",\n  \"generatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Label generated"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Labels`."
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "getPackerMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/packer/{{packerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "packer",
+                "{{packerId}}"
+              ],
+              "query": [
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get packer metrics\n\nGet productivity metrics for a packer\n\n**Parameters**\n- `packerId` (path, required, string)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Packer metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"packerId\": \"string\",\n  \"totalSessions\": 0,\n  \"completedSessions\": 0,\n  \"totalOrders\": 0,\n  \"totalItems\": 0,\n  \"avgItemsPerHour\": 0.0,\n  \"avgOrdersPerHour\": 0.0,\n  \"avgPackingTime\": 0.0,\n  \"qualityScore\": 0.0,\n  \"errorRate\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Packer metrics"
+            }
+          ]
+        },
+        {
+          "name": "getQualityMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/quality",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "quality"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get quality metrics\n\nGet quality control metrics\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Quality metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"totalChecks\": 0,\n  \"passedChecks\": 0,\n  \"failedChecks\": 0,\n  \"passRate\": 0.0,\n  \"commonIssues\": [\n    {\n      \"issue\": \"string\",\n      \"count\": 0\n    }\n  ],\n  \"weightVarianceAvg\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Quality metrics"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Monitoring`."
+    },
+    {
+      "name": "Packing Sessions",
+      "item": [
+        {
+          "name": "listPackingSessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "packerId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "stationId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List packing sessions\n\nRetrieve list of packing sessions with filtering\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `status` (query, optional, None)\n- `packerId` (query, optional, string)\n- `stationId` (query, optional, string)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of packing sessions",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sessions\": [\n    {\n      \"sessionId\": \"string\",\n      \"orderId\": \"string\",\n      \"packerId\": \"string\",\n      \"packerName\": \"string\",\n      \"stationId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"status\": \"STARTED\",\n      \"totalItems\": 0,\n      \"scannedItems\": 0,\n      \"cartonId\": \"string\",\n      \"weight\": 0.0,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"completedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of packing sessions"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "startPackingSession",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Start packing session\n\nStart a new packing session for an order",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"string\",\n  \"packerId\": \"string\",\n  \"stationId\": \"string\",\n  \"warehouseId\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Packing session started",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"sessionId\": \"string\",\n  \"orderId\": \"string\",\n  \"packerId\": \"string\",\n  \"packerName\": \"string\",\n  \"stationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"status\": \"STARTED\",\n  \"totalItems\": 0,\n  \"scannedItems\": 0,\n  \"cartonId\": \"string\",\n  \"weight\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"itemsToPack\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"barcode\": \"string\",\n      \"weight\": 0.0,\n      \"dimensions\": {\n        \"length\": 0.0,\n        \"width\": 0.0,\n        \"height\": 0.0,\n        \"volume\": 0.0\n      },\n      \"isFragile\": true,\n      \"requiresSpecialHandling\": true\n    }\n  ],\n  \"scannedItemsList\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"barcode\": \"string\",\n      \"scannedAt\": \"2024-01-01T00:00:00Z\",\n      \"scannedBy\": \"string\",\n      \"quantity\": 0\n    }\n  ],\n  \"carton\": {\n    \"cartonId\": \"string\",\n    \"name\": \"string\",\n    \"dimensions\": {\n      \"length\": 0.0,\n      \"width\": 0.0,\n      \"height\": 0.0,\n      \"volume\": 0.0\n    },\n    \"maxWeight\": 0.0,\n    \"tareWeight\": 0.0,\n    \"material\": \"string\",\n    \"cost\": 0.0\n  },\n  \"qualityChecks\": [\n    {\n      \"checkId\": \"string\",\n      \"passed\": true,\n      \"performedAt\": \"2024-01-01T00:00:00Z\",\n      \"performedBy\": \"string\",\n      \"checkpoints\": [\n        {}\n      ],\n      \"notes\": \"string\",\n      \"actionRequired\": \"string\"\n    }\n  ],\n  \"shipmentId\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Packing session started"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "cancelPackingSession",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}"
+              ],
+              "query": [
+                {
+                  "key": "reason",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Cancel packing session\n\nCancel a packing session\n\n**Parameters**\n- `sessionId` (path, required, string)\n- `reason` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Session cancelled successfully",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Session cancelled successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "getPackingSession",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get packing session\n\nRetrieve detailed information about a packing session\n\n**Parameters**\n- `sessionId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Packing session details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sessionId\": \"string\",\n  \"orderId\": \"string\",\n  \"packerId\": \"string\",\n  \"packerName\": \"string\",\n  \"stationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"status\": \"STARTED\",\n  \"totalItems\": 0,\n  \"scannedItems\": 0,\n  \"cartonId\": \"string\",\n  \"weight\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"itemsToPack\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"barcode\": \"string\",\n      \"weight\": 0.0,\n      \"dimensions\": {\n        \"length\": 0.0,\n        \"width\": 0.0,\n        \"height\": 0.0,\n        \"volume\": 0.0\n      },\n      \"isFragile\": true,\n      \"requiresSpecialHandling\": true\n    }\n  ],\n  \"scannedItemsList\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"barcode\": \"string\",\n      \"scannedAt\": \"2024-01-01T00:00:00Z\",\n      \"scannedBy\": \"string\",\n      \"quantity\": 0\n    }\n  ],\n  \"carton\": {\n    \"cartonId\": \"string\",\n    \"name\": \"string\",\n    \"dimensions\": {\n      \"length\": 0.0,\n      \"width\": 0.0,\n      \"height\": 0.0,\n      \"volume\": 0.0\n    },\n    \"maxWeight\": 0.0,\n    \"tareWeight\": 0.0,\n    \"material\": \"string\",\n    \"cost\": 0.0\n  },\n  \"qualityChecks\": [\n    {\n      \"checkId\": \"string\",\n      \"passed\": true,\n      \"performedAt\": \"2024-01-01T00:00:00Z\",\n      \"performedBy\": \"string\",\n      \"checkpoints\": [\n        {}\n      ],\n      \"notes\": \"string\",\n      \"actionRequired\": \"string\"\n    }\n  ],\n  \"shipmentId\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Packing session details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "completePackingSession",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}",
+                "complete"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Complete packing session\n\nMark packing session as complete and ready for shipping\n\n**Parameters**\n- `sessionId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"string\",\n  \"packingMaterials\": [\n    {\n      \"materialType\": \"string\",\n      \"quantity\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Session completed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sessionId\": \"string\",\n  \"orderId\": \"string\",\n  \"packerId\": \"string\",\n  \"packerName\": \"string\",\n  \"stationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"status\": \"STARTED\",\n  \"totalItems\": 0,\n  \"scannedItems\": 0,\n  \"cartonId\": \"string\",\n  \"weight\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"itemsToPack\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"barcode\": \"string\",\n      \"weight\": 0.0,\n      \"dimensions\": {\n        \"length\": 0.0,\n        \"width\": 0.0,\n        \"height\": 0.0,\n        \"volume\": 0.0\n      },\n      \"isFragile\": true,\n      \"requiresSpecialHandling\": true\n    }\n  ],\n  \"scannedItemsList\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"barcode\": \"string\",\n      \"scannedAt\": \"2024-01-01T00:00:00Z\",\n      \"scannedBy\": \"string\",\n      \"quantity\": 0\n    }\n  ],\n  \"carton\": {\n    \"cartonId\": \"string\",\n    \"name\": \"string\",\n    \"dimensions\": {\n      \"length\": 0.0,\n      \"width\": 0.0,\n      \"height\": 0.0,\n      \"volume\": 0.0\n    },\n    \"maxWeight\": 0.0,\n    \"tareWeight\": 0.0,\n    \"material\": \"string\",\n    \"cost\": 0.0\n  },\n  \"qualityChecks\": [\n    {\n      \"checkId\": \"string\",\n      \"passed\": true,\n      \"performedAt\": \"2024-01-01T00:00:00Z\",\n      \"performedBy\": \"string\",\n      \"checkpoints\": [\n        {}\n      ],\n      \"notes\": \"string\",\n      \"actionRequired\": \"string\"\n    }\n  ],\n  \"shipmentId\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Session completed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Packing Sessions`."
+    },
+    {
+      "name": "Quality Control",
+      "item": [
+        {
+          "name": "performQualityCheck",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}/quality-check",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}",
+                "quality-check"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Perform quality check\n\nPerform quality control check on packed order\n\n**Parameters**\n- `sessionId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"passed\": true,\n  \"checkpoints\": [\n    {\n      \"checkpoint\": \"CORRECT_ITEMS\",\n      \"passed\": true,\n      \"notes\": \"string\"\n    }\n  ],\n  \"inspector\": \"string\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Quality check completed",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"checkId\": \"string\",\n  \"passed\": true,\n  \"performedAt\": \"2024-01-01T00:00:00Z\",\n  \"performedBy\": \"string\",\n  \"checkpoints\": [\n    {}\n  ],\n  \"notes\": \"string\",\n  \"actionRequired\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Quality check completed"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "weighPackage",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}/weigh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}",
+                "weigh"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Weigh package\n\nRecord package weight and verify against expected\n\n**Parameters**\n- `sessionId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight\": 0.0,\n  \"scaleId\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Weight recorded",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"expectedWeight\": 0.0,\n  \"actualWeight\": 0.0,\n  \"variance\": 0.0,\n  \"withinTolerance\": true,\n  \"tolerancePercent\": 5.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Weight recorded"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Weight discrepancy detected",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"error\": \"string\",\n  \"expectedWeight\": 0.0,\n  \"actualWeight\": 0.0,\n  \"variance\": 0.0,\n  \"requiresRepack\": true\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Weight discrepancy detected"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Quality Control`."
+    },
+    {
+      "name": "Scanning",
+      "item": [
+        {
+          "name": "getItemsToPack",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}",
+                "items"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get items to pack\n\nGet list of items to pack in this session\n\n**Parameters**\n- `sessionId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Items to pack",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"items\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"barcode\": \"string\",\n      \"weight\": 0.0,\n      \"dimensions\": {\n        \"length\": 0.0,\n        \"width\": 0.0,\n        \"height\": 0.0,\n        \"volume\": 0.0\n      },\n      \"isFragile\": true,\n      \"requiresSpecialHandling\": true\n    }\n  ],\n  \"scannedItems\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"barcode\": \"string\",\n      \"scannedAt\": \"2024-01-01T00:00:00Z\",\n      \"scannedBy\": \"string\",\n      \"quantity\": 0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Items to pack"
+            }
+          ]
+        },
+        {
+          "name": "scanItem",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-sessions/{{sessionId}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-sessions",
+                "{{sessionId}}",
+                "scan"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Scan item\n\nScan and verify an item for packing\n\n**Parameters**\n- `sessionId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"string\",\n  \"quantity\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Item scanned successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"valid\": true,\n  \"message\": \"string\",\n  \"scannedItem\": {\n    \"itemId\": \"string\",\n    \"productId\": \"string\",\n    \"sku\": \"string\",\n    \"barcode\": \"string\",\n    \"scannedAt\": \"2024-01-01T00:00:00Z\",\n    \"scannedBy\": \"string\",\n    \"quantity\": 0\n  },\n  \"remainingItems\": 0,\n  \"nextAction\": \"CONTINUE_SCANNING\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Item scanned successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Item validation error",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"error\": \"UNEXPECTED_ITEM\",\n  \"message\": \"string\",\n  \"expectedItem\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Item validation error"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Scanning`."
+    },
+    {
+      "name": "Shipments",
+      "item": [
+        {
+          "name": "listShipments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List shipments\n\nGet list of shipments\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `status` (query, optional, string)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of shipments",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"shipments\": [\n    {\n      \"shipmentId\": \"string\",\n      \"orderId\": \"string\",\n      \"trackingNumber\": \"string\",\n      \"carrier\": \"string\",\n      \"shippingMethod\": \"string\",\n      \"status\": \"CREATED\",\n      \"weight\": 0.0,\n      \"dimensions\": {\n        \"length\": 0.0,\n        \"width\": 0.0,\n        \"height\": 0.0,\n        \"volume\": 0.0\n      },\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"dispatchedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of shipments"
+            }
+          ]
+        },
+        {
+          "name": "createShipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create shipment\n\nCreate a shipment from completed packing session",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"string\",\n  \"carrier\": \"USPS\",\n  \"shippingMethod\": \"string\",\n  \"serviceLevel\": \"STANDARD\",\n  \"shippingAddress\": {\n    \"name\": \"string\",\n    \"company\": \"string\",\n    \"street1\": \"string\",\n    \"street2\": \"string\",\n    \"city\": \"string\",\n    \"state\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\",\n    \"phone\": \"string\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Shipment created",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"shipmentId\": \"string\",\n  \"orderId\": \"string\",\n  \"trackingNumber\": \"string\",\n  \"carrier\": \"string\",\n  \"shippingMethod\": \"string\",\n  \"status\": \"CREATED\",\n  \"weight\": 0.0,\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0,\n    \"volume\": 0.0\n  },\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"dispatchedAt\": \"2024-01-01T00:00:00Z\",\n  \"containers\": [\n    {\n      \"containerId\": \"string\",\n      \"cartonType\": {\n        \"cartonId\": \"string\",\n        \"name\": \"string\",\n        \"dimensions\": {\n          \"length\": 0.0,\n          \"width\": 0.0,\n          \"height\": 0.0,\n          \"volume\": 0.0\n        },\n        \"maxWeight\": 0.0,\n        \"tareWeight\": 0.0,\n        \"material\": \"string\",\n        \"cost\": 0.0\n      },\n      \"weight\": 0.0,\n      \"items\": [\n        {\n          \"productId\": \"string\",\n          \"sku\": \"string\",\n          \"quantity\": 0\n        }\n      ]\n    }\n  ],\n  \"shippingAddress\": {\n    \"name\": \"string\",\n    \"company\": \"string\",\n    \"street1\": \"string\",\n    \"street2\": \"string\",\n    \"city\": \"string\",\n    \"state\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\",\n    \"phone\": \"string\"\n  },\n  \"billingAddress\": {\n    \"name\": \"string\",\n    \"company\": \"string\",\n    \"street1\": \"string\",\n    \"street2\": \"string\",\n    \"city\": \"string\",\n    \"state\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\",\n    \"phone\": \"string\"\n  },\n  \"label\": {\n    \"labelId\": \"string\",\n    \"trackingNumber\": \"string\",\n    \"carrier\": \"string\",\n    \"format\": \"ZPL\",\n    \"content\": \"string\",\n    \"generatedAt\": \"2024-01-01T00:00:00Z\"\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Shipment created"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "getShipment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments/{{shipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments",
+                "{{shipmentId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get shipment\n\nGet shipment details\n\n**Parameters**\n- `shipmentId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Shipment details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"shipmentId\": \"string\",\n  \"orderId\": \"string\",\n  \"trackingNumber\": \"string\",\n  \"carrier\": \"string\",\n  \"shippingMethod\": \"string\",\n  \"status\": \"CREATED\",\n  \"weight\": 0.0,\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0,\n    \"volume\": 0.0\n  },\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"dispatchedAt\": \"2024-01-01T00:00:00Z\",\n  \"containers\": [\n    {\n      \"containerId\": \"string\",\n      \"cartonType\": {\n        \"cartonId\": \"string\",\n        \"name\": \"string\",\n        \"dimensions\": {\n          \"length\": 0.0,\n          \"width\": 0.0,\n          \"height\": 0.0,\n          \"volume\": 0.0\n        },\n        \"maxWeight\": 0.0,\n        \"tareWeight\": 0.0,\n        \"material\": \"string\",\n        \"cost\": 0.0\n      },\n      \"weight\": 0.0,\n      \"items\": [\n        {\n          \"productId\": \"string\",\n          \"sku\": \"string\",\n          \"quantity\": 0\n        }\n      ]\n    }\n  ],\n  \"shippingAddress\": {\n    \"name\": \"string\",\n    \"company\": \"string\",\n    \"street1\": \"string\",\n    \"street2\": \"string\",\n    \"city\": \"string\",\n    \"state\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\",\n    \"phone\": \"string\"\n  },\n  \"billingAddress\": {\n    \"name\": \"string\",\n    \"company\": \"string\",\n    \"street1\": \"string\",\n    \"street2\": \"string\",\n    \"city\": \"string\",\n    \"state\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\",\n    \"phone\": \"string\"\n  },\n  \"label\": {\n    \"labelId\": \"string\",\n    \"trackingNumber\": \"string\",\n    \"carrier\": \"string\",\n    \"format\": \"ZPL\",\n    \"content\": \"string\",\n    \"generatedAt\": \"2024-01-01T00:00:00Z\"\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Shipment details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "dispatchShipment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments/{{shipmentId}}/dispatch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments",
+                "{{shipmentId}}",
+                "dispatch"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Dispatch shipment\n\nMark shipment as dispatched\n\n**Parameters**\n- `shipmentId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dispatchedBy\": \"string\",\n  \"truckId\": \"string\",\n  \"driverId\": \"string\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Shipment dispatched",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"shipmentId\": \"string\",\n  \"orderId\": \"string\",\n  \"trackingNumber\": \"string\",\n  \"carrier\": \"string\",\n  \"shippingMethod\": \"string\",\n  \"status\": \"CREATED\",\n  \"weight\": 0.0,\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0,\n    \"volume\": 0.0\n  },\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"dispatchedAt\": \"2024-01-01T00:00:00Z\",\n  \"containers\": [\n    {\n      \"containerId\": \"string\",\n      \"cartonType\": {\n        \"cartonId\": \"string\",\n        \"name\": \"string\",\n        \"dimensions\": {\n          \"length\": 0.0,\n          \"width\": 0.0,\n          \"height\": 0.0,\n          \"volume\": 0.0\n        },\n        \"maxWeight\": 0.0,\n        \"tareWeight\": 0.0,\n        \"material\": \"string\",\n        \"cost\": 0.0\n      },\n      \"weight\": 0.0,\n      \"items\": [\n        {\n          \"productId\": \"string\",\n          \"sku\": \"string\",\n          \"quantity\": 0\n        }\n      ]\n    }\n  ],\n  \"shippingAddress\": {\n    \"name\": \"string\",\n    \"company\": \"string\",\n    \"street1\": \"string\",\n    \"street2\": \"string\",\n    \"city\": \"string\",\n    \"state\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\",\n    \"phone\": \"string\"\n  },\n  \"billingAddress\": {\n    \"name\": \"string\",\n    \"company\": \"string\",\n    \"street1\": \"string\",\n    \"street2\": \"string\",\n    \"city\": \"string\",\n    \"state\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\",\n    \"phone\": \"string\"\n  },\n  \"label\": {\n    \"labelId\": \"string\",\n    \"trackingNumber\": \"string\",\n    \"carrier\": \"string\",\n    \"format\": \"ZPL\",\n    \"content\": \"string\",\n    \"generatedAt\": \"2024-01-01T00:00:00Z\"\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Shipment dispatched"
+            }
+          ]
+        },
+        {
+          "name": "getPackingManifest",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments/{{shipmentId}}/manifest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments",
+                "{{shipmentId}}",
+                "manifest"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get packing manifest\n\nGet detailed packing manifest\n\n**Parameters**\n- `shipmentId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Packing manifest",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"shipmentId\": \"string\",\n  \"orderId\": \"string\",\n  \"packedBy\": \"string\",\n  \"packedAt\": \"2024-01-01T00:00:00Z\",\n  \"totalItems\": 0,\n  \"totalWeight\": 0.0,\n  \"containers\": [\n    {\n      \"containerId\": \"string\",\n      \"cartonType\": {\n        \"cartonId\": \"string\",\n        \"name\": \"string\",\n        \"dimensions\": {\n          \"length\": 0.0,\n          \"width\": 0.0,\n          \"height\": 0.0,\n          \"volume\": 0.0\n        },\n        \"maxWeight\": 0.0,\n        \"tareWeight\": 0.0,\n        \"material\": \"string\",\n        \"cost\": 0.0\n      },\n      \"weight\": 0.0,\n      \"items\": [\n        {\n          \"productId\": \"string\",\n          \"sku\": \"string\",\n          \"quantity\": 0\n        }\n      ]\n    }\n  ],\n  \"qualityChecks\": [\n    {\n      \"checkId\": \"string\",\n      \"passed\": true,\n      \"performedAt\": \"2024-01-01T00:00:00Z\",\n      \"performedBy\": \"string\",\n      \"checkpoints\": [\n        {}\n      ],\n      \"notes\": \"string\",\n      \"actionRequired\": \"string\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Packing manifest"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Shipments`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8084",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

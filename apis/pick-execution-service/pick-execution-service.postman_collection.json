@@ -1,0 +1,1438 @@
+{
+  "info": {
+    "_postman_id": "7ebe6b68-19fe-4b0b-a336-b0df4897fb1c",
+    "name": "Pick Execution Service API",
+    "description": "The Pick Execution Service manages the execution of picking operations in the warehouse.\nIt handles pick session management, pick path optimization using TSP and 2-opt algorithms,\nput wall operations for batch picking, and real-time pick confirmation. The service optimizes\npick routes to minimize travel distance and provides mobile-friendly APIs for warehouse workers.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Mobile",
+      "item": [
+        {
+          "name": "getActiveSession",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/sessions/active",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "sessions",
+                "active"
+              ],
+              "query": [
+                {
+                  "key": "pickerId",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Get active session\n\nGet active pick session for picker (mobile API)\n\n**Parameters**\n- `pickerId` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Active session",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sessionId\": \"string\",\n  \"status\": \"CREATED\",\n  \"strategy\": \"DISCRETE\",\n  \"totalPicks\": 0,\n  \"completedPicks\": 0,\n  \"remainingPicks\": 0,\n  \"currentInstruction\": {\n    \"instructionId\": \"string\",\n    \"orderId\": \"string\",\n    \"productId\": \"string\",\n    \"sku\": \"string\",\n    \"productName\": \"string\",\n    \"productImage\": \"https://example.com/resource\",\n    \"quantity\": 0,\n    \"pickLocation\": \"string\",\n    \"zone\": \"string\",\n    \"aisle\": \"string\",\n    \"bay\": \"string\",\n    \"level\": \"string\",\n    \"destinationSlot\": \"string\",\n    \"instructions\": [\n      \"string\"\n    ],\n    \"sequenceNumber\": 0,\n    \"remainingInSession\": 0\n  },\n  \"progress\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Active session"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "No active session",
+              "code": 404,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "No active session"
+            }
+          ]
+        },
+        {
+          "name": "getCurrentPick",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/sessions/{{sessionId}}/current-pick",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "sessions",
+                "{{sessionId}}",
+                "current-pick"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get current pick\n\nGet current pick instruction (mobile API)\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Current pick instruction",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"instructionId\": \"string\",\n  \"orderId\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"productName\": \"string\",\n  \"productImage\": \"https://example.com/resource\",\n  \"quantity\": 0,\n  \"pickLocation\": \"string\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"destinationSlot\": \"string\",\n  \"instructions\": [\n    \"string\"\n  ],\n  \"sequenceNumber\": 0,\n  \"remainingInSession\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Current pick instruction"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "No current pick",
+              "code": 404,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "No current pick"
+            }
+          ]
+        },
+        {
+          "name": "scanDuringPick",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/sessions/{{sessionId}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "sessions",
+                "{{sessionId}}",
+                "scan"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Scan barcode\n\nProcess barcode scan during picking (mobile API)\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"string\",\n  \"scanType\": \"LOCATION\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Scan processed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"valid\": true,\n  \"message\": \"string\",\n  \"nextAction\": \"string\",\n  \"quantity\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Scan processed successfully"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Mobile`."
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "getPickerMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/picker/{{pickerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "picker",
+                "{{pickerId}}"
+              ],
+              "query": [
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "Filter from this date",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "Filter to this date",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get picker metrics\n\nGet productivity metrics for a picker\n\n**Parameters**\n- `pickerId` (path, required, string)\n- `dateFrom` (query, optional, string): Filter from this date\n- `dateTo` (query, optional, string): Filter to this date"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Picker metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"pickerId\": \"string\",\n  \"totalSessions\": 0,\n  \"completedSessions\": 0,\n  \"totalPicks\": 0,\n  \"totalUnits\": 0,\n  \"avgUnitsPerHour\": 0.0,\n  \"avgLinesPerHour\": 0.0,\n  \"accuracy\": 0.0,\n  \"shortPickRate\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Picker metrics"
+            }
+          ]
+        },
+        {
+          "name": "getSessionMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "sessions"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "Filter by warehouse ID",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "Filter from this date",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "Filter to this date",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get session metrics\n\nGet aggregate pick session metrics\n\n**Parameters**\n- `warehouseId` (query, optional, string): Filter by warehouse ID\n- `dateFrom` (query, optional, string): Filter from this date\n- `dateTo` (query, optional, string): Filter to this date"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Session metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"totalSessions\": 0,\n  \"completedSessions\": 0,\n  \"inProgressSessions\": 0,\n  \"avgSessionDuration\": 0,\n  \"avgPicksPerSession\": 0.0,\n  \"avgUnitsPerSession\": 0.0,\n  \"overallAccuracy\": 0.0,\n  \"sessionsByStrategy\": {\n    \"additionalPropertyKey\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Session metrics"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Monitoring`."
+    },
+    {
+      "name": "Path Optimization",
+      "item": [
+        {
+          "name": "optimizePickPath",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}/optimize-path",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}",
+                "optimize-path"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Optimize pick path\n\nRe-optimize the pick path for remaining instructions\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentLocation\": \"string\",\n  \"algorithm\": \"TWO_OPT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Path optimized successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"pickPath\": {\n    \"pathId\": \"string\",\n    \"algorithm\": \"NEAREST_NEIGHBOR\",\n    \"totalDistance\": 0.0,\n    \"estimatedDuration\": 0,\n    \"waypoints\": [\n      {\n        \"sequence\": 0,\n        \"location\": \"string\",\n        \"instructionId\": \"string\",\n        \"distanceFromPrevious\": 0.0\n      }\n    ],\n    \"optimizationImprovement\": 0.0\n  },\n  \"instructions\": [\n    {\n      \"instructionId\": \"string\",\n      \"sessionId\": \"string\",\n      \"orderId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"pickedQuantity\": 0,\n      \"pickLocation\": \"string\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"sequenceNumber\": 0,\n      \"status\": \"PENDING\",\n      \"pickedAt\": \"2024-01-01T00:00:00Z\",\n      \"lpn\": \"string\"\n    }\n  ],\n  \"improvement\": {\n    \"distanceReduction\": 0.0,\n    \"timeReduction\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Path optimized successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Path Optimization`."
+    },
+    {
+      "name": "Pick Instructions",
+      "item": [
+        {
+          "name": "getPickInstructions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}/instructions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}",
+                "instructions"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get pick instructions\n\nGet all pick instructions for a session\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session\n- `status` (query, optional, None)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick instructions",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"instructionId\": \"string\",\n    \"sessionId\": \"string\",\n    \"orderId\": \"string\",\n    \"productId\": \"string\",\n    \"sku\": \"string\",\n    \"productName\": \"string\",\n    \"quantity\": 0,\n    \"pickedQuantity\": 0,\n    \"pickLocation\": \"string\",\n    \"zone\": \"string\",\n    \"aisle\": \"string\",\n    \"bay\": \"string\",\n    \"level\": \"string\",\n    \"destinationLocation\": \"string\",\n    \"sequenceNumber\": 0,\n    \"status\": \"PENDING\",\n    \"pickedAt\": \"2024-01-01T00:00:00Z\",\n    \"lpn\": \"string\"\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Pick instructions"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "getNextPickInstruction",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}/instructions/next",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}",
+                "instructions",
+                "next"
+              ],
+              "query": [
+                {
+                  "key": "currentLocation",
+                  "value": "",
+                  "description": "Current location of picker",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get next pick instruction\n\nGet the next pick instruction based on optimized path\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session\n- `currentLocation` (query, optional, string): Current location of picker"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Next pick instruction",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"instructionId\": \"string\",\n  \"sessionId\": \"string\",\n  \"orderId\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"productName\": \"string\",\n  \"quantity\": 0,\n  \"pickedQuantity\": 0,\n  \"pickLocation\": \"string\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"sequenceNumber\": 0,\n  \"status\": \"PENDING\",\n  \"pickedAt\": \"2024-01-01T00:00:00Z\",\n  \"lpn\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Next pick instruction"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "No more picks available",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"message\": \"No more picks in session\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "No more picks available"
+            }
+          ]
+        },
+        {
+          "name": "confirmPick",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}/instructions/{{instructionId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}",
+                "instructions",
+                "{{instructionId}}",
+                "confirm"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Confirm pick\n\nConfirm a pick instruction with actual quantity\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session\n- `instructionId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 0,\n  \"barcode\": \"string\",\n  \"lpn\": \"string\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick confirmed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"instructionId\": \"string\",\n  \"sessionId\": \"string\",\n  \"orderId\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"productName\": \"string\",\n  \"quantity\": 0,\n  \"pickedQuantity\": 0,\n  \"pickLocation\": \"string\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"sequenceNumber\": 0,\n  \"status\": \"PENDING\",\n  \"pickedAt\": \"2024-01-01T00:00:00Z\",\n  \"lpn\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick confirmed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "reportShortPick",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}/instructions/{{instructionId}}/short-pick",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}",
+                "instructions",
+                "{{instructionId}}",
+                "short-pick"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Report short pick\n\nReport a short pick (partial quantity or zero)\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session\n- `instructionId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 0,\n  \"reason\": \"OUT_OF_STOCK\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Short pick reported successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"instructionId\": \"string\",\n  \"sessionId\": \"string\",\n  \"orderId\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"productName\": \"string\",\n  \"quantity\": 0,\n  \"pickedQuantity\": 0,\n  \"pickLocation\": \"string\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"sequenceNumber\": 0,\n  \"status\": \"PENDING\",\n  \"pickedAt\": \"2024-01-01T00:00:00Z\",\n  \"lpn\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Short pick reported successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Pick Instructions`."
+    },
+    {
+      "name": "Pick Sessions",
+      "item": [
+        {
+          "name": "listPickSessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "Filter by warehouse ID",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by session status",
+                  "disabled": true
+                },
+                {
+                  "key": "pickerId",
+                  "value": "",
+                  "description": "Filter by picker ID",
+                  "disabled": true
+                },
+                {
+                  "key": "waveId",
+                  "value": "",
+                  "description": "Filter by wave ID",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "Filter from this date",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "Filter to this date",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List pick sessions\n\nRetrieve a list of pick sessions with optional filtering\n\n**Parameters**\n- `warehouseId` (query, optional, string): Filter by warehouse ID\n- `status` (query, optional, None): Filter by session status\n- `pickerId` (query, optional, string): Filter by picker ID\n- `waveId` (query, optional, string): Filter by wave ID\n- `dateFrom` (query, optional, string): Filter from this date\n- `dateTo` (query, optional, string): Filter to this date\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of pick sessions",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sessions\": [\n    {\n      \"sessionId\": \"string\",\n      \"pickerId\": \"string\",\n      \"pickerName\": \"string\",\n      \"warehouseId\": \"string\",\n      \"waveId\": \"string\",\n      \"status\": \"CREATED\",\n      \"strategy\": \"DISCRETE\",\n      \"putWallId\": \"string\",\n      \"totalInstructions\": 0,\n      \"completedInstructions\": 0,\n      \"totalUnits\": 0,\n      \"pickedUnits\": 0,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"startedAt\": \"2024-01-01T00:00:00Z\",\n      \"completedAt\": \"2024-01-01T00:00:00Z\",\n      \"estimatedDistance\": 0.0,\n      \"actualDistance\": 0.0\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0,\n    \"first\": true,\n    \"last\": true\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of pick sessions"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal server error"
+            }
+          ]
+        },
+        {
+          "name": "createPickSession",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create pick session\n\nCreate a new pick session from assigned tasks or wave",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pickerId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"strategy\": \"DISCRETE\",\n  \"taskIds\": [\n    \"string\"\n  ],\n  \"waveId\": \"string\",\n  \"putWallId\": \"string\",\n  \"optimizePath\": true,\n  \"startLocation\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Pick session created successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"sessionId\": \"string\",\n  \"pickerId\": \"string\",\n  \"pickerName\": \"string\",\n  \"warehouseId\": \"string\",\n  \"waveId\": \"string\",\n  \"status\": \"CREATED\",\n  \"strategy\": \"DISCRETE\",\n  \"putWallId\": \"string\",\n  \"totalInstructions\": 0,\n  \"completedInstructions\": 0,\n  \"totalUnits\": 0,\n  \"pickedUnits\": 0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDistance\": 0.0,\n  \"actualDistance\": 0.0,\n  \"instructions\": [\n    {\n      \"instructionId\": \"string\",\n      \"sessionId\": \"string\",\n      \"orderId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"pickedQuantity\": 0,\n      \"pickLocation\": \"string\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"sequenceNumber\": 0,\n      \"status\": \"PENDING\",\n      \"pickedAt\": \"2024-01-01T00:00:00Z\",\n      \"lpn\": \"string\"\n    }\n  ],\n  \"pickPath\": {\n    \"pathId\": \"string\",\n    \"algorithm\": \"NEAREST_NEIGHBOR\",\n    \"totalDistance\": 0.0,\n    \"estimatedDuration\": 0,\n    \"waypoints\": [\n      {\n        \"sequence\": 0,\n        \"location\": \"string\",\n        \"instructionId\": \"string\",\n        \"distanceFromPrevious\": 0.0\n      }\n    ],\n    \"optimizationImprovement\": 0.0\n  },\n  \"performance\": {\n    \"unitsPerHour\": 0.0,\n    \"linesPerHour\": 0.0,\n    \"accuracy\": 0.0,\n    \"shortPicks\": 0,\n    \"travelEfficiency\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick session created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "cancelPickSession",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}"
+              ],
+              "query": [
+                {
+                  "key": "reason",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Cancel pick session\n\nCancel a pick session and release its tasks\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session\n- `reason` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick session cancelled successfully",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Pick session cancelled successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "getPickSession",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get pick session\n\nRetrieve detailed information about a pick session\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick session details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sessionId\": \"string\",\n  \"pickerId\": \"string\",\n  \"pickerName\": \"string\",\n  \"warehouseId\": \"string\",\n  \"waveId\": \"string\",\n  \"status\": \"CREATED\",\n  \"strategy\": \"DISCRETE\",\n  \"putWallId\": \"string\",\n  \"totalInstructions\": 0,\n  \"completedInstructions\": 0,\n  \"totalUnits\": 0,\n  \"pickedUnits\": 0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDistance\": 0.0,\n  \"actualDistance\": 0.0,\n  \"instructions\": [\n    {\n      \"instructionId\": \"string\",\n      \"sessionId\": \"string\",\n      \"orderId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"pickedQuantity\": 0,\n      \"pickLocation\": \"string\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"sequenceNumber\": 0,\n      \"status\": \"PENDING\",\n      \"pickedAt\": \"2024-01-01T00:00:00Z\",\n      \"lpn\": \"string\"\n    }\n  ],\n  \"pickPath\": {\n    \"pathId\": \"string\",\n    \"algorithm\": \"NEAREST_NEIGHBOR\",\n    \"totalDistance\": 0.0,\n    \"estimatedDuration\": 0,\n    \"waypoints\": [\n      {\n        \"sequence\": 0,\n        \"location\": \"string\",\n        \"instructionId\": \"string\",\n        \"distanceFromPrevious\": 0.0\n      }\n    ],\n    \"optimizationImprovement\": 0.0\n  },\n  \"performance\": {\n    \"unitsPerHour\": 0.0,\n    \"linesPerHour\": 0.0,\n    \"accuracy\": 0.0,\n    \"shortPicks\": 0,\n    \"travelEfficiency\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick session details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "completePickSession",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}",
+                "complete"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Complete pick session\n\nMark pick session as completed\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick session completed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sessionId\": \"string\",\n  \"pickerId\": \"string\",\n  \"pickerName\": \"string\",\n  \"warehouseId\": \"string\",\n  \"waveId\": \"string\",\n  \"status\": \"CREATED\",\n  \"strategy\": \"DISCRETE\",\n  \"putWallId\": \"string\",\n  \"totalInstructions\": 0,\n  \"completedInstructions\": 0,\n  \"totalUnits\": 0,\n  \"pickedUnits\": 0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDistance\": 0.0,\n  \"actualDistance\": 0.0,\n  \"instructions\": [\n    {\n      \"instructionId\": \"string\",\n      \"sessionId\": \"string\",\n      \"orderId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"pickedQuantity\": 0,\n      \"pickLocation\": \"string\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"sequenceNumber\": 0,\n      \"status\": \"PENDING\",\n      \"pickedAt\": \"2024-01-01T00:00:00Z\",\n      \"lpn\": \"string\"\n    }\n  ],\n  \"pickPath\": {\n    \"pathId\": \"string\",\n    \"algorithm\": \"NEAREST_NEIGHBOR\",\n    \"totalDistance\": 0.0,\n    \"estimatedDuration\": 0,\n    \"waypoints\": [\n      {\n        \"sequence\": 0,\n        \"location\": \"string\",\n        \"instructionId\": \"string\",\n        \"distanceFromPrevious\": 0.0\n      }\n    ],\n    \"optimizationImprovement\": 0.0\n  },\n  \"performance\": {\n    \"unitsPerHour\": 0.0,\n    \"linesPerHour\": 0.0,\n    \"accuracy\": 0.0,\n    \"shortPicks\": 0,\n    \"travelEfficiency\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick session completed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "startPickSession",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sessions/{{sessionId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sessions",
+                "{{sessionId}}",
+                "start"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Start pick session\n\nStart the pick session and begin picking\n\n**Parameters**\n- `sessionId` (path, required, string): Unique identifier of the pick session",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startLocation\": \"string\",\n  \"deviceId\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pick session started successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sessionId\": \"string\",\n  \"pickerId\": \"string\",\n  \"pickerName\": \"string\",\n  \"warehouseId\": \"string\",\n  \"waveId\": \"string\",\n  \"status\": \"CREATED\",\n  \"strategy\": \"DISCRETE\",\n  \"putWallId\": \"string\",\n  \"totalInstructions\": 0,\n  \"completedInstructions\": 0,\n  \"totalUnits\": 0,\n  \"pickedUnits\": 0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDistance\": 0.0,\n  \"actualDistance\": 0.0,\n  \"instructions\": [\n    {\n      \"instructionId\": \"string\",\n      \"sessionId\": \"string\",\n      \"orderId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"productName\": \"string\",\n      \"quantity\": 0,\n      \"pickedQuantity\": 0,\n      \"pickLocation\": \"string\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"sequenceNumber\": 0,\n      \"status\": \"PENDING\",\n      \"pickedAt\": \"2024-01-01T00:00:00Z\",\n      \"lpn\": \"string\"\n    }\n  ],\n  \"pickPath\": {\n    \"pathId\": \"string\",\n    \"algorithm\": \"NEAREST_NEIGHBOR\",\n    \"totalDistance\": 0.0,\n    \"estimatedDuration\": 0,\n    \"waypoints\": [\n      {\n        \"sequence\": 0,\n        \"location\": \"string\",\n        \"instructionId\": \"string\",\n        \"distanceFromPrevious\": 0.0\n      }\n    ],\n    \"optimizationImprovement\": 0.0\n  },\n  \"performance\": {\n    \"unitsPerHour\": 0.0,\n    \"linesPerHour\": 0.0,\n    \"accuracy\": 0.0,\n    \"shortPicks\": 0,\n    \"travelEfficiency\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pick session started successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Pick Sessions`."
+    },
+    {
+      "name": "Put Wall",
+      "item": [
+        {
+          "name": "listPutWalls",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/put-walls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "put-walls"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "Filter by warehouse ID",
+                  "disabled": true
+                },
+                {
+                  "key": "available",
+                  "value": "",
+                  "description": "Filter by availability",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List put walls\n\nGet list of put walls\n\n**Parameters**\n- `warehouseId` (query, optional, string): Filter by warehouse ID\n- `available` (query, optional, boolean): Filter by availability"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of put walls",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"putWallId\": \"string\",\n    \"name\": \"string\",\n    \"warehouseId\": \"string\",\n    \"location\": \"string\",\n    \"totalSlots\": 0,\n    \"availableSlots\": 0,\n    \"status\": \"AVAILABLE\"\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "List of put walls"
+            }
+          ]
+        },
+        {
+          "name": "createPutWall",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/put-walls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "put-walls"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create put wall\n\nCreate a new put wall",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"warehouseId\": \"string\",\n  \"location\": \"string\",\n  \"totalSlots\": 0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Put wall created",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"putWallId\": \"string\",\n  \"name\": \"string\",\n  \"warehouseId\": \"string\",\n  \"location\": \"string\",\n  \"totalSlots\": 0,\n  \"availableSlots\": 0,\n  \"status\": \"AVAILABLE\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall created"
+            }
+          ]
+        },
+        {
+          "name": "getPutWall",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/put-walls/{{putWallId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "put-walls",
+                "{{putWallId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get put wall details\n\nGet detailed information about a put wall\n\n**Parameters**\n- `putWallId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Put wall details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"putWallId\": \"string\",\n  \"name\": \"string\",\n  \"warehouseId\": \"string\",\n  \"location\": \"string\",\n  \"totalSlots\": 0,\n  \"availableSlots\": 0,\n  \"status\": \"AVAILABLE\",\n  \"slots\": [\n    {\n      \"slotId\": \"string\",\n      \"slotNumber\": \"string\",\n      \"orderId\": \"string\",\n      \"status\": \"EMPTY\",\n      \"items\": [\n        {\n          \"productId\": \"string\",\n          \"sku\": \"string\",\n          \"expectedQuantity\": 0,\n          \"actualQuantity\": 0\n        }\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "clearPutWall",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/put-walls/{{putWallId}}/clear",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "put-walls",
+                "{{putWallId}}",
+                "clear"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Clear put wall\n\nClear all slots in put wall\n\n**Parameters**\n- `putWallId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Put wall cleared successfully",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Put wall cleared successfully"
+            }
+          ]
+        },
+        {
+          "name": "assignOrderToSlot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/put-walls/{{putWallId}}/slots/{{slotId}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "put-walls",
+                "{{putWallId}}",
+                "slots",
+                "{{slotId}}",
+                "assign"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Assign order to slot\n\nAssign an order to a put wall slot\n\n**Parameters**\n- `putWallId` (path, required, string)\n- `slotId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Order assigned to slot",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"slotId\": \"string\",\n  \"slotNumber\": \"string\",\n  \"orderId\": \"string\",\n  \"status\": \"EMPTY\",\n  \"items\": [\n    {\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"expectedQuantity\": 0,\n      \"actualQuantity\": 0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Order assigned to slot"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "completePutWallSlot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/put-walls/{{putWallId}}/slots/{{slotId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "put-walls",
+                "{{putWallId}}",
+                "slots",
+                "{{slotId}}",
+                "complete"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Complete put wall slot\n\nMark a put wall slot as complete\n\n**Parameters**\n- `putWallId` (path, required, string)\n- `slotId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Slot completed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"slotId\": \"string\",\n  \"slotNumber\": \"string\",\n  \"orderId\": \"string\",\n  \"status\": \"EMPTY\",\n  \"items\": [\n    {\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"expectedQuantity\": 0,\n      \"actualQuantity\": 0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Slot completed successfully"
+            }
+          ]
+        },
+        {
+          "name": "putItemInSlot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/put-walls/{{putWallId}}/slots/{{slotId}}/put",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "put-walls",
+                "{{putWallId}}",
+                "slots",
+                "{{slotId}}",
+                "put"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Put item in slot\n\nPut a picked item into a put wall slot\n\n**Parameters**\n- `putWallId` (path, required, string)\n- `slotId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"barcode\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Item put in slot successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"slotId\": \"string\",\n  \"slotNumber\": \"string\",\n  \"orderId\": \"string\",\n  \"status\": \"EMPTY\",\n  \"items\": [\n    {\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"expectedQuantity\": 0,\n      \"actualQuantity\": 0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Item put in slot successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Put Wall`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8083",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

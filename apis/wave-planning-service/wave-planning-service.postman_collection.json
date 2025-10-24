@@ -1,0 +1,938 @@
+{
+  "info": {
+    "_postman_id": "15af97c7-9826-4991-b761-bef86cd90aec",
+    "name": "Wave Planning Service API",
+    "description": "The Wave Planning Service is responsible for creating, optimizing, and managing warehouse picking waves.\nIt implements sophisticated algorithms to group orders efficiently based on various strategies including\ncarrier cutoffs, zone optimization, and capacity constraints.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "getWaveMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/{{waveId}}/metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "{{waveId}}",
+                "metrics"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get wave metrics\n\nGet detailed metrics for a wave\n\n**Parameters**\n- `waveId` (path, required, string): Unique identifier of the wave"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Wave metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"totalOrders\": 0,\n  \"totalLines\": 0,\n  \"totalUnits\": 0,\n  \"totalVolume\": 0.0,\n  \"totalWeight\": 0.0,\n  \"estimatedPickers\": 0,\n  \"estimatedDuration\": 0,\n  \"totalDistance\": 0.0,\n  \"ordersByZone\": {\n    \"additionalPropertyKey\": 0\n  },\n  \"ordersByCarrier\": {\n    \"additionalPropertyKey\": 0\n  },\n  \"completionRate\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Wave metrics"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "getWaveProgress",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/{{waveId}}/progress",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "{{waveId}}",
+                "progress"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get wave progress\n\nGet real-time progress of wave execution\n\n**Parameters**\n- `waveId` (path, required, string): Unique identifier of the wave"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Wave progress information",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"waveId\": \"string\",\n  \"status\": \"DRAFT\",\n  \"totalOrders\": 0,\n  \"completedOrders\": 0,\n  \"inProgressOrders\": 0,\n  \"pendingOrders\": 0,\n  \"completionPercentage\": 0.0,\n  \"estimatedTimeRemaining\": 0,\n  \"activePickers\": [\n    \"string\"\n  ],\n  \"bottlenecks\": [\n    {\n      \"zone\": \"string\",\n      \"congestion\": 0.0,\n      \"waitTime\": 0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Wave progress information"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Monitoring`."
+    },
+    {
+      "name": "Optimization",
+      "item": [
+        {
+          "name": "optimizeWave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/{{waveId}}/optimize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "{{waveId}}",
+                "optimize"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Optimize wave\n\nOptimize an existing wave using specified criteria\n\n**Parameters**\n- `waveId` (path, required, string): Unique identifier of the wave",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"minimizeTravelDistance\": true,\n  \"balanceWorkload\": true,\n  \"prioritizeSLA\": true,\n  \"groupByZone\": false,\n  \"groupByCarrier\": false,\n  \"weights\": {\n    \"distance\": 0.3,\n    \"workload\": 0.3,\n    \"sla\": 0.4\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Wave optimized successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"wave\": {\n    \"waveId\": \"string\",\n    \"warehouseId\": \"string\",\n    \"status\": \"DRAFT\",\n    \"type\": \"TIME_BASED\",\n    \"name\": \"string\",\n    \"createdAt\": \"2024-01-01T00:00:00Z\",\n    \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n    \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n    \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n    \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n    \"orderIds\": [\n      \"string\"\n    ],\n    \"priority\": \"LOW\",\n    \"metadata\": {}\n  },\n  \"metrics\": {\n    \"totalOrders\": 0,\n    \"totalLines\": 0,\n    \"totalUnits\": 0,\n    \"totalVolume\": 0.0,\n    \"totalWeight\": 0.0,\n    \"estimatedPickers\": 0,\n    \"estimatedDuration\": 0,\n    \"totalDistance\": 0.0,\n    \"ordersByZone\": {\n      \"additionalPropertyKey\": 0\n    },\n    \"ordersByCarrier\": {\n      \"additionalPropertyKey\": 0\n    },\n    \"completionRate\": 0.0\n  },\n  \"improvement\": {\n    \"distanceReduction\": 0.0,\n    \"timeReduction\": 0.0,\n    \"message\": \"string\"\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Wave optimized successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Optimization`."
+    },
+    {
+      "name": "Waves",
+      "item": [
+        {
+          "name": "listWaves",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "Filter by warehouse ID",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by wave status",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "Filter waves created after this date",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "Filter waves created before this date",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Page number for pagination",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "Number of items per page",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List all waves\n\nRetrieve a list of waves with optional filtering\n\n**Parameters**\n- `warehouseId` (query, optional, string): Filter by warehouse ID\n- `status` (query, optional, string): Filter by wave status\n- `dateFrom` (query, optional, string): Filter waves created after this date\n- `dateTo` (query, optional, string): Filter waves created before this date\n- `page` (query, optional, integer): Page number for pagination\n- `size` (query, optional, integer): Number of items per page"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of waves",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"waves\": [\n    {\n      \"waveId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"status\": \"DRAFT\",\n      \"type\": \"TIME_BASED\",\n      \"name\": \"string\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n      \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n      \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n      \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n      \"orderIds\": [\n        \"string\"\n      ],\n      \"priority\": \"LOW\",\n      \"metadata\": {}\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0,\n    \"first\": true,\n    \"last\": true\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of waves"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal server error"
+            }
+          ]
+        },
+        {
+          "name": "createWave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create a new wave\n\nCreate a new wave with specified orders",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"type\": \"TIME_BASED\",\n  \"name\": \"string\",\n  \"orderIds\": [\n    \"string\"\n  ],\n  \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n  \"priority\": \"LOW\",\n  \"metadata\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Wave created successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"waveId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"status\": \"DRAFT\",\n  \"type\": \"TIME_BASED\",\n  \"name\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n  \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n  \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n  \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n  \"orderIds\": [\n    \"string\"\n  ],\n  \"priority\": \"LOW\",\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Wave created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal server error"
+            }
+          ]
+        },
+        {
+          "name": "createCapacityWaves",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/create-capacity-based",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "create-capacity-based"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create capacity-based waves\n\nCreate waves respecting capacity constraints",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"capacity\": {\n    \"maxOrders\": 100,\n    \"maxLines\": 500,\n    \"maxVolume\": 0.0,\n    \"maxWeight\": 0.0,\n    \"maxPickers\": 0,\n    \"maxDuration\": 0\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Capacity waves created",
+              "code": 201,
+              "header": [],
+              "body": "[\n  {\n    \"waveId\": \"string\",\n    \"warehouseId\": \"string\",\n    \"status\": \"DRAFT\",\n    \"type\": \"TIME_BASED\",\n    \"name\": \"string\",\n    \"createdAt\": \"2024-01-01T00:00:00Z\",\n    \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n    \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n    \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n    \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n    \"orderIds\": [\n      \"string\"\n    ],\n    \"priority\": \"LOW\",\n    \"metadata\": {}\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Capacity waves created"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "createCarrierWaves",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/create-carrier-based",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "create-carrier-based"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create carrier-based waves\n\nCreate waves grouped by carrier with cutoff times",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"cutoffs\": [\n    {\n      \"carrier\": \"string\",\n      \"cutoffTime\": \"2024-01-01T00:00:00Z\",\n      \"serviceLevel\": \"string\"\n    }\n  ],\n  \"includeAllOrders\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Carrier waves created",
+              "code": 201,
+              "header": [],
+              "body": "[\n  {\n    \"waveId\": \"string\",\n    \"warehouseId\": \"string\",\n    \"status\": \"DRAFT\",\n    \"type\": \"TIME_BASED\",\n    \"name\": \"string\",\n    \"createdAt\": \"2024-01-01T00:00:00Z\",\n    \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n    \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n    \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n    \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n    \"orderIds\": [\n      \"string\"\n    ],\n    \"priority\": \"LOW\",\n    \"metadata\": {}\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Carrier waves created"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "createZoneWaves",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/create-zone-based",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "create-zone-based"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create zone-based waves\n\nCreate waves optimized for zone picking",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"zones\": [\n    \"string\"\n  ],\n  \"maxZonesPerWave\": 3,\n  \"minOrdersPerWave\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Zone waves created",
+              "code": 201,
+              "header": [],
+              "body": "[\n  {\n    \"waveId\": \"string\",\n    \"warehouseId\": \"string\",\n    \"status\": \"DRAFT\",\n    \"type\": \"TIME_BASED\",\n    \"name\": \"string\",\n    \"createdAt\": \"2024-01-01T00:00:00Z\",\n    \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n    \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n    \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n    \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n    \"orderIds\": [\n      \"string\"\n    ],\n    \"priority\": \"LOW\",\n    \"metadata\": {}\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Zone waves created"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "mergeWaves",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/merge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "merge"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Merge waves\n\nMerge multiple waves into a single wave",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"waveIds\": [\n    \"string\"\n  ],\n  \"name\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Waves merged successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"waveId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"status\": \"DRAFT\",\n  \"type\": \"TIME_BASED\",\n  \"name\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n  \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n  \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n  \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n  \"orderIds\": [\n    \"string\"\n  ],\n  \"priority\": \"LOW\",\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Waves merged successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "cancelWave",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/waves/{{waveId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "{{waveId}}"
+              ],
+              "query": [
+                {
+                  "key": "reason",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Cancel wave\n\nCancel a wave and release its orders\n\n**Parameters**\n- `waveId` (path, required, string): Unique identifier of the wave\n- `reason` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Wave cancelled successfully",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Wave cancelled successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "getWaveById",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/{{waveId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "{{waveId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get wave by ID\n\nRetrieve detailed information about a specific wave\n\n**Parameters**\n- `waveId` (path, required, string): Unique identifier of the wave"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Wave details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"waveId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"status\": \"DRAFT\",\n  \"type\": \"TIME_BASED\",\n  \"name\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n  \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n  \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n  \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n  \"orderIds\": [\n    \"string\"\n  ],\n  \"priority\": \"LOW\",\n  \"metadata\": {},\n  \"orders\": [\n    {\n      \"orderId\": \"string\",\n      \"customerId\": \"string\",\n      \"priority\": \"LOW\",\n      \"orderDate\": \"2024-01-01T00:00:00Z\",\n      \"requiredDate\": \"2024-01-01T00:00:00Z\",\n      \"carrier\": \"string\",\n      \"shippingMethod\": \"string\",\n      \"lines\": [\n        {\n          \"lineId\": \"string\",\n          \"productId\": \"string\",\n          \"sku\": \"string\",\n          \"quantity\": 0,\n          \"pickLocation\": \"string\",\n          \"zone\": \"string\",\n          \"weight\": 0.0,\n          \"volume\": 0.0\n        }\n      ],\n      \"shippingAddress\": {\n        \"street\": \"string\",\n        \"city\": \"string\",\n        \"state\": \"string\",\n        \"zipCode\": \"string\",\n        \"country\": \"string\"\n      }\n    }\n  ],\n  \"metrics\": {\n    \"totalOrders\": 0,\n    \"totalLines\": 0,\n    \"totalUnits\": 0,\n    \"totalVolume\": 0.0,\n    \"totalWeight\": 0.0,\n    \"estimatedPickers\": 0,\n    \"estimatedDuration\": 0,\n    \"totalDistance\": 0.0,\n    \"ordersByZone\": {\n      \"additionalPropertyKey\": 0\n    },\n    \"ordersByCarrier\": {\n      \"additionalPropertyKey\": 0\n    },\n    \"completionRate\": 0.0\n  },\n  \"assignments\": [\n    {\n      \"pickerId\": \"string\",\n      \"pickerName\": \"string\",\n      \"assignedOrders\": [\n        \"string\"\n      ],\n      \"zone\": \"string\",\n      \"estimatedDuration\": 0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Wave details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal server error"
+            }
+          ]
+        },
+        {
+          "name": "updateWave",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/{{waveId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "{{waveId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update wave\n\nUpdate wave properties (only for waves in DRAFT or PLANNED status)\n\n**Parameters**\n- `waveId` (path, required, string): Unique identifier of the wave",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n  \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n  \"priority\": \"LOW\",\n  \"metadata\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Wave updated successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"waveId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"status\": \"DRAFT\",\n  \"type\": \"TIME_BASED\",\n  \"name\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedStartTime\": \"2024-01-01T00:00:00Z\",\n  \"plannedEndTime\": \"2024-01-01T00:00:00Z\",\n  \"actualStartTime\": \"2024-01-01T00:00:00Z\",\n  \"actualEndTime\": \"2024-01-01T00:00:00Z\",\n  \"orderIds\": [\n    \"string\"\n  ],\n  \"priority\": \"LOW\",\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Wave updated successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "releaseWave",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/waves/{{waveId}}/release",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "waves",
+                "{{waveId}}",
+                "release"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Release wave\n\nRelease wave for picking execution\n\n**Parameters**\n- `waveId` (path, required, string): Unique identifier of the wave",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedPickers\": [\n    \"string\"\n  ],\n  \"priority\": \"LOW\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Wave released successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"waveId\": \"string\",\n  \"status\": \"string\",\n  \"assignedPickers\": [\n    \"string\"\n  ],\n  \"tasksCreated\": 0,\n  \"sessionsCreated\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Wave released successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Waves`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

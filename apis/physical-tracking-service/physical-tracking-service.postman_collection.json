@@ -1,0 +1,1113 @@
+{
+  "info": {
+    "_postman_id": "1ba93aba-2779-4d04-8871-2cb5d219bc19",
+    "name": "Physical Tracking Service API",
+    "description": "The Physical Tracking Service provides real-time tracking of physical inventory movements, license plates,\nand location states in the warehouse. It manages the entire license plate lifecycle, tracks all physical\nmovements, maintains location occupancy status, and integrates with RTLS (Real-Time Location Systems)\nfor asset tracking. The service provides complete movement history and audit trails for inventory traceability.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Audit",
+      "item": [
+        {
+          "name": "getProductMovementAudit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit/movements/by-product",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit",
+                "movements",
+                "by-product"
+              ],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "lotNumber",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Product movement audit\n\nGet movement audit trail for a product\n\n**Parameters**\n- `productId` (query, required, string)\n- `lotNumber` (query, optional, string)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Product movement audit",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"productId\": \"string\",\n  \"movements\": [\n    {\n      \"movementId\": \"string\",\n      \"lpn\": \"string\",\n      \"fromLocation\": \"string\",\n      \"toLocation\": \"string\",\n      \"movementType\": \"PUTAWAY\",\n      \"movedBy\": \"string\",\n      \"movedAt\": \"2024-01-01T00:00:00Z\",\n      \"taskId\": \"string\",\n      \"reason\": \"string\",\n      \"productId\": \"string\",\n      \"quantity\": 0,\n      \"lotNumber\": \"string\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product movement audit"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Audit`."
+    },
+    {
+      "name": "License Plates",
+      "item": [
+        {
+          "name": "listLicensePlates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "location",
+                  "value": "",
+                  "description": "Current location",
+                  "disabled": true
+                },
+                {
+                  "key": "productId",
+                  "value": "",
+                  "description": "Contains this product",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List license plates\n\nRetrieve list of license plates with filtering\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `status` (query, optional, None)\n- `type` (query, optional, None)\n- `location` (query, optional, string): Current location\n- `productId` (query, optional, string): Contains this product\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of license plates",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"licensePlates\": [\n    {\n      \"lpn\": \"string\",\n      \"type\": \"PALLET\",\n      \"status\": \"ACTIVE\",\n      \"warehouseId\": \"string\",\n      \"currentLocation\": \"string\",\n      \"zone\": \"string\",\n      \"itemCount\": 0,\n      \"totalWeight\": 0.0,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"lastMovedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of license plates"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "createLicensePlate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create license plate\n\nCreate a new license plate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lpn\": \"string\",\n  \"type\": \"PALLET\",\n  \"warehouseId\": \"string\",\n  \"currentLocation\": \"string\",\n  \"items\": [\n    {\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"lotNumber\": \"string\",\n      \"serialNumber\": \"string\",\n      \"expirationDate\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "License plate created",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"lpn\": \"string\",\n  \"type\": \"PALLET\",\n  \"status\": \"ACTIVE\",\n  \"warehouseId\": \"string\",\n  \"currentLocation\": \"string\",\n  \"zone\": \"string\",\n  \"itemCount\": 0,\n  \"totalWeight\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"lastMovedAt\": \"2024-01-01T00:00:00Z\",\n  \"items\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"lotNumber\": \"string\",\n      \"serialNumber\": \"string\",\n      \"expirationDate\": \"2024-01-01T00:00:00Z\",\n      \"addedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"movements\": [\n    {\n      \"movementId\": \"string\",\n      \"lpn\": \"string\",\n      \"fromLocation\": \"string\",\n      \"toLocation\": \"string\",\n      \"movementType\": \"PUTAWAY\",\n      \"movedBy\": \"string\",\n      \"movedAt\": \"2024-01-01T00:00:00Z\",\n      \"taskId\": \"string\",\n      \"reason\": \"string\"\n    }\n  ],\n  \"rtlsPosition\": {\n    \"assetId\": \"string\",\n    \"assetType\": \"string\",\n    \"x\": 0.0,\n    \"y\": 0.0,\n    \"z\": 0.0,\n    \"zone\": \"string\",\n    \"estimatedLocation\": \"string\",\n    \"accuracy\": 0.0,\n    \"lastUpdated\": \"2024-01-01T00:00:00Z\",\n    \"velocity\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "License plate created"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "searchLicensePlates",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates/search",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates",
+                "search"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Search license plates\n\nAdvanced search for license plates",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lpn\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"lotNumber\": \"string\",\n  \"location\": \"string\",\n  \"zone\": \"string\",\n  \"status\": \"ACTIVE\",\n  \"createdAfter\": \"2024-01-01T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Search results",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"results\": [\n    {\n      \"lpn\": \"string\",\n      \"type\": \"PALLET\",\n      \"status\": \"ACTIVE\",\n      \"warehouseId\": \"string\",\n      \"currentLocation\": \"string\",\n      \"zone\": \"string\",\n      \"itemCount\": 0,\n      \"totalWeight\": 0.0,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"lastMovedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"totalResults\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Search results"
+            }
+          ]
+        },
+        {
+          "name": "deleteLicensePlate",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates/{{lpn}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates",
+                "{{lpn}}"
+              ],
+              "query": [
+                {
+                  "key": "reason",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Delete license plate\n\nDelete/consume a license plate (must be empty)\n\n**Parameters**\n- `lpn` (path, required, string): License Plate Number\n- `reason` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "License plate deleted",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "License plate deleted"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "License plate not empty",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "License plate not empty"
+            }
+          ]
+        },
+        {
+          "name": "getLicensePlate",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates/{{lpn}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates",
+                "{{lpn}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get license plate\n\nRetrieve detailed information about a license plate\n\n**Parameters**\n- `lpn` (path, required, string): License Plate Number"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "License plate details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"lpn\": \"string\",\n  \"type\": \"PALLET\",\n  \"status\": \"ACTIVE\",\n  \"warehouseId\": \"string\",\n  \"currentLocation\": \"string\",\n  \"zone\": \"string\",\n  \"itemCount\": 0,\n  \"totalWeight\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"lastMovedAt\": \"2024-01-01T00:00:00Z\",\n  \"items\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"lotNumber\": \"string\",\n      \"serialNumber\": \"string\",\n      \"expirationDate\": \"2024-01-01T00:00:00Z\",\n      \"addedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"movements\": [\n    {\n      \"movementId\": \"string\",\n      \"lpn\": \"string\",\n      \"fromLocation\": \"string\",\n      \"toLocation\": \"string\",\n      \"movementType\": \"PUTAWAY\",\n      \"movedBy\": \"string\",\n      \"movedAt\": \"2024-01-01T00:00:00Z\",\n      \"taskId\": \"string\",\n      \"reason\": \"string\"\n    }\n  ],\n  \"rtlsPosition\": {\n    \"assetId\": \"string\",\n    \"assetType\": \"string\",\n    \"x\": 0.0,\n    \"y\": 0.0,\n    \"z\": 0.0,\n    \"zone\": \"string\",\n    \"estimatedLocation\": \"string\",\n    \"accuracy\": 0.0,\n    \"lastUpdated\": \"2024-01-01T00:00:00Z\",\n    \"velocity\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "License plate details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "removeItemFromLicensePlate",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates/{{lpn}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates",
+                "{{lpn}}",
+                "items"
+              ],
+              "query": [
+                {
+                  "key": "itemId",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "quantity",
+                  "value": "",
+                  "description": "Quantity to remove (all if not specified)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Remove item from license plate\n\nRemove an item from a license plate\n\n**Parameters**\n- `lpn` (path, required, string): License Plate Number\n- `itemId` (query, required, string)\n- `quantity` (query, optional, integer): Quantity to remove (all if not specified)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Item removed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"lpn\": \"string\",\n  \"type\": \"PALLET\",\n  \"status\": \"ACTIVE\",\n  \"warehouseId\": \"string\",\n  \"currentLocation\": \"string\",\n  \"zone\": \"string\",\n  \"itemCount\": 0,\n  \"totalWeight\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"lastMovedAt\": \"2024-01-01T00:00:00Z\",\n  \"items\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"lotNumber\": \"string\",\n      \"serialNumber\": \"string\",\n      \"expirationDate\": \"2024-01-01T00:00:00Z\",\n      \"addedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"movements\": [\n    {\n      \"movementId\": \"string\",\n      \"lpn\": \"string\",\n      \"fromLocation\": \"string\",\n      \"toLocation\": \"string\",\n      \"movementType\": \"PUTAWAY\",\n      \"movedBy\": \"string\",\n      \"movedAt\": \"2024-01-01T00:00:00Z\",\n      \"taskId\": \"string\",\n      \"reason\": \"string\"\n    }\n  ],\n  \"rtlsPosition\": {\n    \"assetId\": \"string\",\n    \"assetType\": \"string\",\n    \"x\": 0.0,\n    \"y\": 0.0,\n    \"z\": 0.0,\n    \"zone\": \"string\",\n    \"estimatedLocation\": \"string\",\n    \"accuracy\": 0.0,\n    \"lastUpdated\": \"2024-01-01T00:00:00Z\",\n    \"velocity\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Item removed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "addItemToLicensePlate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates/{{lpn}}/items",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates",
+                "{{lpn}}",
+                "items"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Add item to license plate\n\nAdd an item to a license plate\n\n**Parameters**\n- `lpn` (path, required, string): License Plate Number",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"lotNumber\": \"string\",\n  \"serialNumber\": \"string\",\n  \"expirationDate\": \"2024-01-01T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Item added successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"lpn\": \"string\",\n  \"type\": \"PALLET\",\n  \"status\": \"ACTIVE\",\n  \"warehouseId\": \"string\",\n  \"currentLocation\": \"string\",\n  \"zone\": \"string\",\n  \"itemCount\": 0,\n  \"totalWeight\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"lastMovedAt\": \"2024-01-01T00:00:00Z\",\n  \"items\": [\n    {\n      \"itemId\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"lotNumber\": \"string\",\n      \"serialNumber\": \"string\",\n      \"expirationDate\": \"2024-01-01T00:00:00Z\",\n      \"addedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"movements\": [\n    {\n      \"movementId\": \"string\",\n      \"lpn\": \"string\",\n      \"fromLocation\": \"string\",\n      \"toLocation\": \"string\",\n      \"movementType\": \"PUTAWAY\",\n      \"movedBy\": \"string\",\n      \"movedAt\": \"2024-01-01T00:00:00Z\",\n      \"taskId\": \"string\",\n      \"reason\": \"string\"\n    }\n  ],\n  \"rtlsPosition\": {\n    \"assetId\": \"string\",\n    \"assetType\": \"string\",\n    \"x\": 0.0,\n    \"y\": 0.0,\n    \"z\": 0.0,\n    \"zone\": \"string\",\n    \"estimatedLocation\": \"string\",\n    \"accuracy\": 0.0,\n    \"lastUpdated\": \"2024-01-01T00:00:00Z\",\n    \"velocity\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Item added successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `License Plates`."
+    },
+    {
+      "name": "Location State",
+      "item": [
+        {
+          "name": "getLocationContents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/contents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}",
+                "contents"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get location contents\n\nGet all license plates in a location\n\n**Parameters**\n- `locationId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location contents",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"licensePlates\": [\n    {\n      \"lpn\": \"string\",\n      \"type\": \"PALLET\",\n      \"status\": \"ACTIVE\",\n      \"warehouseId\": \"string\",\n      \"currentLocation\": \"string\",\n      \"zone\": \"string\",\n      \"itemCount\": 0,\n      \"totalWeight\": 0.0,\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"lastMovedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"totalCount\": 0,\n  \"utilization\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location contents"
+            }
+          ]
+        },
+        {
+          "name": "getLocationState",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/state",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}",
+                "state"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get location state\n\nGet real-time state of a location\n\n**Parameters**\n- `locationId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location state",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"occupancyStatus\": \"EMPTY\",\n  \"licensePlateCount\": 0,\n  \"capacity\": 0,\n  \"utilization\": 0.0,\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"lastUpdated\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location state"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "updateLocationState",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/state",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}",
+                "state"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update location state\n\nUpdate location occupancy status\n\n**Parameters**\n- `locationId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"occupancyStatus\": \"EMPTY\",\n  \"blocked\": true,\n  \"blockReason\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location state updated",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"occupancyStatus\": \"EMPTY\",\n  \"licensePlateCount\": 0,\n  \"capacity\": 0,\n  \"utilization\": 0.0,\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"lastUpdated\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location state updated"
+            }
+          ]
+        },
+        {
+          "name": "getLocationUtilization",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/location-utilization",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "location-utilization"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "zone",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get location utilization metrics\n\nGet utilization metrics for warehouse locations\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `zone` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location utilization metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"totalLocations\": 0,\n  \"emptyLocations\": 0,\n  \"partiallyOccupied\": 0,\n  \"fullLocations\": 0,\n  \"blockedLocations\": 0,\n  \"overallUtilization\": 0.0,\n  \"utilizationByZone\": {\n    \"additionalPropertyKey\": 0.0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location utilization metrics"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Location State`."
+    },
+    {
+      "name": "Movements",
+      "item": [
+        {
+          "name": "moveLicensePlate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates/{{lpn}}/move",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates",
+                "{{lpn}}",
+                "move"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Move license plate\n\nRecord physical movement of a license plate\n\n**Parameters**\n- `lpn` (path, required, string): License Plate Number",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"toLocation\": \"string\",\n  \"movementType\": \"PUTAWAY\",\n  \"movedBy\": \"string\",\n  \"taskId\": \"string\",\n  \"reason\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Movement recorded successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"movement\": {\n    \"movementId\": \"string\",\n    \"lpn\": \"string\",\n    \"fromLocation\": \"string\",\n    \"toLocation\": \"string\",\n    \"movementType\": \"PUTAWAY\",\n    \"movedBy\": \"string\",\n    \"movedAt\": \"2024-01-01T00:00:00Z\",\n    \"taskId\": \"string\",\n    \"reason\": \"string\"\n  },\n  \"licensePlate\": {\n    \"lpn\": \"string\",\n    \"type\": \"PALLET\",\n    \"status\": \"ACTIVE\",\n    \"warehouseId\": \"string\",\n    \"currentLocation\": \"string\",\n    \"zone\": \"string\",\n    \"itemCount\": 0,\n    \"totalWeight\": 0.0,\n    \"createdAt\": \"2024-01-01T00:00:00Z\",\n    \"lastMovedAt\": \"2024-01-01T00:00:00Z\"\n  },\n  \"fromLocationState\": {\n    \"locationId\": \"string\",\n    \"occupancyStatus\": \"EMPTY\",\n    \"licensePlateCount\": 0,\n    \"capacity\": 0,\n    \"utilization\": 0.0,\n    \"blocked\": true,\n    \"blockReason\": \"string\",\n    \"lastUpdated\": \"2024-01-01T00:00:00Z\"\n  },\n  \"toLocationState\": {\n    \"locationId\": \"string\",\n    \"occupancyStatus\": \"EMPTY\",\n    \"licensePlateCount\": 0,\n    \"capacity\": 0,\n    \"utilization\": 0.0,\n    \"blocked\": true,\n    \"blockReason\": \"string\",\n    \"lastUpdated\": \"2024-01-01T00:00:00Z\"\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Movement recorded successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Location occupied or blocked",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location occupied or blocked"
+            }
+          ]
+        },
+        {
+          "name": "getLicensePlateMovements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/license-plates/{{lpn}}/movements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "license-plates",
+                "{{lpn}}",
+                "movements"
+              ],
+              "query": [
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get movement history\n\nGet movement history for a license plate\n\n**Parameters**\n- `lpn` (path, required, string): License Plate Number\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Movement history",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"movements\": [\n    {\n      \"movementId\": \"string\",\n      \"lpn\": \"string\",\n      \"fromLocation\": \"string\",\n      \"toLocation\": \"string\",\n      \"movementType\": \"PUTAWAY\",\n      \"movedBy\": \"string\",\n      \"movedAt\": \"2024-01-01T00:00:00Z\",\n      \"taskId\": \"string\",\n      \"reason\": \"string\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Movement history"
+            }
+          ]
+        },
+        {
+          "name": "listMovements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/movements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "movements"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "movementType",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "fromLocation",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "toLocation",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "movedBy",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List movements\n\nGet list of all movements with filtering\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `movementType` (query, optional, None)\n- `fromLocation` (query, optional, string)\n- `toLocation` (query, optional, string)\n- `movedBy` (query, optional, string)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of movements",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"movements\": [\n    {\n      \"movementId\": \"string\",\n      \"lpn\": \"string\",\n      \"fromLocation\": \"string\",\n      \"toLocation\": \"string\",\n      \"movementType\": \"PUTAWAY\",\n      \"movedBy\": \"string\",\n      \"movedAt\": \"2024-01-01T00:00:00Z\",\n      \"taskId\": \"string\",\n      \"reason\": \"string\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of movements"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Movements`."
+    },
+    {
+      "name": "RTLS",
+      "item": [
+        {
+          "name": "getAssetPosition",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rtls/assets/{{assetId}}/position",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rtls",
+                "assets",
+                "{{assetId}}",
+                "position"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get asset position\n\nGet current RTLS position of an asset\n\n**Parameters**\n- `assetId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Asset position",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"assetId\": \"string\",\n  \"assetType\": \"string\",\n  \"x\": 0.0,\n  \"y\": 0.0,\n  \"z\": 0.0,\n  \"zone\": \"string\",\n  \"estimatedLocation\": \"string\",\n  \"accuracy\": 0.0,\n  \"lastUpdated\": \"2024-01-01T00:00:00Z\",\n  \"velocity\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Asset position"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "updateRTLSPosition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rtls/positions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rtls",
+                "positions"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update RTLS position\n\nRecord real-time location from RTLS system",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assetId\": \"string\",\n  \"assetType\": \"LICENSE_PLATE\",\n  \"x\": 0.0,\n  \"y\": 0.0,\n  \"z\": 0.0,\n  \"zone\": \"string\",\n  \"accuracy\": 0.0,\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Position updated",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Position updated"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `RTLS`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8085",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

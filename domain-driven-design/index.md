@@ -8,7 +8,25 @@ description: Domain models, bounded contexts, and strategic design for PakLog WM
 
 This section contains comprehensive Domain-Driven Design (DDD) documentation for the PakLog WMS/WES system. Each bounded context is thoroughly documented with aggregates, entities, value objects, and domain events.
 
-## Bounded Contexts
+## Core Documentation
+
+### [Bounded Contexts Overview](bounded-contexts-overview) **NEW**
+Complete strategic design documentation for all 22 services:
+- Context map with relationships
+- Integration patterns between contexts
+- Shared kernel and partnerships
+- Anti-corruption layers
+- Ubiquitous language glossary
+
+### [Aggregate Catalog](aggregate-catalog) **NEW**
+Comprehensive catalog of all domain aggregates:
+- 50+ aggregates across all services
+- Aggregate invariants and boundaries
+- State transitions and lifecycles
+- Domain events per aggregate
+- Value objects catalog
+
+## Bounded Contexts (Original 6 Services)
 
 ### 1. [Warehouse Operations Context](warehouse-operations/ddd)
 Core warehouse execution domain including:
@@ -57,6 +75,32 @@ Outbound logistics domain:
 - **Value Objects**: TrackingNumber, CarrierId, ShippingRate
 - **Domain Services**: RateShoppingService, LabelGenerationService
 - **Integration**: Carrier API adapters
+
+## Additional 16 Bounded Contexts
+
+### Phase 2: Execution Services
+- **Wave Planning Service** - Wave optimization strategies
+- **Task Execution Service** - Unified task management
+- **Pick Execution Service** - TSP path optimization
+- **Pack & Ship Service** - 3D bin packing
+- **Physical Tracking Service** - License plate tracking
+- **Location Master Service** - ABC slotting
+- **Workload Planning Service** - Labor forecasting
+
+### Phase 3: Advanced Operations
+- **Returns Management** - RMA and fraud detection
+- **Robotics Fleet Management** - A* pathfinding
+- **WES Orchestration Engine** - Saga pattern
+
+### Phase 4: Optimization
+- **Predictive Analytics Platform** - ML forecasting
+- **Yard Management System** - Dock scheduling
+- **Cross-Docking Operations** - Flow-through
+
+### Phase 5: Customer Services
+- **Last-Mile Delivery** - VRP optimization
+- **Value-Added Services** - Kitting workflows
+- **Quality Compliance** - SPC implementation
 
 ## DDD Patterns Implemented
 

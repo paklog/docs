@@ -1,0 +1,1796 @@
+{
+  "info": {
+    "_postman_id": "6535a2b7-ce3e-4320-b5d1-a1f56990b543",
+    "name": "Shipment & Transportation API",
+    "description": "REST endpoints exposed by the shipment transportation service.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "getBillOfLading",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "text/plain",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/bol",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "bol"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Retrieve a Bill of Lading document for a load\n\nReturns the carrier-approved Bill of Lading (BOL) document, enabling\ndownstream systems to share legally required shipment documentation.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Bill of Lading content in plain text.",
+              "code": 200,
+              "header": [],
+              "body": "\"string\"",
+              "_postman_previewlanguage": "text",
+              "description": "Bill of Lading content in plain text."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Documents`."
+    },
+    {
+      "name": "Load Carrier",
+      "item": [
+        {
+          "name": "unassignCarrier",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/carrier",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "carrier"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Unassign the carrier from a load\n\nRemoves the carrier commitment from the load when capacity falls\nthrough or needs to be reallocated.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value."
+          },
+          "response": [
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "Carrier unassigned successfully.",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Carrier unassigned successfully."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "assignCarrier",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/carrier",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "carrier"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Assign a carrier to a load\n\nAssociates a carrier with the load once capacity is secured. This\nendpoint captures dispatch contact details and prepares the load for\ntendering.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"carrierName\": \"FEDEX\",\n  \"scac\": \"string\",\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Carrier assigned successfully.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"reference\": \"string\",\n  \"status\": \"PLANNED\",\n  \"carrierName\": \"FEDEX\",\n  \"shipments\": [\n    \"00000000-0000-0000-0000-000000000000\"\n  ],\n  \"origin\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"destination\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"requestedPickupDate\": \"2024-01-01\",\n  \"requestedDeliveryDate\": \"2024-01-01\",\n  \"pickup\": {\n    \"confirmationNumber\": \"string\",\n    \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n    \"location\": {\n      \"name\": \"string\",\n      \"addressLine1\": \"string\",\n      \"addressLine2\": \"string\",\n      \"city\": \"string\",\n      \"stateOrProvince\": \"string\",\n      \"postalCode\": \"string\",\n      \"country\": \"string\"\n    },\n    \"contactName\": \"string\",\n    \"contactPhone\": \"string\",\n    \"instructions\": \"string\"\n  },\n  \"tender\": {\n    \"status\": \"NOT_TENDERED\",\n    \"expiresAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedBy\": \"string\",\n    \"decision\": \"ACCEPTED\",\n    \"notes\": \"string\"\n  },\n  \"notes\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Carrier assigned successfully."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Load Carrier`."
+    },
+    {
+      "name": "Load Rating",
+      "item": [
+        {
+          "name": "rateLoad",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/rate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "rate"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Retrieve the calculated rate for a load\n\nCalculates the latest transportation cost for the load based on the\nassigned carrier, distance, and contractual pricing.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Calculated rate returned.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"amount\": 0.0,\n  \"currency\": \"string\",\n  \"estimatedDeliveryDays\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Calculated rate returned."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Load Rating`."
+    },
+    {
+      "name": "Load Shipments",
+      "item": [
+        {
+          "name": "listShipmentsForLoad",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "shipments"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Zero-based index of the page to retrieve.",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "Number of records to include in a page.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List shipments assigned to a load\n\nRetrieves the shipments currently grouped under the specified load so\ndispatchers can verify freight composition before execution.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `page` (query, optional, integer): Zero-based index of the page to retrieve.\n- `size` (query, optional, integer): Number of records to include in a page."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Page of shipments currently assigned to the load.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": {\n        \"value\": \"00000000-0000-0000-0000-000000000000\"\n      },\n      \"orderId\": {\n        \"value\": \"string\"\n      },\n      \"status\": \"CREATED\",\n      \"carrierName\": \"FEDEX\",\n      \"trackingNumber\": {\n        \"value\": \"string\"\n      },\n      \"trackingEvents\": [\n        {\n          \"status\": \"string\",\n          \"statusDescription\": \"string\",\n          \"location\": \"string\",\n          \"timestamp\": \"2024-01-01T00:00:00Z\",\n          \"eventCode\": \"string\",\n          \"detailedDescription\": \"string\"\n        }\n      ],\n      \"assignedLoadId\": \"00000000-0000-0000-0000-000000000000\",\n      \"lastUpdatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"page\": 0,\n  \"size\": 0,\n  \"totalItems\": 0,\n  \"totalPages\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Page of shipments currently assigned to the load."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "assignShipmentsToLoad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "shipments"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Assign shipments to a load\n\nAdds one or more shipments to the specified load. Use this endpoint to\nconsolidate freight prior to carrier tendering and execution.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentIds\": [\n    \"00000000-0000-0000-0000-000000000000\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Shipments assigned to the load.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"reference\": \"string\",\n  \"status\": \"PLANNED\",\n  \"carrierName\": \"FEDEX\",\n  \"shipments\": [\n    \"00000000-0000-0000-0000-000000000000\"\n  ],\n  \"origin\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"destination\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"requestedPickupDate\": \"2024-01-01\",\n  \"requestedDeliveryDate\": \"2024-01-01\",\n  \"pickup\": {\n    \"confirmationNumber\": \"string\",\n    \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n    \"location\": {\n      \"name\": \"string\",\n      \"addressLine1\": \"string\",\n      \"addressLine2\": \"string\",\n      \"city\": \"string\",\n      \"stateOrProvince\": \"string\",\n      \"postalCode\": \"string\",\n      \"country\": \"string\"\n    },\n    \"contactName\": \"string\",\n    \"contactPhone\": \"string\",\n    \"instructions\": \"string\"\n  },\n  \"tender\": {\n    \"status\": \"NOT_TENDERED\",\n    \"expiresAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedBy\": \"string\",\n    \"decision\": \"ACCEPTED\",\n    \"notes\": \"string\"\n  },\n  \"notes\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Shipments assigned to the load."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "removeShipmentFromLoad",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/shipments/{{shipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "shipments",
+                "{{shipmentId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Remove a shipment from a load\n\nDetaches a shipment from the load when freight needs to be rerouted or\nwhen capacity limits are exceeded.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `shipmentId` (path, required, string): Identifier of the shipment."
+          },
+          "response": [
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "Shipment removed from the load.",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Shipment removed from the load."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Load Shipments`."
+    },
+    {
+      "name": "Loads",
+      "item": [
+        {
+          "name": "listLoads",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Load status filter. If omitted, all statuses are returned.",
+                  "disabled": true
+                },
+                {
+                  "key": "carrierName",
+                  "value": "",
+                  "description": "Carrier filter applied to shipments or loads.",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Zero-based index of the page to retrieve.",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "Number of records to include in a page.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List loads in the transportation network\n\nProvides a paginated view of transportation loads, allowing operations\nteams to monitor lifecycle status, carrier coverage, and shipment\nassignments across origins and destinations.\n\n**Parameters**\n- `status` (query, optional, None): Load status filter. If omitted, all statuses are returned.\n- `carrierName` (query, optional, None): Carrier filter applied to shipments or loads.\n- `page` (query, optional, integer): Zero-based index of the page to retrieve.\n- `size` (query, optional, integer): Number of records to include in a page."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Page of loads matching the requested filters.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": \"00000000-0000-0000-0000-000000000000\",\n      \"reference\": \"string\",\n      \"status\": \"PLANNED\",\n      \"carrierName\": \"FEDEX\",\n      \"shipments\": [\n        \"00000000-0000-0000-0000-000000000000\"\n      ],\n      \"origin\": {\n        \"name\": \"string\",\n        \"addressLine1\": \"string\",\n        \"addressLine2\": \"string\",\n        \"city\": \"string\",\n        \"stateOrProvince\": \"string\",\n        \"postalCode\": \"string\",\n        \"country\": \"string\"\n      },\n      \"destination\": {\n        \"name\": \"string\",\n        \"addressLine1\": \"string\",\n        \"addressLine2\": \"string\",\n        \"city\": \"string\",\n        \"stateOrProvince\": \"string\",\n        \"postalCode\": \"string\",\n        \"country\": \"string\"\n      },\n      \"requestedPickupDate\": \"2024-01-01\",\n      \"requestedDeliveryDate\": \"2024-01-01\",\n      \"pickup\": {\n        \"confirmationNumber\": \"string\",\n        \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n        \"location\": {\n          \"name\": \"string\",\n          \"addressLine1\": \"string\",\n          \"addressLine2\": \"string\",\n          \"city\": \"string\",\n          \"stateOrProvince\": \"string\",\n          \"postalCode\": \"string\",\n          \"country\": \"string\"\n        },\n        \"contactName\": \"string\",\n        \"contactPhone\": \"string\",\n        \"instructions\": \"string\"\n      },\n      \"tender\": {\n        \"status\": \"NOT_TENDERED\",\n        \"expiresAt\": \"2024-01-01T00:00:00Z\",\n        \"respondedAt\": \"2024-01-01T00:00:00Z\",\n        \"respondedBy\": \"string\",\n        \"decision\": \"ACCEPTED\",\n        \"notes\": \"string\"\n      },\n      \"notes\": \"string\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"updatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"page\": 0,\n  \"size\": 0,\n  \"totalItems\": 0,\n  \"totalPages\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Page of loads matching the requested filters."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "createLoad",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create a new load\n\nCreates a transportation load that orchestrates shipments between an\norigin and destination location. Supply the shipments to be grouped and\nthe planned pickup and delivery dates to initiate planning activities.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"string\",\n  \"shipments\": [\n    \"00000000-0000-0000-0000-000000000000\"\n  ],\n  \"origin\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"destination\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"requestedPickupDate\": \"2024-01-01\",\n  \"requestedDeliveryDate\": \"2024-01-01\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Load created successfully.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"reference\": \"string\",\n  \"status\": \"PLANNED\",\n  \"carrierName\": \"FEDEX\",\n  \"shipments\": [\n    \"00000000-0000-0000-0000-000000000000\"\n  ],\n  \"origin\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"destination\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"requestedPickupDate\": \"2024-01-01\",\n  \"requestedDeliveryDate\": \"2024-01-01\",\n  \"pickup\": {\n    \"confirmationNumber\": \"string\",\n    \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n    \"location\": {\n      \"name\": \"string\",\n      \"addressLine1\": \"string\",\n      \"addressLine2\": \"string\",\n      \"city\": \"string\",\n      \"stateOrProvince\": \"string\",\n      \"postalCode\": \"string\",\n      \"country\": \"string\"\n    },\n    \"contactName\": \"string\",\n    \"contactPhone\": \"string\",\n    \"instructions\": \"string\"\n  },\n  \"tender\": {\n    \"status\": \"NOT_TENDERED\",\n    \"expiresAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedBy\": \"string\",\n    \"decision\": \"ACCEPTED\",\n    \"notes\": \"string\"\n  },\n  \"notes\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Load created successfully."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "deleteLoad",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Cancel a load\n\nCancels a planned or in-progress load when it can no longer be\nexecuted. Downstream integrations should treat the load as closed and\nrelease any allocated transportation capacity.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value."
+          },
+          "response": [
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "Load cancelled successfully.",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Load cancelled successfully."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "getLoad",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "If-None-Match",
+                "value": "",
+                "description": "Optional caching header allowing conditional GET semantics via ETags.",
+                "disabled": true
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Retrieve load details\n\nReturns the authoritative representation of a load, including shipment\nassignments, carrier commitments, pickup arrangements, and tender\nhistory for downstream logistics coordination.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-None-Match` (header, optional, string): Optional caching header allowing conditional GET semantics via ETags."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Load found.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"reference\": \"string\",\n  \"status\": \"PLANNED\",\n  \"carrierName\": \"FEDEX\",\n  \"shipments\": [\n    \"00000000-0000-0000-0000-000000000000\"\n  ],\n  \"origin\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"destination\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"requestedPickupDate\": \"2024-01-01\",\n  \"requestedDeliveryDate\": \"2024-01-01\",\n  \"pickup\": {\n    \"confirmationNumber\": \"string\",\n    \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n    \"location\": {\n      \"name\": \"string\",\n      \"addressLine1\": \"string\",\n      \"addressLine2\": \"string\",\n      \"city\": \"string\",\n      \"stateOrProvince\": \"string\",\n      \"postalCode\": \"string\",\n      \"country\": \"string\"\n    },\n    \"contactName\": \"string\",\n    \"contactPhone\": \"string\",\n    \"instructions\": \"string\"\n  },\n  \"tender\": {\n    \"status\": \"NOT_TENDERED\",\n    \"expiresAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedBy\": \"string\",\n    \"decision\": \"ACCEPTED\",\n    \"notes\": \"string\"\n  },\n  \"notes\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Load found."
+            },
+            {
+              "name": "304 response",
+              "originalRequest": null,
+              "status": "Load representation not changed since the provided ETag.",
+              "code": 304,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Load representation not changed since the provided ETag."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "updateLoad",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update load metadata or status\n\nApplies partial updates to an existing load. Typical use cases include\nrevising requested pickup or delivery dates, updating notes, or moving a\nload forward in its lifecycle once downstream milestones are reached.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reference\": \"string\",\n  \"requestedPickupDate\": \"2024-01-01\",\n  \"requestedDeliveryDate\": \"2024-01-01\",\n  \"status\": \"PLANNED\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Load updated successfully.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"reference\": \"string\",\n  \"status\": \"PLANNED\",\n  \"carrierName\": \"FEDEX\",\n  \"shipments\": [\n    \"00000000-0000-0000-0000-000000000000\"\n  ],\n  \"origin\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"destination\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"requestedPickupDate\": \"2024-01-01\",\n  \"requestedDeliveryDate\": \"2024-01-01\",\n  \"pickup\": {\n    \"confirmationNumber\": \"string\",\n    \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n    \"location\": {\n      \"name\": \"string\",\n      \"addressLine1\": \"string\",\n      \"addressLine2\": \"string\",\n      \"city\": \"string\",\n      \"stateOrProvince\": \"string\",\n      \"postalCode\": \"string\",\n      \"country\": \"string\"\n    },\n    \"contactName\": \"string\",\n    \"contactPhone\": \"string\",\n    \"instructions\": \"string\"\n  },\n  \"tender\": {\n    \"status\": \"NOT_TENDERED\",\n    \"expiresAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedAt\": \"2024-01-01T00:00:00Z\",\n    \"respondedBy\": \"string\",\n    \"decision\": \"ACCEPTED\",\n    \"notes\": \"string\"\n  },\n  \"notes\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Load updated successfully."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Loads`."
+    },
+    {
+      "name": "Pickup",
+      "item": [
+        {
+          "name": "cancelPickup",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/pickup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "pickup"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Cancel the scheduled pickup for a load\n\nRemoves the scheduled pickup appointment, freeing dock capacity and\nnotifying the carrier of the cancellation.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value."
+          },
+          "response": [
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "Pickup cancelled successfully.",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Pickup cancelled successfully."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "getPickup",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/pickup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "pickup"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Retrieve pickup scheduling details for a load\n\nProvides the confirmed pickup appointment and contact information for\nthe load, enabling dock scheduling and driver coordination.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pickup details for the load.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"confirmationNumber\": \"string\",\n  \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n  \"location\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\",\n  \"instructions\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pickup details for the load."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "schedulePickup",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/pickup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "pickup"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Schedule or update the pickup for a load\n\nCreates or amends the pickup appointment for the load, including dock\ninstructions and onsite contacts.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n  \"location\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\",\n  \"instructions\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Pickup scheduled successfully.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"confirmationNumber\": \"string\",\n  \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n  \"location\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\",\n  \"instructions\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pickup scheduled successfully."
+            },
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Pickup created successfully.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"confirmationNumber\": \"string\",\n  \"scheduledFor\": \"2024-01-01T00:00:00Z\",\n  \"location\": {\n    \"name\": \"string\",\n    \"addressLine1\": \"string\",\n    \"addressLine2\": \"string\",\n    \"city\": \"string\",\n    \"stateOrProvince\": \"string\",\n    \"postalCode\": \"string\",\n    \"country\": \"string\"\n  },\n  \"contactName\": \"string\",\n  \"contactPhone\": \"string\",\n  \"instructions\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Pickup created successfully."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Pickup`."
+    },
+    {
+      "name": "Shipments",
+      "item": [
+        {
+          "name": "listShipments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Shipment status filter. If omitted, all statuses are returned.",
+                  "disabled": true
+                },
+                {
+                  "key": "carrierName",
+                  "value": "",
+                  "description": "Carrier filter applied to shipments or loads.",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Zero-based index of the page to retrieve.",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "Number of records to include in a page.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List shipments filtered by status and carrier\n\nReturns a paginated collection of shipments filtered by shipment status and\ncarrier assignment. Use this endpoint to monitor available freight and\nunderstand current delivery progress across the network.\n\n**Parameters**\n- `status` (query, optional, None): Shipment status filter. If omitted, all statuses are returned.\n- `carrierName` (query, optional, None): Carrier filter applied to shipments or loads.\n- `page` (query, optional, integer): Zero-based index of the page to retrieve.\n- `size` (query, optional, integer): Number of records to include in a page."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Page of shipments matching the requested filters.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"items\": [\n    {\n      \"id\": {\n        \"value\": \"00000000-0000-0000-0000-000000000000\"\n      },\n      \"orderId\": {\n        \"value\": \"string\"\n      },\n      \"status\": \"CREATED\",\n      \"carrierName\": \"FEDEX\",\n      \"trackingNumber\": {\n        \"value\": \"string\"\n      },\n      \"trackingEvents\": [\n        {\n          \"status\": \"string\",\n          \"statusDescription\": \"string\",\n          \"location\": \"string\",\n          \"timestamp\": \"2024-01-01T00:00:00Z\",\n          \"eventCode\": \"string\",\n          \"detailedDescription\": \"string\"\n        }\n      ],\n      \"assignedLoadId\": \"00000000-0000-0000-0000-000000000000\",\n      \"lastUpdatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"page\": 0,\n  \"size\": 0,\n  \"totalItems\": 0,\n  \"totalPages\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Page of shipments matching the requested filters."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "getShipment",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "If-None-Match",
+                "value": "",
+                "description": "Optional caching header allowing conditional GET semantics via ETags.",
+                "disabled": true
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/shipments/{{shipmentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shipments",
+                "{{shipmentId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Retrieve a shipment by identifier\n\nRetrieves the latest state of a specific shipment, including the\nassociated order metadata, assigned load, and detailed tracking history.\n\n**Parameters**\n- `shipmentId` (path, required, string): Identifier of the shipment.\n- `If-None-Match` (header, optional, string): Optional caching header allowing conditional GET semantics via ETags."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Shipment found.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"id\": {\n    \"value\": \"00000000-0000-0000-0000-000000000000\"\n  },\n  \"orderId\": {\n    \"value\": \"string\"\n  },\n  \"status\": \"CREATED\",\n  \"carrierName\": \"FEDEX\",\n  \"trackingNumber\": {\n    \"value\": \"string\"\n  },\n  \"trackingEvents\": [\n    {\n      \"status\": \"string\",\n      \"statusDescription\": \"string\",\n      \"location\": \"string\",\n      \"timestamp\": \"2024-01-01T00:00:00Z\",\n      \"eventCode\": \"string\",\n      \"detailedDescription\": \"string\"\n    }\n  ],\n  \"assignedLoadId\": \"00000000-0000-0000-0000-000000000000\",\n  \"lastUpdatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Shipment found."
+            },
+            {
+              "name": "304 response",
+              "originalRequest": null,
+              "status": "Shipment representation not changed since the provided ETag.",
+              "code": 304,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Shipment representation not changed since the provided ETag."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Shipments`."
+    },
+    {
+      "name": "Tender",
+      "item": [
+        {
+          "name": "cancelTender",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/tender",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "tender"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Withdraw an active tender\n\nCancels the active tender offer, notifying downstream systems that the\ncarrier response is no longer valid.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value."
+          },
+          "response": [
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "Tender cancelled successfully.",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Tender cancelled successfully."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "getTender",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/tender",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "tender"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Retrieve tender details for a load\n\nReturns the tender record for the load, including expiration, decision,\nand audit metadata used to coordinate carrier commitments.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Current tender details.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"status\": \"NOT_TENDERED\",\n  \"expiresAt\": \"2024-01-01T00:00:00Z\",\n  \"respondedAt\": \"2024-01-01T00:00:00Z\",\n  \"respondedBy\": \"string\",\n  \"decision\": \"ACCEPTED\",\n  \"notes\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Current tender details."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "tenderLoad",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/tender",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "tender"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Tender a load to its assigned carrier\n\nCreates or refreshes a tender offer to the assigned carrier. Use this\nendpoint to manage offer expirations and share special handling notes.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expiresAt\": \"2024-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Tender refreshed successfully.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"status\": \"NOT_TENDERED\",\n  \"expiresAt\": \"2024-01-01T00:00:00Z\",\n  \"respondedAt\": \"2024-01-01T00:00:00Z\",\n  \"respondedBy\": \"string\",\n  \"decision\": \"ACCEPTED\",\n  \"notes\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Tender refreshed successfully."
+            },
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Tender created successfully.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"status\": \"NOT_TENDERED\",\n  \"expiresAt\": \"2024-01-01T00:00:00Z\",\n  \"respondedAt\": \"2024-01-01T00:00:00Z\",\n  \"respondedBy\": \"string\",\n  \"decision\": \"ACCEPTED\",\n  \"notes\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Tender created successfully."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        },
+        {
+          "name": "recordTenderDecision",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "If-Match",
+                "value": "",
+                "description": "Optional concurrency control header containing an ETag value.",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/loads/{{loadId}}/tender/decision",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "loads",
+                "{{loadId}}",
+                "tender",
+                "decision"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Record the carrier response to a tender\n\nCaptures a carrier's accept or decline response for the tender,\nupdating downstream planning and execution workflows.\n\n**Parameters**\n- `loadId` (path, required, string): Identifier of the load.\n- `If-Match` (header, optional, string): Optional concurrency control header containing an ETag value.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"ACCEPTED\",\n  \"respondedBy\": \"string\",\n  \"reason\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Tender decision processed.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"status\": \"NOT_TENDERED\",\n  \"expiresAt\": \"2024-01-01T00:00:00Z\",\n  \"respondedAt\": \"2024-01-01T00:00:00Z\",\n  \"respondedBy\": \"string\",\n  \"decision\": \"ACCEPTED\",\n  \"notes\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Tender decision processed."
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Invalid request payload or parameters.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Invalid request payload or parameters."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Requested resource was not found.",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Requested resource was not found."
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Request could not be processed due to a conflict with the current state of the resource.",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Request could not be processed due to a conflict with the current state of the resource."
+            },
+            {
+              "name": "412 response",
+              "originalRequest": null,
+              "status": "Precondition header requirements were not met for the request.",
+              "code": 412,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Precondition header requirements were not met for the request."
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Unexpected error occurred while processing the request.",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"type\": \"https://example.com/resource\",\n  \"title\": \"string\",\n  \"status\": 0,\n  \"detail\": \"string\",\n  \"instance\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Unexpected error occurred while processing the request."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Tender`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

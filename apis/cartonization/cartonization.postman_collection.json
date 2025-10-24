@@ -1,0 +1,256 @@
+{
+  "info": {
+    "_postman_id": "729fa194-085e-460d-8232-051d9608569d",
+    "name": "Cartonization Service API",
+    "description": "A RESTful API for managing carton inventory and calculating optimal packing solutions.\nThis service operates within the Cartonization Bounded Context. It is responsible for all bin-packing algorithms and business rules related to packing.\nIt consumes data from the Product Catalog API to retrieve item dimensions when needed.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Cartonization",
+      "item": [
+        {
+          "name": "calculatePackingSolution",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Request-ID",
+                "value": "",
+                "description": "",
+                "disabled": true
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/packing-solutions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "packing-solutions"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Calculate a packing solution\n\nAccepts a list of SKUs and quantities and returns the optimal packing solution.\nThis endpoint triggers the core bin-packing algorithm. The service will internally fetch product dimensions from the Product Catalog service.\n\n**Parameters**\n- `X-Request-ID` (header, optional, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"sku\": \"EXAMPLE-SKU-123\",\n      \"quantity\": 2\n    }\n  ],\n  \"orderId\": \"string\",\n  \"optimizeForMinimumBoxes\": true,\n  \"allowMixedCategories\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Optimal packing solution found.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"packages\": [\n    {\n      \"cartonId\": \"00000000-0000-0000-0000-000000000000\",\n      \"items\": [\n        {\n          \"sku\": \"EXAMPLE-SKU-123\",\n          \"quantity\": 2\n        }\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Optimal packing solution found."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Cartonization`."
+    },
+    {
+      "name": "Cartons",
+      "item": [
+        {
+          "name": "listCartons",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cartons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cartons"
+              ],
+              "query": [
+                {
+                  "key": "activeOnly",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List all carton types\n\nRetrieves a list of all available cartons in the inventory.\n\n**Parameters**\n- `activeOnly` (query, optional, boolean)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "A list of available cartons.",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"id\": \"00000000-0000-0000-0000-000000000000\",\n    \"name\": \"Medium Cube Box (12x12x12)\",\n    \"dimensions\": {\n      \"length\": {\n        \"value\": 0.0,\n        \"unit\": \"MM\"\n      },\n      \"width\": {\n        \"value\": 0.0,\n        \"unit\": \"MM\"\n      },\n      \"height\": {\n        \"value\": 0.0,\n        \"unit\": \"MM\"\n      }\n    },\n    \"maxWeight\": {\n      \"value\": 0.0,\n      \"unit\": \"G\"\n    }\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "A list of available cartons."
+            }
+          ]
+        },
+        {
+          "name": "createCarton",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cartons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cartons"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create a new carton type\n\nAdds a new carton specification to the inventory.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"string\",\n  \"length\": 0.0,\n  \"width\": 0.0,\n  \"height\": 0.0,\n  \"dimensionUnit\": \"string\",\n  \"maxWeight\": 0.0,\n  \"weightUnit\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Carton created successfully.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"name\": \"Medium Cube Box (12x12x12)\",\n  \"dimensions\": {\n    \"length\": {\n      \"value\": 0.0,\n      \"unit\": \"MM\"\n    },\n    \"width\": {\n      \"value\": 0.0,\n      \"unit\": \"MM\"\n    },\n    \"height\": {\n      \"value\": 0.0,\n      \"unit\": \"MM\"\n    }\n  },\n  \"maxWeight\": {\n    \"value\": 0.0,\n    \"unit\": \"G\"\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Carton created successfully."
+            }
+          ]
+        },
+        {
+          "name": "deactivateCarton",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cartons/{{cartonId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cartons",
+                "{{cartonId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Deactivate a carton\n\nDeactivates a carton, making it unavailable for future packing solutions.\n\n**Parameters**\n- `cartonId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "Carton deactivated successfully.",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Carton deactivated successfully."
+            }
+          ]
+        },
+        {
+          "name": "getCartonById",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cartons/{{cartonId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cartons",
+                "{{cartonId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get carton by ID\n\n**Parameters**\n- `cartonId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Successful operation.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"id\": \"00000000-0000-0000-0000-000000000000\",\n  \"name\": \"Medium Cube Box (12x12x12)\",\n  \"dimensions\": {\n    \"length\": {\n      \"value\": 0.0,\n      \"unit\": \"MM\"\n    },\n    \"width\": {\n      \"value\": 0.0,\n      \"unit\": \"MM\"\n    },\n    \"height\": {\n      \"value\": 0.0,\n      \"unit\": \"MM\"\n    }\n  },\n  \"maxWeight\": {\n    \"value\": 0.0,\n    \"unit\": \"G\"\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Successful operation."
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Carton not found.",
+              "code": 404,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Carton not found."
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Cartons`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

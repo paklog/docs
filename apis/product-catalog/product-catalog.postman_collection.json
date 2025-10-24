@@ -1,0 +1,378 @@
+{
+  "info": {
+    "_postman_id": "9966878a-2ed3-4b22-9c87-c1f08c49d6c1",
+    "name": "Product Catalog API",
+    "description": "A RESTful API for managing product catalog data, including dimensions and compliance attributes.\nThis API is designed using Domain-Driven Design principles, with the Product as the central Aggregate.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "listProducts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": [
+                {
+                  "key": "offset",
+                  "value": "",
+                  "description": "The number of items to skip for pagination.",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "The number of items to return.",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List all products\n\nRetrieves a paginated list of all products in the catalog.\n\n**Parameters**\n- `offset` (query, optional, integer): The number of items to skip for pagination.\n- `limit` (query, optional, integer): The number of items to return."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "A paged response containing products.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"content\": [\n    {\n      \"sku\": \"EXAMPLE-SKU-123\",\n      \"title\": \"Industrial Grade Widget\",\n      \"dimensions\": {\n        \"item\": {\n          \"length\": {\n            \"value\": 10.5,\n            \"unit\": \"INCHES\"\n          },\n          \"width\": {\n            \"value\": 10.5,\n            \"unit\": \"INCHES\"\n          },\n          \"height\": {\n            \"value\": 10.5,\n            \"unit\": \"INCHES\"\n          },\n          \"weight\": {\n            \"value\": 5.8,\n            \"unit\": \"POUNDS\"\n          }\n        },\n        \"package\": {\n          \"length\": {\n            \"value\": 10.5,\n            \"unit\": \"INCHES\"\n          },\n          \"width\": {\n            \"value\": 10.5,\n            \"unit\": \"INCHES\"\n          },\n          \"height\": {\n            \"value\": 10.5,\n            \"unit\": \"INCHES\"\n          },\n          \"weight\": {\n            \"value\": 5.8,\n            \"unit\": \"POUNDS\"\n          }\n        }\n      },\n      \"attributes\": {\n        \"hazmat_info\": {\n          \"is_hazmat\": true,\n          \"un_number\": \"UN1950\"\n        }\n      }\n    }\n  ],\n  \"total_pages\": 0,\n  \"total_elements\": 0,\n  \"current_page\": 0,\n  \"page_size\": 0,\n  \"is_first\": true,\n  \"is_last\": true\n}",
+              "_postman_previewlanguage": "json",
+              "description": "A paged response containing products."
+            }
+          ]
+        },
+        {
+          "name": "createProduct",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create a new product\n\nAdds a new product with its dimensions and attributes to the catalog. The SKU must be unique.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"EXAMPLE-SKU-123\",\n  \"title\": \"Industrial Grade Widget\",\n  \"dimensions\": {\n    \"item\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    },\n    \"package\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    }\n  },\n  \"attributes\": {\n    \"hazmat_info\": {\n      \"is_hazmat\": true,\n      \"un_number\": \"UN1950\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Product created successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"sku\": \"EXAMPLE-SKU-123\",\n  \"title\": \"Industrial Grade Widget\",\n  \"dimensions\": {\n    \"item\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    },\n    \"package\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    }\n  },\n  \"attributes\": {\n    \"hazmat_info\": {\n      \"is_hazmat\": true,\n      \"un_number\": \"UN1950\"\n    }\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Validation failed for the provided product data",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": 400,\n  \"message\": \"Validation failed: sku must not be blank\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Validation failed for the provided product data"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Product with the given SKU already exists",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": 400,\n  \"message\": \"Validation failed: sku must not be blank\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product with the given SKU already exists"
+            }
+          ]
+        },
+        {
+          "name": "deleteProduct",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{sku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{sku}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Delete a product\n\nDeletes a product from the catalog by its SKU.\n\n**Parameters**\n- `sku` (path, required, string): The unique SKU of the product."
+          },
+          "response": [
+            {
+              "name": "204 response",
+              "originalRequest": null,
+              "status": "Product deleted successfully",
+              "code": 204,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Product deleted successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Product not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": 400,\n  \"message\": \"Validation failed: sku must not be blank\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product not found"
+            }
+          ]
+        },
+        {
+          "name": "getProductBySku",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{sku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{sku}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get product by SKU\n\nRetrieves a single product by its unique Stock Keeping Unit (SKU).\n\n**Parameters**\n- `sku` (path, required, string): The unique SKU of the product."
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Product retrieved successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sku\": \"EXAMPLE-SKU-123\",\n  \"title\": \"Industrial Grade Widget\",\n  \"dimensions\": {\n    \"item\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    },\n    \"package\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    }\n  },\n  \"attributes\": {\n    \"hazmat_info\": {\n      \"is_hazmat\": true,\n      \"un_number\": \"UN1950\"\n    }\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product retrieved successfully"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Product not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": 400,\n  \"message\": \"Validation failed: sku must not be blank\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product not found"
+            }
+          ]
+        },
+        {
+          "name": "patchProduct",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{sku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{sku}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Partially update a product\n\nUpdates one or more fields of an existing product. Fields not included in the request body will not be changed.\n\n**Parameters**\n- `sku` (path, required, string): The unique SKU of the product.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"EXAMPLE-SKU-123\",\n  \"title\": \"Industrial Grade Widget\",\n  \"dimensions\": {\n    \"item\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    },\n    \"package\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    }\n  },\n  \"attributes\": {\n    \"hazmat_info\": {\n      \"is_hazmat\": true,\n      \"un_number\": \"UN1950\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Product partially updated",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sku\": \"EXAMPLE-SKU-123\",\n  \"title\": \"Industrial Grade Widget\",\n  \"dimensions\": {\n    \"item\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    },\n    \"package\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    }\n  },\n  \"attributes\": {\n    \"hazmat_info\": {\n      \"is_hazmat\": true,\n      \"un_number\": \"UN1950\"\n    }\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product partially updated"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Validation failed for the provided product data",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": 400,\n  \"message\": \"Validation failed: sku must not be blank\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Validation failed for the provided product data"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Product not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": 400,\n  \"message\": \"Validation failed: sku must not be blank\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product not found"
+            }
+          ]
+        },
+        {
+          "name": "updateProduct",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/{{sku}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "products",
+                "{{sku}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update a product (full replace)\n\nReplaces the entire product resource with the provided data. All fields are required.\n\n**Parameters**\n- `sku` (path, required, string): The unique SKU of the product.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sku\": \"EXAMPLE-SKU-123\",\n  \"title\": \"Industrial Grade Widget\",\n  \"dimensions\": {\n    \"item\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    },\n    \"package\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    }\n  },\n  \"attributes\": {\n    \"hazmat_info\": {\n      \"is_hazmat\": true,\n      \"un_number\": \"UN1950\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Product updated successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"sku\": \"EXAMPLE-SKU-123\",\n  \"title\": \"Industrial Grade Widget\",\n  \"dimensions\": {\n    \"item\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    },\n    \"package\": {\n      \"length\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"width\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"height\": {\n        \"value\": 10.5,\n        \"unit\": \"INCHES\"\n      },\n      \"weight\": {\n        \"value\": 5.8,\n        \"unit\": \"POUNDS\"\n      }\n    }\n  },\n  \"attributes\": {\n    \"hazmat_info\": {\n      \"is_hazmat\": true,\n      \"un_number\": \"UN1950\"\n    }\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product updated successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Validation failed for the provided product data",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": 400,\n  \"message\": \"Validation failed: sku must not be blank\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Validation failed for the provided product data"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Product not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": 400,\n  \"message\": \"Validation failed: sku must not be blank\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Product not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Products`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8082",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

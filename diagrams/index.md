@@ -10,6 +10,14 @@ This section contains comprehensive technical diagrams that illustrate the archi
 
 ## Available Diagrams
 
+### 0. [Complete System Overview](00-SYSTEM-OVERVIEW) **NEW**
+Comprehensive view of all 22 microservices:
+- Complete microservices ecosystem map
+- Service categories (Foundation, Execution, Advanced, Intelligence)
+- Technology stack overview
+- Deployment architecture
+- Key architectural decisions
+
 ### 1. [Architecture Overview](01-ARCHITECTURE-OVERVIEW)
 Complete system architecture using the C4 Model approach:
 - System Context Diagram
@@ -67,6 +75,17 @@ Comprehensive API specifications:
 - Authentication & Authorization
 - Rate Limiting & Throttling
 - Error Handling
+
+### 8. [Event Flow Diagrams](08-EVENT-FLOW-DIAGRAMS) **NEW**
+Complete event-driven architecture documentation:
+- Order fulfillment end-to-end event flow
+- Returns processing event choreography
+- Robotics fleet coordination events
+- Predictive analytics event integration
+- Cross-docking operation flows
+- WES orchestration saga patterns
+- Complete event catalog with 80+ domain events
+- Event publishing patterns and CloudEvents structure
 
 ## How to Use These Diagrams
 

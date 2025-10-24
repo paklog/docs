@@ -1,0 +1,1404 @@
+{
+  "info": {
+    "_postman_id": "0d6b0c99-115c-4853-9e52-d0a58f1d4bac",
+    "name": "Task Execution Service API",
+    "description": "The Task Execution Service provides unified task management and orchestration for all warehouse operations.\nIt handles task creation, assignment, prioritization, and execution tracking across multiple work types including\npicking, packing, putaway, replenishment, counting, and shipping. The service integrates with Redis for\nhigh-performance queue management and provides real-time task status updates.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Assignments",
+      "item": [
+        {
+          "name": "autoAssignTasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assignments/auto-assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assignments",
+                "auto-assign"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Auto-assign tasks\n\nAutomatically assign pending tasks to available workers",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"maxAssignments\": 100\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Auto-assignment results",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"assigned\": 0,\n  \"failed\": 0,\n  \"assignments\": [\n    {\n      \"taskId\": \"string\",\n      \"workerId\": \"string\",\n      \"score\": 0.0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Auto-assignment results"
+            }
+          ]
+        },
+        {
+          "name": "recommendTasks",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assignments/recommend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assignments",
+                "recommend"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get task recommendations\n\nGet task recommendations for a worker based on location, skills, and priority",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workerId\": \"string\",\n  \"currentLocation\": \"string\",\n  \"skills\": [\n    \"string\"\n  ],\n  \"maxTasks\": 5\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task recommendations",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"recommendations\": [\n    {\n      \"task\": {\n        \"taskId\": \"string\",\n        \"taskType\": \"PICK\",\n        \"warehouseId\": \"string\",\n        \"status\": \"PENDING\",\n        \"priority\": \"LOW\",\n        \"assignedTo\": \"string\",\n        \"sourceLocation\": \"string\",\n        \"destinationLocation\": \"string\",\n        \"productId\": \"string\",\n        \"sku\": \"string\",\n        \"quantity\": 0,\n        \"actualQuantity\": 0,\n        \"lpn\": \"string\",\n        \"waveId\": \"string\",\n        \"orderId\": \"string\",\n        \"createdAt\": \"2024-01-01T00:00:00Z\",\n        \"assignedAt\": \"2024-01-01T00:00:00Z\",\n        \"startedAt\": \"2024-01-01T00:00:00Z\",\n        \"completedAt\": \"2024-01-01T00:00:00Z\",\n        \"dueDate\": \"2024-01-01T00:00:00Z\",\n        \"estimatedDuration\": 0,\n        \"actualDuration\": 0,\n        \"metadata\": {}\n      },\n      \"score\": 0.0,\n      \"reasons\": [\n        \"string\"\n      ],\n      \"distanceMeters\": 0.0,\n      \"estimatedWalkTime\": 0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task recommendations"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "assignTask",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/assign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{taskId}}",
+                "assign"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Assign task to worker\n\nAssign a task to a specific worker\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workerId\": \"string\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task assigned successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"taskId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"warehouseId\": \"string\",\n  \"status\": \"PENDING\",\n  \"priority\": \"LOW\",\n  \"assignedTo\": \"string\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"actualQuantity\": 0,\n  \"lpn\": \"string\",\n  \"waveId\": \"string\",\n  \"orderId\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"assignedAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDuration\": 0,\n  \"actualDuration\": 0,\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task assigned successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "rejectTask",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{taskId}}",
+                "reject"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Reject task assignment\n\nWorker rejects an assigned task\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task rejected successfully",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Task rejected successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Assignments`."
+    },
+    {
+      "name": "Mobile",
+      "item": [
+        {
+          "name": "getAssignedTasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/tasks/assigned",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "tasks",
+                "assigned"
+              ],
+              "query": [
+                {
+                  "key": "workerId",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Get assigned tasks\n\nGet all tasks assigned to a worker (mobile API)\n\n**Parameters**\n- `workerId` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Assigned tasks",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"taskId\": \"string\",\n    \"taskType\": \"PICK\",\n    \"priority\": \"LOW\",\n    \"sourceLocation\": \"string\",\n    \"destinationLocation\": \"string\",\n    \"productId\": \"string\",\n    \"sku\": \"string\",\n    \"productName\": \"string\",\n    \"quantity\": 0,\n    \"lpn\": \"string\",\n    \"orderId\": \"string\",\n    \"instructions\": [\n      \"string\"\n    ],\n    \"nextAction\": \"string\",\n    \"estimatedDuration\": 0\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Assigned tasks"
+            }
+          ]
+        },
+        {
+          "name": "getNextTask",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/tasks/next",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "tasks",
+                "next"
+              ],
+              "query": [
+                {
+                  "key": "workerId",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "deviceId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get next task for worker\n\nRetrieve the next task for a worker (mobile API)\n\n**Parameters**\n- `workerId` (query, required, string)\n- `deviceId` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Next task for worker",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"taskId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"priority\": \"LOW\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"productName\": \"string\",\n  \"quantity\": 0,\n  \"lpn\": \"string\",\n  \"orderId\": \"string\",\n  \"instructions\": [\n    \"string\"\n  ],\n  \"nextAction\": \"string\",\n  \"estimatedDuration\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Next task for worker"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "No tasks available",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"message\": \"No tasks available\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "No tasks available"
+            }
+          ]
+        },
+        {
+          "name": "scanBarcode",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mobile/tasks/{{taskId}}/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mobile",
+                "tasks",
+                "{{taskId}}",
+                "scan"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Scan barcode during task\n\nRecord a barcode scan during task execution\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"barcode\": \"string\",\n  \"scanType\": \"LOCATION\",\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Scan validated successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"valid\": true,\n  \"message\": \"string\",\n  \"nextAction\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Scan validated successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Mobile`."
+    },
+    {
+      "name": "Monitoring",
+      "item": [
+        {
+          "name": "getTaskMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "Filter by warehouse ID",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "Filter tasks created after this date",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "Filter tasks created before this date",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get task metrics\n\nGet aggregate task metrics\n\n**Parameters**\n- `warehouseId` (query, optional, string): Filter by warehouse ID\n- `dateFrom` (query, optional, string): Filter tasks created after this date\n- `dateTo` (query, optional, string): Filter tasks created before this date"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"totalTasks\": 0,\n  \"completedTasks\": 0,\n  \"pendingTasks\": 0,\n  \"inProgressTasks\": 0,\n  \"failedTasks\": 0,\n  \"avgCompletionTime\": 0.0,\n  \"avgQueueTime\": 0.0,\n  \"tasksByType\": {\n    \"additionalPropertyKey\": 0\n  },\n  \"tasksByPriority\": {\n    \"additionalPropertyKey\": 0\n  },\n  \"completionRate\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task metrics"
+            }
+          ]
+        },
+        {
+          "name": "getWorkerMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/worker/{{workerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "worker",
+                "{{workerId}}"
+              ],
+              "query": [
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get worker metrics\n\nGet productivity metrics for a specific worker\n\n**Parameters**\n- `workerId` (path, required, string)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Worker metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"workerId\": \"string\",\n  \"totalTasks\": 0,\n  \"completedTasks\": 0,\n  \"failedTasks\": 0,\n  \"avgCompletionTime\": 0.0,\n  \"productivity\": 0.0,\n  \"accuracy\": 0.0,\n  \"tasksByType\": {\n    \"additionalPropertyKey\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Worker metrics"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Monitoring`."
+    },
+    {
+      "name": "Queues",
+      "item": [
+        {
+          "name": "listQueues",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/queues",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queues"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List task queues\n\nGet status of all task queues\n\n**Parameters**\n- `warehouseId` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Queue status list",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"queueId\": \"string\",\n    \"queueName\": \"string\",\n    \"taskType\": \"PICK\",\n    \"depth\": 0,\n    \"oldestTaskAge\": 0,\n    \"avgWaitTime\": 0,\n    \"priority\": \"LOW\"\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Queue status list"
+            }
+          ]
+        },
+        {
+          "name": "rebalanceQueue",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/queues/{{queueId}}/rebalance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queues",
+                "{{queueId}}",
+                "rebalance"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Rebalance queue\n\nRebalance tasks in queue based on current priorities\n\n**Parameters**\n- `queueId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Queue rebalanced successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"rebalanced\": 0,\n  \"message\": \"string\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Queue rebalanced successfully"
+            }
+          ]
+        },
+        {
+          "name": "getQueueTasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/queues/{{queueId}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "queues",
+                "{{queueId}}",
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Page number for pagination",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "Number of items per page",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get tasks in queue\n\nRetrieve tasks from a specific queue\n\n**Parameters**\n- `queueId` (path, required, string)\n- `page` (query, optional, integer): Page number for pagination\n- `size` (query, optional, integer): Number of items per page"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Tasks in queue",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"tasks\": [\n    {\n      \"taskId\": \"string\",\n      \"taskType\": \"PICK\",\n      \"warehouseId\": \"string\",\n      \"status\": \"PENDING\",\n      \"priority\": \"LOW\",\n      \"assignedTo\": \"string\",\n      \"sourceLocation\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"actualQuantity\": 0,\n      \"lpn\": \"string\",\n      \"waveId\": \"string\",\n      \"orderId\": \"string\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"assignedAt\": \"2024-01-01T00:00:00Z\",\n      \"startedAt\": \"2024-01-01T00:00:00Z\",\n      \"completedAt\": \"2024-01-01T00:00:00Z\",\n      \"dueDate\": \"2024-01-01T00:00:00Z\",\n      \"estimatedDuration\": 0,\n      \"actualDuration\": 0,\n      \"metadata\": {}\n    }\n  ],\n  \"queueDepth\": 0,\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0,\n    \"first\": true,\n    \"last\": true\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Tasks in queue"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Queues`."
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "listTasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "Filter by warehouse ID",
+                  "disabled": true
+                },
+                {
+                  "key": "taskType",
+                  "value": "",
+                  "description": "Filter by task type",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by task status",
+                  "disabled": true
+                },
+                {
+                  "key": "assignedTo",
+                  "value": "",
+                  "description": "Filter by assigned worker ID",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "Filter tasks created after this date",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "Filter tasks created before this date",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Page number for pagination",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "Number of items per page",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List all tasks\n\nRetrieve a list of tasks with optional filtering\n\n**Parameters**\n- `warehouseId` (query, optional, string): Filter by warehouse ID\n- `taskType` (query, optional, None): Filter by task type\n- `status` (query, optional, None): Filter by task status\n- `assignedTo` (query, optional, string): Filter by assigned worker ID\n- `dateFrom` (query, optional, string): Filter tasks created after this date\n- `dateTo` (query, optional, string): Filter tasks created before this date\n- `page` (query, optional, integer): Page number for pagination\n- `size` (query, optional, integer): Number of items per page"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of tasks",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"tasks\": [\n    {\n      \"taskId\": \"string\",\n      \"taskType\": \"PICK\",\n      \"warehouseId\": \"string\",\n      \"status\": \"PENDING\",\n      \"priority\": \"LOW\",\n      \"assignedTo\": \"string\",\n      \"sourceLocation\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"actualQuantity\": 0,\n      \"lpn\": \"string\",\n      \"waveId\": \"string\",\n      \"orderId\": \"string\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"assignedAt\": \"2024-01-01T00:00:00Z\",\n      \"startedAt\": \"2024-01-01T00:00:00Z\",\n      \"completedAt\": \"2024-01-01T00:00:00Z\",\n      \"dueDate\": \"2024-01-01T00:00:00Z\",\n      \"estimatedDuration\": 0,\n      \"actualDuration\": 0,\n      \"metadata\": {}\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0,\n    \"first\": true,\n    \"last\": true\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of tasks"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal server error"
+            }
+          ]
+        },
+        {
+          "name": "createTask",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create a new task\n\nCreate a new task with specified work type and details",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskType\": \"PICK\",\n  \"warehouseId\": \"string\",\n  \"priority\": \"LOW\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"lpn\": \"string\",\n  \"waveId\": \"string\",\n  \"orderId\": \"string\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"assignTo\": \"string\",\n  \"metadata\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Task created successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"taskId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"warehouseId\": \"string\",\n  \"status\": \"PENDING\",\n  \"priority\": \"LOW\",\n  \"assignedTo\": \"string\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"actualQuantity\": 0,\n  \"lpn\": \"string\",\n  \"waveId\": \"string\",\n  \"orderId\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"assignedAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDuration\": 0,\n  \"actualDuration\": 0,\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal server error"
+            }
+          ]
+        },
+        {
+          "name": "createTaskBatch",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "batch"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create tasks in batch\n\nCreate multiple tasks in a single operation",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tasks\": [\n    {\n      \"taskType\": \"PICK\",\n      \"warehouseId\": \"string\",\n      \"priority\": \"LOW\",\n      \"sourceLocation\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"lpn\": \"string\",\n      \"waveId\": \"string\",\n      \"orderId\": \"string\",\n      \"dueDate\": \"2024-01-01T00:00:00Z\",\n      \"assignTo\": \"string\",\n      \"metadata\": {}\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Tasks created successfully",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"created\": [\n    {\n      \"taskId\": \"string\",\n      \"taskType\": \"PICK\",\n      \"warehouseId\": \"string\",\n      \"status\": \"PENDING\",\n      \"priority\": \"LOW\",\n      \"assignedTo\": \"string\",\n      \"sourceLocation\": \"string\",\n      \"destinationLocation\": \"string\",\n      \"productId\": \"string\",\n      \"sku\": \"string\",\n      \"quantity\": 0,\n      \"actualQuantity\": 0,\n      \"lpn\": \"string\",\n      \"waveId\": \"string\",\n      \"orderId\": \"string\",\n      \"createdAt\": \"2024-01-01T00:00:00Z\",\n      \"assignedAt\": \"2024-01-01T00:00:00Z\",\n      \"startedAt\": \"2024-01-01T00:00:00Z\",\n      \"completedAt\": \"2024-01-01T00:00:00Z\",\n      \"dueDate\": \"2024-01-01T00:00:00Z\",\n      \"estimatedDuration\": 0,\n      \"actualDuration\": 0,\n      \"metadata\": {}\n    }\n  ],\n  \"failed\": [\n    {\n      \"index\": 0,\n      \"error\": \"string\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Tasks created successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "cancelTask",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{taskId}}"
+              ],
+              "query": [
+                {
+                  "key": "reason",
+                  "value": "",
+                  "description": "Reason for cancellation",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Cancel task\n\nCancel a task and release its resources\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task\n- `reason` (query, required, string): Reason for cancellation"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task cancelled successfully",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Task cancelled successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "getTaskById",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{taskId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get task by ID\n\nRetrieve detailed information about a specific task\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"taskId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"warehouseId\": \"string\",\n  \"status\": \"PENDING\",\n  \"priority\": \"LOW\",\n  \"assignedTo\": \"string\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"actualQuantity\": 0,\n  \"lpn\": \"string\",\n  \"waveId\": \"string\",\n  \"orderId\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"assignedAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDuration\": 0,\n  \"actualDuration\": 0,\n  \"metadata\": {},\n  \"worker\": {\n    \"workerId\": \"string\",\n    \"name\": \"string\",\n    \"email\": \"string\",\n    \"skills\": [\n      \"string\"\n    ],\n    \"currentLocation\": \"string\",\n    \"status\": \"ACTIVE\"\n  },\n  \"timeline\": [\n    {\n      \"eventType\": \"CREATED\",\n      \"timestamp\": \"2024-01-01T00:00:00Z\",\n      \"userId\": \"string\",\n      \"details\": \"string\"\n    }\n  ],\n  \"scans\": [\n    {\n      \"barcode\": \"string\",\n      \"scanType\": \"LOCATION\",\n      \"timestamp\": \"2024-01-01T00:00:00Z\",\n      \"valid\": true\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "500 response",
+              "originalRequest": null,
+              "status": "Internal server error",
+              "code": 500,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Internal server error"
+            }
+          ]
+        },
+        {
+          "name": "updateTask",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{taskId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update task\n\nUpdate task properties (only for tasks in PENDING status)\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"LOW\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"quantity\": 0,\n  \"metadata\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task updated successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"taskId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"warehouseId\": \"string\",\n  \"status\": \"PENDING\",\n  \"priority\": \"LOW\",\n  \"assignedTo\": \"string\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"actualQuantity\": 0,\n  \"lpn\": \"string\",\n  \"waveId\": \"string\",\n  \"orderId\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"assignedAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDuration\": 0,\n  \"actualDuration\": 0,\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task updated successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "completeTask",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{taskId}}",
+                "complete"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Complete task\n\nMark task as completed with actual quantities\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"actualQuantity\": 0,\n  \"notes\": \"string\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"scans\": [\n    {\n      \"barcode\": \"string\",\n      \"scanType\": \"string\",\n      \"timestamp\": \"2024-01-01T00:00:00Z\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task completed successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"taskId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"warehouseId\": \"string\",\n  \"status\": \"PENDING\",\n  \"priority\": \"LOW\",\n  \"assignedTo\": \"string\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"actualQuantity\": 0,\n  \"lpn\": \"string\",\n  \"waveId\": \"string\",\n  \"orderId\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"assignedAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDuration\": 0,\n  \"actualDuration\": 0,\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task completed successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "failTask",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/fail",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{taskId}}",
+                "fail"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Fail task\n\nMark task as failed with reason\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"string\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task marked as failed",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"taskId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"warehouseId\": \"string\",\n  \"status\": \"PENDING\",\n  \"priority\": \"LOW\",\n  \"assignedTo\": \"string\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"actualQuantity\": 0,\n  \"lpn\": \"string\",\n  \"waveId\": \"string\",\n  \"orderId\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"assignedAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDuration\": 0,\n  \"actualDuration\": 0,\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task marked as failed"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "startTask",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks/{{taskId}}/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks",
+                "{{taskId}}",
+                "start"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Start task execution\n\nMark task as started by the assigned worker\n\n**Parameters**\n- `taskId` (path, required, string): Unique identifier of the task",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"deviceId\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Task started successfully",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"taskId\": \"string\",\n  \"taskType\": \"PICK\",\n  \"warehouseId\": \"string\",\n  \"status\": \"PENDING\",\n  \"priority\": \"LOW\",\n  \"assignedTo\": \"string\",\n  \"sourceLocation\": \"string\",\n  \"destinationLocation\": \"string\",\n  \"productId\": \"string\",\n  \"sku\": \"string\",\n  \"quantity\": 0,\n  \"actualQuantity\": 0,\n  \"lpn\": \"string\",\n  \"waveId\": \"string\",\n  \"orderId\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"assignedAt\": \"2024-01-01T00:00:00Z\",\n  \"startedAt\": \"2024-01-01T00:00:00Z\",\n  \"completedAt\": \"2024-01-01T00:00:00Z\",\n  \"dueDate\": \"2024-01-01T00:00:00Z\",\n  \"estimatedDuration\": 0,\n  \"actualDuration\": 0,\n  \"metadata\": {}\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Task started successfully"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Tasks`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8082",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

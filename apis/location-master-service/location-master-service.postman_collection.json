@@ -1,0 +1,1159 @@
+{
+  "info": {
+    "_postman_id": "549e39f5-f421-43ec-9464-7fb2ff594857",
+    "name": "Location Master Service API",
+    "description": "The Location Master Service manages warehouse location configuration and slotting optimization.\nIt defines location hierarchies (Warehouse \u2192 Zone \u2192 Aisle \u2192 Bay \u2192 Bin), manages location attributes,\ncapacity, and restrictions, implements slotting rules and optimization algorithms, and handles ABC velocity\nclassification and zone assignment rules. The service is the master data source for all warehouse locations.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Capacity",
+      "item": [
+        {
+          "name": "configureCapacity",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/capacity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}",
+                "capacity"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Configure capacity\n\nConfigure location capacity parameters\n\n**Parameters**\n- `locationId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maxPallets\": 0,\n  \"maxCases\": 0,\n  \"maxEaches\": 0,\n  \"maxWeight\": 0.0,\n  \"maxVolume\": 0.0\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Capacity configured",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"slottingClass\": \"A_FAST\",\n  \"currentOccupancy\": 0,\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"reserved\": true,\n  \"reservedFor\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Capacity configured"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Capacity`."
+    },
+    {
+      "name": "Hierarchy",
+      "item": [
+        {
+          "name": "getLocationHierarchy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/hierarchy/{{warehouseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "hierarchy",
+                "{{warehouseId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get location hierarchy\n\nGet complete location hierarchy for warehouse\n\n**Parameters**\n- `warehouseId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location hierarchy",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"warehouseId\": \"string\",\n  \"zones\": [\n    {\n      \"zoneId\": \"string\",\n      \"aisles\": [\n        {\n          \"aisleId\": \"string\",\n          \"bays\": [\n            {\n              \"bayId\": \"string\",\n              \"levels\": [\n                \"string\"\n              ]\n            }\n          ]\n        }\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location hierarchy"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Hierarchy`."
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "listLocations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "zone",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "aisle",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "slottingClass",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List locations\n\nRetrieve list of locations with filtering\n\n**Parameters**\n- `warehouseId` (query, required, string)\n- `zone` (query, optional, string)\n- `aisle` (query, optional, string)\n- `type` (query, optional, None)\n- `status` (query, optional, None)\n- `slottingClass` (query, optional, None)\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of locations",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locations\": [\n    {\n      \"locationId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"type\": \"BIN\",\n      \"status\": \"ACTIVE\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"slottingClass\": \"A_FAST\",\n      \"currentOccupancy\": 0,\n      \"capacity\": {\n        \"maxPallets\": 0,\n        \"maxCases\": 0,\n        \"maxEaches\": 0,\n        \"maxWeight\": 0.0,\n        \"maxVolume\": 0.0\n      }\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of locations"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "createLocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create location\n\nCreate a new warehouse location",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"slottingClass\": \"A_FAST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Location created",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"slottingClass\": \"A_FAST\",\n  \"currentOccupancy\": 0,\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"reserved\": true,\n  \"reservedFor\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location created"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "createLocationsBulk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "bulk"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create locations in bulk\n\nCreate multiple locations at once",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"locations\": [\n    {\n      \"locationId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"type\": \"BIN\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"capacity\": {\n        \"maxPallets\": 0,\n        \"maxCases\": 0,\n        \"maxEaches\": 0,\n        \"maxWeight\": 0.0,\n        \"maxVolume\": 0.0\n      },\n      \"dimensions\": {\n        \"length\": 0.0,\n        \"width\": 0.0,\n        \"height\": 0.0\n      },\n      \"restrictions\": {\n        \"allowedProductTypes\": [\n          \"string\"\n        ],\n        \"prohibitedProductTypes\": [\n          \"string\"\n        ],\n        \"requiresHazmatCertification\": true,\n        \"temperatureControlled\": true,\n        \"minTemperature\": 0.0,\n        \"maxTemperature\": 0.0\n      },\n      \"slottingClass\": \"A_FAST\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Locations created",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"created\": [\n    {\n      \"locationId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"type\": \"BIN\",\n      \"status\": \"ACTIVE\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"slottingClass\": \"A_FAST\",\n      \"currentOccupancy\": 0,\n      \"capacity\": {\n        \"maxPallets\": 0,\n        \"maxCases\": 0,\n        \"maxEaches\": 0,\n        \"maxWeight\": 0.0,\n        \"maxVolume\": 0.0\n      }\n    }\n  ],\n  \"failed\": [\n    {\n      \"locationId\": \"string\",\n      \"error\": \"string\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Locations created"
+            }
+          ]
+        },
+        {
+          "name": "deactivateLocation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}"
+              ],
+              "query": [
+                {
+                  "key": "reason",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Deactivate location\n\nDeactivate a location (soft delete)\n\n**Parameters**\n- `locationId` (path, required, string)\n- `reason` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location deactivated",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Location deactivated"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Location occupied",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location occupied"
+            }
+          ]
+        },
+        {
+          "name": "getLocation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get location\n\nRetrieve detailed information about a location\n\n**Parameters**\n- `locationId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"slottingClass\": \"A_FAST\",\n  \"currentOccupancy\": 0,\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"reserved\": true,\n  \"reservedFor\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "updateLocation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update location\n\nUpdate location attributes\n\n**Parameters**\n- `locationId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\",\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location updated",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"slottingClass\": \"A_FAST\",\n  \"currentOccupancy\": 0,\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"reserved\": true,\n  \"reservedFor\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location updated"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "blockLocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/block",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}",
+                "block"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Block location\n\nBlock a location temporarily\n\n**Parameters**\n- `locationId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"string\",\n  \"blockUntil\": \"2024-01-01T00:00:00Z\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location blocked",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"slottingClass\": \"A_FAST\",\n  \"currentOccupancy\": 0,\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"reserved\": true,\n  \"reservedFor\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location blocked"
+            }
+          ]
+        },
+        {
+          "name": "reserveLocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/reserve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}",
+                "reserve"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Reserve location\n\nReserve location for specific use\n\n**Parameters**\n- `locationId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purpose\": \"string\",\n  \"reservedFor\": \"string\",\n  \"expiresAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location reserved",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"slottingClass\": \"A_FAST\",\n  \"currentOccupancy\": 0,\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"reserved\": true,\n  \"reservedFor\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location reserved"
+            }
+          ]
+        },
+        {
+          "name": "unblockLocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/unblock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}",
+                "unblock"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Unblock location\n\nUnblock a previously blocked location\n\n**Parameters**\n- `locationId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location unblocked",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"slottingClass\": \"A_FAST\",\n  \"currentOccupancy\": 0,\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"reserved\": true,\n  \"reservedFor\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location unblocked"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Locations`."
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "findAvailableLocations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/search/available",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "available"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Find available locations\n\nFind available locations matching criteria",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"zone\": \"string\",\n  \"minCapacity\": 0,\n  \"locationType\": \"BIN\",\n  \"slottingClass\": \"A_FAST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Available locations",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"locationId\": \"string\",\n    \"warehouseId\": \"string\",\n    \"type\": \"BIN\",\n    \"status\": \"ACTIVE\",\n    \"zone\": \"string\",\n    \"aisle\": \"string\",\n    \"bay\": \"string\",\n    \"level\": \"string\",\n    \"slottingClass\": \"A_FAST\",\n    \"currentOccupancy\": 0,\n    \"capacity\": {\n      \"maxPallets\": 0,\n      \"maxCases\": 0,\n      \"maxEaches\": 0,\n      \"maxWeight\": 0.0,\n      \"maxVolume\": 0.0\n    }\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "Available locations"
+            }
+          ]
+        },
+        {
+          "name": "searchLocations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/search/locations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "search",
+                "locations"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Search locations\n\nAdvanced location search",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"slottingClass\": \"A_FAST\",\n  \"minCapacity\": 0,\n  \"available\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Search results",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"results\": [\n    {\n      \"locationId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"type\": \"BIN\",\n      \"status\": \"ACTIVE\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"slottingClass\": \"A_FAST\",\n      \"currentOccupancy\": 0,\n      \"capacity\": {\n        \"maxPallets\": 0,\n        \"maxCases\": 0,\n        \"maxEaches\": 0,\n        \"maxWeight\": 0.0,\n        \"maxVolume\": 0.0\n      }\n    }\n  ],\n  \"totalResults\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Search results"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Search`."
+    },
+    {
+      "name": "Slotting",
+      "item": [
+        {
+          "name": "updateSlotting",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/locations/{{locationId}}/slotting",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "locations",
+                "{{locationId}}",
+                "slotting"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update slotting classification\n\nUpdate location slotting class and rules\n\n**Parameters**\n- `locationId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slottingClass\": \"A_FAST\",\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"reason\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Slotting updated",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"locationId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"type\": \"BIN\",\n  \"status\": \"ACTIVE\",\n  \"zone\": \"string\",\n  \"aisle\": \"string\",\n  \"bay\": \"string\",\n  \"level\": \"string\",\n  \"slottingClass\": \"A_FAST\",\n  \"currentOccupancy\": 0,\n  \"capacity\": {\n    \"maxPallets\": 0,\n    \"maxCases\": 0,\n    \"maxEaches\": 0,\n    \"maxWeight\": 0.0,\n    \"maxVolume\": 0.0\n  },\n  \"dimensions\": {\n    \"length\": 0.0,\n    \"width\": 0.0,\n    \"height\": 0.0\n  },\n  \"restrictions\": {\n    \"allowedProductTypes\": [\n      \"string\"\n    ],\n    \"prohibitedProductTypes\": [\n      \"string\"\n    ],\n    \"requiresHazmatCertification\": true,\n    \"temperatureControlled\": true,\n    \"minTemperature\": 0.0,\n    \"maxTemperature\": 0.0\n  },\n  \"assignedProducts\": [\n    \"string\"\n  ],\n  \"blocked\": true,\n  \"blockReason\": \"string\",\n  \"reserved\": true,\n  \"reservedFor\": \"string\",\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"updatedAt\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Slotting updated"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "analyzeSlotting",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/slotting/analyze",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slotting",
+                "analyze"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Analyze slotting\n\nAnalyze current slotting efficiency",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"zone\": \"string\",\n  \"includeSuggestions\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Slotting analysis",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"warehouseId\": \"string\",\n  \"zone\": \"string\",\n  \"totalLocations\": 0,\n  \"slottingEfficiency\": 0.0,\n  \"averagePickDistance\": 0.0,\n  \"distributionByClass\": {\n    \"additionalPropertyKey\": 0\n  },\n  \"issues\": [\n    {\n      \"issue\": \"string\",\n      \"severity\": \"LOW\",\n      \"affectedLocations\": [\n        \"string\"\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Slotting analysis"
+            }
+          ]
+        },
+        {
+          "name": "optimizeSlotting",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/slotting/optimize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slotting",
+                "optimize"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Optimize slotting\n\nGenerate optimal slotting recommendations",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"zone\": \"string\",\n  \"strategy\": \"ABC_VELOCITY\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Slotting optimization results",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"strategy\": \"string\",\n  \"recommendations\": [\n    {\n      \"productId\": \"string\",\n      \"currentLocation\": \"string\",\n      \"recommendedLocation\": \"string\",\n      \"reason\": \"string\",\n      \"expectedImprovement\": 0.0\n    }\n  ],\n  \"totalRecommendations\": 0,\n  \"estimatedDistanceReduction\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Slotting optimization results"
+            }
+          ]
+        },
+        {
+          "name": "recommendLocation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/slotting/recommend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "slotting",
+                "recommend"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Recommend location\n\nRecommend best location for a product",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"quantity\": 0,\n  \"velocity\": \"HIGH\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Location recommendations",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"recommendations\": [\n    {\n      \"locationId\": \"string\",\n      \"score\": 0.0,\n      \"reasons\": [\n        \"string\"\n      ],\n      \"distanceFromPicking\": 0.0,\n      \"currentUtilization\": 0.0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Location recommendations"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Slotting`."
+    },
+    {
+      "name": "Zones",
+      "item": [
+        {
+          "name": "listZones",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/zones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zones"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: List zones\n\nGet list of zones in warehouse\n\n**Parameters**\n- `warehouseId` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of zones",
+              "code": 200,
+              "header": [],
+              "body": "[\n  {\n    \"zoneId\": \"string\",\n    \"name\": \"string\",\n    \"warehouseId\": \"string\",\n    \"zoneType\": \"PICKING\",\n    \"totalLocations\": 0,\n    \"availableLocations\": 0\n  }\n]",
+              "_postman_previewlanguage": "json",
+              "description": "List of zones"
+            }
+          ]
+        },
+        {
+          "name": "createZone",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/zones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zones"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create zone\n\nCreate a new zone",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"zoneId\": \"string\",\n  \"name\": \"string\",\n  \"warehouseId\": \"string\",\n  \"zoneType\": \"PICKING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Zone created",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"zoneId\": \"string\",\n  \"name\": \"string\",\n  \"warehouseId\": \"string\",\n  \"zoneType\": \"PICKING\",\n  \"totalLocations\": 0,\n  \"availableLocations\": 0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Zone created"
+            }
+          ]
+        },
+        {
+          "name": "getZone",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/zones/{{zoneId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "zones",
+                "{{zoneId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get zone\n\nGet zone details\n\n**Parameters**\n- `zoneId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Zone details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"zoneId\": \"string\",\n  \"name\": \"string\",\n  \"warehouseId\": \"string\",\n  \"zoneType\": \"PICKING\",\n  \"totalLocations\": 0,\n  \"availableLocations\": 0,\n  \"locations\": [\n    {\n      \"locationId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"type\": \"BIN\",\n      \"status\": \"ACTIVE\",\n      \"zone\": \"string\",\n      \"aisle\": \"string\",\n      \"bay\": \"string\",\n      \"level\": \"string\",\n      \"slottingClass\": \"A_FAST\",\n      \"currentOccupancy\": 0,\n      \"capacity\": {\n        \"maxPallets\": 0,\n        \"maxCases\": 0,\n        \"maxEaches\": 0,\n        \"maxWeight\": 0.0,\n        \"maxVolume\": 0.0\n      }\n    }\n  ],\n  \"utilization\": 0.0\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Zone details"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Zones`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}

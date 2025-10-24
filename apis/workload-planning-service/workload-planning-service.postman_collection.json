@@ -1,0 +1,983 @@
+{
+  "info": {
+    "_postman_id": "834bec7b-bfd0-4379-9b1e-514405e7be4e",
+    "name": "Workload Planning Service API",
+    "description": "The Workload Planning Service provides intelligent workforce planning, demand forecasting, and labor optimization.\nIt forecasts workload demand using time series analysis, plans optimal workforce allocation across shifts,\nbalances labor supply with operational demand, optimizes labor costs while meeting service levels, and provides\nactionable recommendations for staffing decisions. The service uses multiple forecasting models including\nMoving Average, Exponential Smoothing, and seasonal decomposition.\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Approval",
+      "item": [
+        {
+          "name": "approvePlan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{planId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{planId}}",
+                "approve"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Approve workload plan\n\nApprove a workload plan (DRAFT \u2192 APPROVED)\n\n**Parameters**\n- `planId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approvedBy\": \"string\",\n  \"notes\": \"string\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Plan approved",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"planId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"planDate\": \"2024-01-01\",\n  \"status\": \"DRAFT\",\n  \"totalWorkers\": 0,\n  \"totalHours\": 0.0,\n  \"estimatedCost\": 0.0,\n  \"utilization\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ],\n  \"workerAssignments\": [\n    {\n      \"workerId\": \"string\",\n      \"workerName\": \"string\",\n      \"shiftType\": \"DAY_SHIFT\",\n      \"workloadCategory\": \"RECEIVING\",\n      \"skillLevel\": \"NOVICE\",\n      \"plannedHours\": 0.0,\n      \"expectedProductivity\": 0.0\n    }\n  ],\n  \"shiftPlans\": [\n    {\n      \"shiftType\": \"DAY_SHIFT\",\n      \"startTime\": \"string\",\n      \"endTime\": \"string\",\n      \"requiredWorkers\": 0,\n      \"assignedWorkers\": 0,\n      \"workloadCategories\": [\n        \"RECEIVING\"\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Plan approved"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        },
+        {
+          "name": "publishPlan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{planId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{planId}}",
+                "publish"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Publish workload plan\n\nPublish approved plan to workers (APPROVED \u2192 PUBLISHED)\n\n**Parameters**\n- `planId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Plan published",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"planId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"planDate\": \"2024-01-01\",\n  \"status\": \"DRAFT\",\n  \"totalWorkers\": 0,\n  \"totalHours\": 0.0,\n  \"estimatedCost\": 0.0,\n  \"utilization\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ],\n  \"workerAssignments\": [\n    {\n      \"workerId\": \"string\",\n      \"workerName\": \"string\",\n      \"shiftType\": \"DAY_SHIFT\",\n      \"workloadCategory\": \"RECEIVING\",\n      \"skillLevel\": \"NOVICE\",\n      \"plannedHours\": 0.0,\n      \"expectedProductivity\": 0.0\n    }\n  ],\n  \"shiftPlans\": [\n    {\n      \"shiftType\": \"DAY_SHIFT\",\n      \"startTime\": \"string\",\n      \"endTime\": \"string\",\n      \"requiredWorkers\": 0,\n      \"assignedWorkers\": 0,\n      \"workloadCategories\": [\n        \"RECEIVING\"\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Plan published"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Approval`."
+    },
+    {
+      "name": "Forecasts",
+      "item": [
+        {
+          "name": "listForecasts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/forecasts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "forecasts"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "period",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List forecasts\n\nRetrieve list of demand forecasts\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `period` (query, optional, None)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of forecasts",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"forecasts\": [\n    {\n      \"forecastId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"period\": \"HOURLY\",\n      \"forecastDate\": \"2024-01-01\",\n      \"model\": \"MOVING_AVERAGE\",\n      \"accuracy\": 0.0,\n      \"confidenceLevel\": 95,\n      \"generatedAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of forecasts"
+            }
+          ]
+        },
+        {
+          "name": "generateForecast",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/forecasts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "forecasts"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Generate forecast\n\nGenerate a new demand forecast",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"period\": \"HOURLY\",\n  \"forecastDate\": \"2024-01-01\",\n  \"workloadCategories\": [\n    \"RECEIVING\"\n  ],\n  \"model\": \"EXPONENTIAL_SMOOTHING\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Forecast generated",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"forecastId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"period\": \"HOURLY\",\n  \"forecastDate\": \"2024-01-01\",\n  \"model\": \"MOVING_AVERAGE\",\n  \"accuracy\": 0.0,\n  \"confidenceLevel\": 95,\n  \"generatedAt\": \"2024-01-01T00:00:00Z\",\n  \"predictions\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"predictedVolume\": 0,\n      \"confidenceInterval\": {\n        \"lower\": 0,\n        \"upper\": 0\n      },\n      \"requiredWorkers\": 0,\n      \"requiredHours\": 0.0\n    }\n  ],\n  \"historicalData\": [\n    {\n      \"timestamp\": \"2024-01-01T00:00:00Z\",\n      \"actualVolume\": 0,\n      \"category\": \"RECEIVING\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Forecast generated"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "getLatestForecast",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/forecasts/warehouse/{{warehouseId}}/latest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "forecasts",
+                "warehouse",
+                "{{warehouseId}}",
+                "latest"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get latest forecast\n\nGet most recent forecast for warehouse\n\n**Parameters**\n- `warehouseId` (path, required, string)\n- `period` (query, optional, None)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Latest forecast",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"forecastId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"period\": \"HOURLY\",\n  \"forecastDate\": \"2024-01-01\",\n  \"model\": \"MOVING_AVERAGE\",\n  \"accuracy\": 0.0,\n  \"confidenceLevel\": 95,\n  \"generatedAt\": \"2024-01-01T00:00:00Z\",\n  \"predictions\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"predictedVolume\": 0,\n      \"confidenceInterval\": {\n        \"lower\": 0,\n        \"upper\": 0\n      },\n      \"requiredWorkers\": 0,\n      \"requiredHours\": 0.0\n    }\n  ],\n  \"historicalData\": [\n    {\n      \"timestamp\": \"2024-01-01T00:00:00Z\",\n      \"actualVolume\": 0,\n      \"category\": \"RECEIVING\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Latest forecast"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "getForecast",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/forecasts/{{forecastId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "forecasts",
+                "{{forecastId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get forecast\n\nRetrieve forecast details\n\n**Parameters**\n- `forecastId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Forecast details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"forecastId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"period\": \"HOURLY\",\n  \"forecastDate\": \"2024-01-01\",\n  \"model\": \"MOVING_AVERAGE\",\n  \"accuracy\": 0.0,\n  \"confidenceLevel\": 95,\n  \"generatedAt\": \"2024-01-01T00:00:00Z\",\n  \"predictions\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"predictedVolume\": 0,\n      \"confidenceInterval\": {\n        \"lower\": 0,\n        \"upper\": 0\n      },\n      \"requiredWorkers\": 0,\n      \"requiredHours\": 0.0\n    }\n  ],\n  \"historicalData\": [\n    {\n      \"timestamp\": \"2024-01-01T00:00:00Z\",\n      \"actualVolume\": 0,\n      \"category\": \"RECEIVING\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Forecast details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Forecasts`."
+    },
+    {
+      "name": "Optimization",
+      "item": [
+        {
+          "name": "optimizePlan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{planId}}/optimize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{planId}}",
+                "optimize"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Optimize workload plan\n\nOptimize worker assignments in the plan\n\n**Parameters**\n- `planId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"minimizeCost\": true,\n  \"maximizeUtilization\": true,\n  \"balanceWorkload\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Plan optimized",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"plan\": {\n    \"planId\": \"string\",\n    \"warehouseId\": \"string\",\n    \"planDate\": \"2024-01-01\",\n    \"status\": \"DRAFT\",\n    \"totalWorkers\": 0,\n    \"totalHours\": 0.0,\n    \"estimatedCost\": 0.0,\n    \"utilization\": 0.0,\n    \"createdAt\": \"2024-01-01T00:00:00Z\",\n    \"plannedVolumes\": [\n      {\n        \"category\": \"RECEIVING\",\n        \"volume\": 0\n      }\n    ],\n    \"workerAssignments\": [\n      {\n        \"workerId\": \"string\",\n        \"workerName\": \"string\",\n        \"shiftType\": \"DAY_SHIFT\",\n        \"workloadCategory\": \"RECEIVING\",\n        \"skillLevel\": \"NOVICE\",\n        \"plannedHours\": 0.0,\n        \"expectedProductivity\": 0.0\n      }\n    ],\n    \"shiftPlans\": [\n      {\n        \"shiftType\": \"DAY_SHIFT\",\n        \"startTime\": \"string\",\n        \"endTime\": \"string\",\n        \"requiredWorkers\": 0,\n        \"assignedWorkers\": 0,\n        \"workloadCategories\": [\n          \"RECEIVING\"\n        ]\n      }\n    ]\n  },\n  \"improvements\": {\n    \"costReduction\": 0.0,\n    \"utilizationIncrease\": 0.0,\n    \"workloadBalance\": 0.0\n  },\n  \"changes\": [\n    \"string\"\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Plan optimized"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Optimization`."
+    },
+    {
+      "name": "Recommendations",
+      "item": [
+        {
+          "name": "getRecommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/recommendations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "recommendations"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Get staffing recommendations\n\nGet intelligent staffing recommendations\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `date` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Staffing recommendations",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"warehouseId\": \"string\",\n  \"date\": \"2024-01-01\",\n  \"status\": \"UNDERSTAFFED\",\n  \"recommendations\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"shiftType\": \"DAY_SHIFT\",\n      \"currentWorkers\": 0,\n      \"recommendedWorkers\": 0,\n      \"reason\": \"string\",\n      \"priority\": \"LOW\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Staffing recommendations"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Recommendations`."
+    },
+    {
+      "name": "Workers",
+      "item": [
+        {
+          "name": "removeWorker",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{planId}}/workers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{planId}}",
+                "workers"
+              ],
+              "query": [
+                {
+                  "key": "workerId",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                },
+                {
+                  "key": "shiftType",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Remove worker from plan\n\nRemove a worker assignment from the plan\n\n**Parameters**\n- `planId` (path, required, string)\n- `workerId` (query, required, string)\n- `shiftType` (query, required, None)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Worker removed",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"planId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"planDate\": \"2024-01-01\",\n  \"status\": \"DRAFT\",\n  \"totalWorkers\": 0,\n  \"totalHours\": 0.0,\n  \"estimatedCost\": 0.0,\n  \"utilization\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ],\n  \"workerAssignments\": [\n    {\n      \"workerId\": \"string\",\n      \"workerName\": \"string\",\n      \"shiftType\": \"DAY_SHIFT\",\n      \"workloadCategory\": \"RECEIVING\",\n      \"skillLevel\": \"NOVICE\",\n      \"plannedHours\": 0.0,\n      \"expectedProductivity\": 0.0\n    }\n  ],\n  \"shiftPlans\": [\n    {\n      \"shiftType\": \"DAY_SHIFT\",\n      \"startTime\": \"string\",\n      \"endTime\": \"string\",\n      \"requiredWorkers\": 0,\n      \"assignedWorkers\": 0,\n      \"workloadCategories\": [\n        \"RECEIVING\"\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Worker removed"
+            }
+          ]
+        },
+        {
+          "name": "assignWorker",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{planId}}/workers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{planId}}",
+                "workers"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Assign worker to plan\n\nAssign a worker to a shift in the plan\n\n**Parameters**\n- `planId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workerId\": \"string\",\n  \"workerName\": \"string\",\n  \"shiftType\": \"DAY_SHIFT\",\n  \"workloadCategory\": \"RECEIVING\",\n  \"skillLevel\": \"NOVICE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Worker assigned",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"planId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"planDate\": \"2024-01-01\",\n  \"status\": \"DRAFT\",\n  \"totalWorkers\": 0,\n  \"totalHours\": 0.0,\n  \"estimatedCost\": 0.0,\n  \"utilization\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ],\n  \"workerAssignments\": [\n    {\n      \"workerId\": \"string\",\n      \"workerName\": \"string\",\n      \"shiftType\": \"DAY_SHIFT\",\n      \"workloadCategory\": \"RECEIVING\",\n      \"skillLevel\": \"NOVICE\",\n      \"plannedHours\": 0.0,\n      \"expectedProductivity\": 0.0\n    }\n  ],\n  \"shiftPlans\": [\n    {\n      \"shiftType\": \"DAY_SHIFT\",\n      \"startTime\": \"string\",\n      \"endTime\": \"string\",\n      \"requiredWorkers\": 0,\n      \"assignedWorkers\": 0,\n      \"workloadCategories\": [\n        \"RECEIVING\"\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Worker assigned"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Workers`."
+    },
+    {
+      "name": "Workload Plans",
+      "item": [
+        {
+          "name": "getWarehouseMetrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/warehouse/{{warehouseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "warehouse",
+                "{{warehouseId}}"
+              ],
+              "query": [
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: Get warehouse metrics\n\nGet workload planning metrics for warehouse\n\n**Parameters**\n- `warehouseId` (path, required, string)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Warehouse metrics",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"warehouseId\": \"string\",\n  \"totalPlans\": 0,\n  \"avgUtilization\": 0.0,\n  \"avgAccuracy\": 0.0,\n  \"laborCostTrend\": [\n    {\n      \"date\": \"2024-01-01\",\n      \"cost\": 0.0\n    }\n  ],\n  \"productivityTrend\": [\n    {\n      \"date\": \"2024-01-01\",\n      \"unitsPerHour\": 0.0\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Warehouse metrics"
+            }
+          ]
+        },
+        {
+          "name": "listPlans",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans"
+              ],
+              "query": [
+                {
+                  "key": "warehouseId",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateFrom",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "dateTo",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                },
+                {
+                  "key": "size",
+                  "value": "",
+                  "description": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "**Summary**: List workload plans\n\nRetrieve list of workload plans\n\n**Parameters**\n- `warehouseId` (query, optional, string)\n- `status` (query, optional, None)\n- `dateFrom` (query, optional, string)\n- `dateTo` (query, optional, string)\n- `page` (query, optional, integer)\n- `size` (query, optional, integer)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "List of workload plans",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"plans\": [\n    {\n      \"planId\": \"string\",\n      \"warehouseId\": \"string\",\n      \"planDate\": \"2024-01-01\",\n      \"status\": \"DRAFT\",\n      \"totalWorkers\": 0,\n      \"totalHours\": 0.0,\n      \"estimatedCost\": 0.0,\n      \"utilization\": 0.0,\n      \"createdAt\": \"2024-01-01T00:00:00Z\"\n    }\n  ],\n  \"pagination\": {\n    \"page\": 0,\n    \"size\": 0,\n    \"totalElements\": 0,\n    \"totalPages\": 0\n  }\n}",
+              "_postman_previewlanguage": "json",
+              "description": "List of workload plans"
+            }
+          ]
+        },
+        {
+          "name": "createPlan",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Create workload plan\n\nCreate a new workload plan",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"warehouseId\": \"string\",\n  \"planDate\": \"2024-01-01\",\n  \"forecastId\": \"string\",\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 response",
+              "originalRequest": null,
+              "status": "Plan created",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"planId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"planDate\": \"2024-01-01\",\n  \"status\": \"DRAFT\",\n  \"totalWorkers\": 0,\n  \"totalHours\": 0.0,\n  \"estimatedCost\": 0.0,\n  \"utilization\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ],\n  \"workerAssignments\": [\n    {\n      \"workerId\": \"string\",\n      \"workerName\": \"string\",\n      \"shiftType\": \"DAY_SHIFT\",\n      \"workloadCategory\": \"RECEIVING\",\n      \"skillLevel\": \"NOVICE\",\n      \"plannedHours\": 0.0,\n      \"expectedProductivity\": 0.0\n    }\n  ],\n  \"shiftPlans\": [\n    {\n      \"shiftType\": \"DAY_SHIFT\",\n      \"startTime\": \"string\",\n      \"endTime\": \"string\",\n      \"requiredWorkers\": 0,\n      \"assignedWorkers\": 0,\n      \"workloadCategories\": [\n        \"RECEIVING\"\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Plan created"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            }
+          ]
+        },
+        {
+          "name": "cancelPlan",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{planId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{planId}}"
+              ],
+              "query": [
+                {
+                  "key": "reason",
+                  "value": "",
+                  "description": "",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "**Summary**: Cancel workload plan\n\nCancel a workload plan\n\n**Parameters**\n- `planId` (path, required, string)\n- `reason` (query, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Plan cancelled",
+              "code": 200,
+              "header": [],
+              "body": "",
+              "_postman_previewlanguage": "json",
+              "description": "Plan cancelled"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "getPlan",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{planId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{planId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Get workload plan\n\nRetrieve workload plan details\n\n**Parameters**\n- `planId` (path, required, string)"
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Plan details",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"planId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"planDate\": \"2024-01-01\",\n  \"status\": \"DRAFT\",\n  \"totalWorkers\": 0,\n  \"totalHours\": 0.0,\n  \"estimatedCost\": 0.0,\n  \"utilization\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ],\n  \"workerAssignments\": [\n    {\n      \"workerId\": \"string\",\n      \"workerName\": \"string\",\n      \"shiftType\": \"DAY_SHIFT\",\n      \"workloadCategory\": \"RECEIVING\",\n      \"skillLevel\": \"NOVICE\",\n      \"plannedHours\": 0.0,\n      \"expectedProductivity\": 0.0\n    }\n  ],\n  \"shiftPlans\": [\n    {\n      \"shiftType\": \"DAY_SHIFT\",\n      \"startTime\": \"string\",\n      \"endTime\": \"string\",\n      \"requiredWorkers\": 0,\n      \"assignedWorkers\": 0,\n      \"workloadCategories\": [\n        \"RECEIVING\"\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Plan details"
+            },
+            {
+              "name": "404 response",
+              "originalRequest": null,
+              "status": "Resource not found",
+              "code": 404,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource not found"
+            }
+          ]
+        },
+        {
+          "name": "updatePlan",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "description": "Automatically derived from the OpenAPI request body content types."
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "description": "Preferred response media type from OpenAPI specification."
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/plans/{{planId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "plans",
+                "{{planId}}"
+              ],
+              "query": []
+            },
+            "description": "**Summary**: Update workload plan\n\nUpdate workload plan (only DRAFT status)\n\n**Parameters**\n- `planId` (path, required, string)",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 response",
+              "originalRequest": null,
+              "status": "Plan updated",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"planId\": \"string\",\n  \"warehouseId\": \"string\",\n  \"planDate\": \"2024-01-01\",\n  \"status\": \"DRAFT\",\n  \"totalWorkers\": 0,\n  \"totalHours\": 0.0,\n  \"estimatedCost\": 0.0,\n  \"utilization\": 0.0,\n  \"createdAt\": \"2024-01-01T00:00:00Z\",\n  \"plannedVolumes\": [\n    {\n      \"category\": \"RECEIVING\",\n      \"volume\": 0\n    }\n  ],\n  \"workerAssignments\": [\n    {\n      \"workerId\": \"string\",\n      \"workerName\": \"string\",\n      \"shiftType\": \"DAY_SHIFT\",\n      \"workloadCategory\": \"RECEIVING\",\n      \"skillLevel\": \"NOVICE\",\n      \"plannedHours\": 0.0,\n      \"expectedProductivity\": 0.0\n    }\n  ],\n  \"shiftPlans\": [\n    {\n      \"shiftType\": \"DAY_SHIFT\",\n      \"startTime\": \"string\",\n      \"endTime\": \"string\",\n      \"requiredWorkers\": 0,\n      \"assignedWorkers\": 0,\n      \"workloadCategories\": [\n        \"RECEIVING\"\n      ]\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Plan updated"
+            },
+            {
+              "name": "400 response",
+              "originalRequest": null,
+              "status": "Bad request",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Bad request"
+            },
+            {
+              "name": "409 response",
+              "originalRequest": null,
+              "status": "Resource conflict",
+              "code": 409,
+              "header": [],
+              "body": "{\n  \"code\": \"string\",\n  \"message\": \"string\",\n  \"details\": {},\n  \"timestamp\": \"2024-01-01T00:00:00Z\"\n}",
+              "_postman_previewlanguage": "json",
+              "description": "Resource conflict"
+            }
+          ]
+        }
+      ],
+      "description": "Operations grouped under `Workload Plans`."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "description": "Base URL derived from the OpenAPI servers list."
+    }
+  ]
+}
