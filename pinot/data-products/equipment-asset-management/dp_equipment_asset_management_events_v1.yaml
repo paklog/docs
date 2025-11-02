@@ -1,0 +1,20 @@
+name: dp_equipment_asset_management_events_v1
+service: equipment-asset-management
+domain: ops
+kind: source-aligned
+description: Equipment asset lifecycle events for operations.
+owner: equipment-ops@paklog.com
+kafka_topics:
+  - equipment.asset.lifecycle
+pinot_table: dp_equipment_asset_management_events_v1
+schema_file: pinot/schemas/equipment-asset-management/dp_equipment_asset_management_events_v1.schema.json
+table_files:
+  dev: pinot/tables/equipment-asset-management/dp_equipment_asset_management_events_v1.table.dev.json
+  staging: pinot/tables/equipment-asset-management/dp_equipment_asset_management_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, ops]
+

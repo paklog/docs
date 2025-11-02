@@ -1,0 +1,286 @@
+asyncapi: 2.5.0
+info:
+  title: Order Management Events (CloudEvents)
+  version: 1.0.1
+  description: |
+    This service publishes domain events related to the lifecycle of a fulfillment order.
+    All events conform to the CloudEvents v1.0 specification and are explicitly defined.
+
+servers:
+  production:
+    url: kafka-prod.example.com:9092
+    protocol: kafka
+    description: Production Kafka broker
+
+channels:
+  fulfillment.order_management.v1.events:
+    description: A topic for all domain events originating from the Order Management Bounded Context.
+    publish:
+      summary: Publish an order management domain event.
+      message:
+        oneOf:
+          - $ref: '#/components/messages/FulfillmentOrderReceived'
+          - $ref: '#/components/messages/FulfillmentOrderValidated'
+          - $ref: '#/components/messages/FulfillmentOrderInvalidated'
+          - $ref: '#/components/messages/FulfillmentOrderCancelled'
+
+components:
+  messages:
+    FulfillmentOrderReceived:
+      name: fulfillment_order_received
+      title: Fulfillment Order Received
+      summary: Published when a new fulfillment order is successfully accepted by the system.
+      contentType: application/cloudevents+json
+      payload:
+        $ref: "#/components/schemas/FulfillmentOrderReceivedCloudEvent"
+        
+    FulfillmentOrderValidated:
+      name: fulfillment_order_validated
+      title: Fulfillment Order Validated
+      summary: Published when an order has passed all business rule validations and is ready for the warehouse.
+      contentType: application/cloudevents+json
+      payload:
+        $ref: "#/components/schemas/FulfillmentOrderValidatedCloudEvent"
+
+    FulfillmentOrderInvalidated:
+      name: fulfillment_order_invalidated
+      title: Fulfillment Order Invalidated
+      summary: Published when an order fails business rule validation.
+      contentType: application/cloudevents+json
+      payload:
+        $ref: "#/components/schemas/FulfillmentOrderInvalidatedCloudEvent"
+
+    FulfillmentOrderCancelled:
+      name: fulfillment_order_cancelled
+      title: Fulfillment Order Cancelled
+      summary: Published when an order has been successfully cancelled.
+      contentType: application/cloudevents+json
+      payload:
+        $ref: "#/components/schemas/FulfillmentOrderCancelledCloudEvent"
+
+  schemas:
+    # --- Explicit CloudEvent Definitions ---
+
+    FulfillmentOrderReceivedCloudEvent:
+      type: object
+      required: [specversion, type, source, id, time, data]
+      properties:
+        specversion:
+          type: string
+          enum: ["1.0"]
+        type:
+          type: string
+          enum: ["com.example.fulfillment.order.received"]
+        source:
+          type: string
+          format: uri-reference
+          example: "/fulfillment/order-management-service"
+        subject:
+          type: string
+          description: The `order_id` of the fulfillment order.
+        id:
+          type: string
+          format: uuid
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          enum: ["application/json"]
+        data:
+          $ref: '#/components/schemas/FulfillmentOrderData'
+
+    FulfillmentOrderValidatedCloudEvent:
+      type: object
+      required: [specversion, type, source, id, time, data]
+      properties:
+        specversion:
+          type: string
+          enum: ["1.0"]
+        type:
+          type: string
+          enum: ["com.example.fulfillment.order.validated"]
+        source:
+          type: string
+          format: uri-reference
+          example: "/fulfillment/order-management-service"
+        subject:
+          type: string
+        id:
+          type: string
+          format: uuid
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          enum: ["application/json"]
+        data:
+          $ref: '#/components/schemas/FulfillmentOrderData'
+
+    FulfillmentOrderInvalidatedCloudEvent:
+      type: object
+      required: [specversion, type, source, id, time, data]
+      properties:
+        specversion:
+          type: string
+          enum: ["1.0"]
+        type:
+          type: string
+          enum: ["com.example.fulfillment.order.invalidated"]
+        source:
+          type: string
+          format: uri-reference
+          example: "/fulfillment/order-management-service"
+        subject:
+          type: string
+        id:
+          type: string
+          format: uuid
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          enum: ["application/json"]
+        data:
+          $ref: '#/components/schemas/FulfillmentOrderInvalidatedData'
+
+    FulfillmentOrderCancelledCloudEvent:
+      type: object
+      required: [specversion, type, source, id, time, data]
+      properties:
+        specversion:
+          type: string
+          enum: ["1.0"]
+        type:
+          type: string
+          enum: ["com.example.fulfillment.order.cancelled"]
+        source:
+          type: string
+          format: uri-reference
+          example: "/fulfillment/order-management-service"
+        subject:
+          type: string
+        id:
+          type: string
+          format: uuid
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          enum: ["application/json"]
+        data:
+          $ref: '#/components/schemas/FulfillmentOrderCancelledData'
+
+    # --- Domain-Specific Data Payloads ---
+
+    FulfillmentOrderData:
+      type: object
+      properties:
+        order:
+          $ref: '#/components/schemas/FulfillmentOrder'
+
+    FulfillmentOrderInvalidatedData:
+      type: object
+      required: [order_id, seller_fulfillment_order_id, reason]
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        seller_fulfillment_order_id:
+          type: string
+        reason:
+          type: string
+          description: The reason why the order was invalidated.
+          example: "Insufficient stock for SKU item-xyz-789"
+
+    FulfillmentOrderCancelledData:
+      type: object
+      required: [order_id, seller_fulfillment_order_id]
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        seller_fulfillment_order_id:
+          type: string
+        cancellation_reason:
+          type: string
+          example: "Cancelled at seller's request."
+
+    # --- Reusable Domain Model Schemas ---
+
+    FulfillmentOrder:
+      type: object
+      properties:
+        order_id:
+          type: string
+          format: uuid
+        seller_fulfillment_order_id:
+          type: string
+        displayable_order_id:
+          type: string
+        displayable_order_date:
+          type: string
+          format: date-time
+        displayable_order_comment:
+          type: string
+        shipping_speed_category:
+          type: string
+        destination_address:
+          $ref: '#/components/schemas/Address'
+        status:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        received_date:
+          type: string
+          format: date-time
+
+    OrderItem:
+      type: object
+      required:
+        - seller_sku
+        - seller_fulfillment_order_item_id
+        - quantity
+      properties:
+        seller_sku:
+          type: string
+        seller_fulfillment_order_item_id:
+          type: string
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+        gift_message:
+          type: string
+        displayable_comment:
+          type: string
+
+    Address:
+      type: object
+      required:
+        - name
+        - address_line_1
+        - city
+        - state_or_region
+        - postal_code
+        - country_code
+      properties:
+        name:
+          type: string
+        address_line_1:
+          type: string
+        address_line_2:
+          type: string
+        city:
+          type: string
+        state_or_region:
+          type: string
+        postal_code:
+          type: string
+        country_code:
+          type: string

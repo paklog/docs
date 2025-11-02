@@ -1,0 +1,1501 @@
+openapi: 3.1.0
+info:
+  title: Value-Added Services (VAS) API
+  description: |
+    ## Overview
+    The Value-Added Services API provides comprehensive management of warehouse value-added operations including kitting, labeling, gift wrapping, customization, assembly, repackaging, quality inspection, and sorting services.
+
+    ## Features
+    - **Multi-Service Support**: Handle 8 different types of value-added services
+    - **Workflow Management**: Track multi-step workflows with quality checkpoints
+    - **Real-Time Progress**: Monitor order progress with percentage completion
+    - **Quality Control**: Perform quality checks with grading system (A-D)
+    - **SLA Tracking**: Automatic SLA violation detection based on service type
+    - **Flexible Billing**: Support for per-unit, per-hour, flat-rate, and tiered billing
+    - **Event-Driven**: Publishes CloudEvents to Kafka for downstream processing
+
+    ## Architecture
+    Built using Domain-Driven Design (DDD) principles with:
+    - Hexagonal Architecture (Ports & Adapters)
+    - Event Sourcing for state changes
+    - MongoDB for persistence
+    - Kafka for event streaming
+    - Spring Boot 3.x framework
+
+    ## Business Process
+    1. **Order Creation**: Client creates a VAS order specifying service type, priority, and billing
+    2. **Workflow Initiation**: System generates workflow steps based on service type
+    3. **Step Execution**: Workers complete steps sequentially with time tracking
+    4. **Quality Checks**: Optional quality checkpoints with pass/fail evaluation
+    5. **Rework Handling**: Failed quality checks trigger rework (max 2 attempts)
+    6. **Completion**: Order completes with cost calculation and SLA verification
+
+  version: 1.0.0
+  contact:
+    name: Paklog Engineering Team
+    email: engineering@paklog.com
+    url: https://paklog.com
+  license:
+    name: Proprietary
+    url: https://paklog.com/license
+
+servers:
+  - url: http://localhost:8097
+    description: Local development server
+  - url: https://api-dev.paklog.com
+    description: Development environment
+  - url: https://api-staging.paklog.com
+    description: Staging environment
+  - url: https://api.paklog.com
+    description: Production environment
+
+tags:
+  - name: VAS Orders
+    description: |
+      Operations for managing Value-Added Service orders throughout their lifecycle.
+      Each order represents a unit of work that flows through a customizable workflow
+      with optional quality checkpoints and SLA tracking.
+  - name: Workflow Management
+    description: |
+      Control workflow execution including starting orders, completing individual steps,
+      and handling quality checkpoints. The workflow engine supports sequential step
+      execution with automatic progression.
+  - name: Quality Control
+    description: |
+      Quality checkpoint operations with grading system. Quality checks can be configured
+      per workflow step and support pass/fail evaluation with automatic rework triggering.
+
+paths:
+  /api/v1/vas/orders:
+    post:
+      operationId: createVASOrder
+      summary: Create a new VAS order
+      description: |
+        Creates a new Value-Added Services order with the specified configuration.
+
+        **Workflow Generation:**
+        - The system automatically generates workflow steps based on the service type
+        - Each service type has predefined SLA hours (configured in application.yml)
+        - Steps are sequenced automatically and tracked for completion
+
+        **Business Rules:**
+        - Service type determines the workflow template and SLA
+        - Priority affects scheduling but not workflow structure
+        - Billing type and rate are used for cost calculation upon completion
+        - Due date is calculated as: current_time + SLA_hours
+
+        **Events Published:**
+        - `VASOrderCreated` event is published to Kafka topic: support-intelligence.value-added-services.events
+
+        **Example Use Cases:**
+        - **Kitting**: Assemble components into promotional kits (max 20 components)
+        - **Labeling**: Apply custom labels to products
+        - **Gift Wrapping**: Wrap products for gifting with custom packaging
+        - **Customization**: Apply personalization (engraving, embroidery, printing)
+        - **Assembly**: Assemble multi-part products
+        - **Repackaging**: Repackage products in different containers
+        - **Quality Inspection**: Detailed quality checks for compliance
+        - **Sorting**: Sort products by criteria (size, color, condition)
+
+      tags:
+        - VAS Orders
+      requestBody:
+        required: true
+        description: Order creation parameters with validation constraints
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVASOrderCommand'
+            examples:
+              kittingOrder:
+                summary: Kitting Service - Promotional Bundle
+                description: Create a kitting order to assemble a promotional bundle with multiple components
+                value:
+                  customerId: "CUST-12345"
+                  warehouseId: "WH-NORTH-01"
+                  serviceType: "KITTING"
+                  priority: "HIGH"
+                  billingType: "PER_UNIT"
+                  billingRate: 25.50
+              giftWrapOrder:
+                summary: Gift Wrap Service - Holiday Package
+                description: Gift wrapping with premium packaging for holiday season
+                value:
+                  customerId: "CUST-67890"
+                  warehouseId: "WH-SOUTH-02"
+                  serviceType: "GIFT_WRAP"
+                  priority: "URGENT"
+                  billingType: "FLAT_RATE"
+                  billingRate: 15.00
+              customizationOrder:
+                summary: Customization - Laser Engraving
+                description: Custom laser engraving on premium products
+                value:
+                  customerId: "CUST-54321"
+                  warehouseId: "WH-EAST-03"
+                  serviceType: "CUSTOMIZATION"
+                  priority: "NORMAL"
+                  billingType: "PER_HOUR"
+                  billingRate: 75.00
+              labelingOrder:
+                summary: Labeling - Compliance Labels
+                description: Apply regulatory compliance labels to products
+                value:
+                  customerId: "CUST-11111"
+                  warehouseId: "WH-WEST-01"
+                  serviceType: "LABELING"
+                  priority: "LOW"
+                  billingType: "PER_UNIT"
+                  billingRate: 2.50
+      responses:
+        '201':
+          description: |
+            Order created successfully. Returns the unique order ID which should be used
+            for all subsequent operations (start, step completion, quality checks, etc.)
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+                description: Unique identifier for the created VAS order
+                example: "67890abc-def1-2345-6789-0abcdef12345"
+          headers:
+            Location:
+              description: URI of the created order resource
+              schema:
+                type: string
+                example: "/api/v1/vas/orders/67890abc-def1-2345-6789-0abcdef12345"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/vas/orders/{id}:
+    get:
+      operationId: getVASOrder
+      summary: Retrieve VAS order details
+      description: |
+        Retrieves complete order information including current status, workflow progress,
+        quality checkpoints, billing details, and SLA tracking.
+
+        **Response Details:**
+        - Complete workflow with all steps and their status
+        - Progress percentage calculated as: (completedSteps / totalSteps) * 100
+        - Quality checkpoints with grades and pass/fail status
+        - Kitting components (if service type is KITTING)
+        - Time tracking: estimated vs actual labor minutes
+        - Cost calculation based on billing type and actual labor
+        - SLA violation status (true if completed after due date)
+
+        **Status Transitions:**
+        ```
+        PENDING → IN_PROGRESS → QUALITY_CHECK → COMPLETED
+                             → REWORK_REQUIRED → IN_PROGRESS
+                             → FAILED
+                             → CANCELLED
+        ```
+
+      tags:
+        - VAS Orders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique VAS order identifier
+          schema:
+            type: string
+            format: uuid
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+      responses:
+        '200':
+          description: Order details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VASOrder'
+              examples:
+                kittingInProgress:
+                  summary: Kitting Order - In Progress
+                  description: A kitting order currently being processed with 2 of 4 steps completed
+                  value:
+                    id: "67890abc-def1-2345-6789-0abcdef12345"
+                    orderNumber: "VAS-2025-001234"
+                    customerId: "CUST-12345"
+                    warehouseId: "WH-NORTH-01"
+                    serviceType: "KITTING"
+                    status: "IN_PROGRESS"
+                    priority: "HIGH"
+                    steps:
+                      - stepId: "STEP-001"
+                        sequence: 1
+                        name: "Pick Components"
+                        description: "Retrieve all components from warehouse locations"
+                        completed: true
+                        requiresQualityCheck: false
+                        assignedTo: "WORKER-456"
+                        startedAt: "2025-11-01T10:00:00Z"
+                        completedAt: "2025-11-01T10:25:00Z"
+                        estimatedDurationMinutes: 30
+                        actualDurationMinutes: 25
+                        photoUrl: null
+                        notes: "All components picked successfully"
+                      - stepId: "STEP-002"
+                        sequence: 2
+                        name: "Verify Components"
+                        description: "Verify quantities and SKUs match requirements"
+                        completed: true
+                        requiresQualityCheck: true
+                        assignedTo: "WORKER-456"
+                        startedAt: "2025-11-01T10:25:00Z"
+                        completedAt: "2025-11-01T10:40:00Z"
+                        estimatedDurationMinutes: 20
+                        actualDurationMinutes: 15
+                        photoUrl: "https://cdn.paklog.com/photos/verify-12345.jpg"
+                        notes: "Components verified and photographed"
+                      - stepId: "STEP-003"
+                        sequence: 3
+                        name: "Assemble Kit"
+                        description: "Place components in kit packaging"
+                        completed: false
+                        requiresQualityCheck: false
+                        assignedTo: "WORKER-456"
+                        startedAt: "2025-11-01T10:40:00Z"
+                        completedAt: null
+                        estimatedDurationMinutes: 45
+                        actualDurationMinutes: 0
+                        photoUrl: null
+                        notes: null
+                      - stepId: "STEP-004"
+                        sequence: 4
+                        name: "Final Quality Check"
+                        description: "Verify kit assembly meets quality standards"
+                        completed: false
+                        requiresQualityCheck: true
+                        assignedTo: null
+                        startedAt: null
+                        completedAt: null
+                        estimatedDurationMinutes: 15
+                        actualDurationMinutes: 0
+                        photoUrl: null
+                        notes: null
+                    qualityCheckpoints:
+                      - checkpointId: "QC-001"
+                        stepId: "STEP-002"
+                        inspectorId: "INSPECTOR-789"
+                        grade: "A_EXCELLENT"
+                        passed: true
+                        photoUrl: "https://cdn.paklog.com/photos/qc-001.jpg"
+                        notes: "All components match requirements perfectly"
+                        inspectedAt: "2025-11-01T10:41:00Z"
+                    components:
+                      - componentId: "COMP-001"
+                        sku: "SKU-WIDGET-A"
+                        description: "Premium Widget Type A"
+                        requiredQuantity: 5
+                        pickedQuantity: 5
+                        location: "A-12-34"
+                        lotNumber: "LOT-2025-0156"
+                        verified: true
+                      - componentId: "COMP-002"
+                        sku: "SKU-GADGET-B"
+                        description: "Deluxe Gadget Model B"
+                        requiredQuantity: 3
+                        pickedQuantity: 3
+                        location: "B-23-45"
+                        lotNumber: "LOT-2025-0189"
+                        verified: true
+                      - componentId: "COMP-003"
+                        sku: "SKU-MANUAL-EN"
+                        description: "User Manual - English"
+                        requiredQuantity: 1
+                        pickedQuantity: 1
+                        location: "C-34-56"
+                        lotNumber: "LOT-2025-0201"
+                        verified: true
+                    totalSteps: 4
+                    completedSteps: 2
+                    progressPercentage: 50
+                    estimatedLaborMinutes: 110
+                    actualLaborMinutes: 40
+                    billingType: "PER_UNIT"
+                    billingRate: 25.50
+                    totalCost: 0.0
+                    dueDate: "2025-11-02T10:00:00Z"
+                    startedAt: "2025-11-01T10:00:00Z"
+                    completedAt: null
+                    slaHours: 24
+                    slaViolated: false
+                    reworkCount: 0
+                    reworkReason: null
+                    version: 5
+                    createdAt: "2025-11-01T09:45:00Z"
+                    updatedAt: "2025-11-01T10:40:00Z"
+                completedWithRework:
+                  summary: Customization Order - Completed After Rework
+                  description: A customization order that required one rework cycle but completed successfully
+                  value:
+                    id: "abc12345-def6-7890-abcd-ef1234567890"
+                    orderNumber: "VAS-2025-001235"
+                    customerId: "CUST-54321"
+                    warehouseId: "WH-EAST-03"
+                    serviceType: "CUSTOMIZATION"
+                    status: "COMPLETED"
+                    priority: "NORMAL"
+                    steps:
+                      - stepId: "STEP-001"
+                        sequence: 1
+                        name: "Design Review"
+                        description: "Review customization design with customer requirements"
+                        completed: true
+                        requiresQualityCheck: false
+                        assignedTo: "WORKER-123"
+                        startedAt: "2025-10-31T14:00:00Z"
+                        completedAt: "2025-10-31T14:30:00Z"
+                        estimatedDurationMinutes: 30
+                        actualDurationMinutes: 30
+                        photoUrl: null
+                        notes: "Design approved"
+                      - stepId: "STEP-002"
+                        sequence: 2
+                        name: "Apply Customization"
+                        description: "Laser engrave customer design on product"
+                        completed: true
+                        requiresQualityCheck: true
+                        assignedTo: "WORKER-123"
+                        startedAt: "2025-10-31T14:30:00Z"
+                        completedAt: "2025-10-31T16:45:00Z"
+                        estimatedDurationMinutes: 120
+                        actualDurationMinutes: 135
+                        photoUrl: "https://cdn.paklog.com/photos/custom-12345.jpg"
+                        notes: "First attempt had alignment issue, rework completed successfully"
+                    qualityCheckpoints:
+                      - checkpointId: "QC-001"
+                        stepId: "STEP-002"
+                        inspectorId: "INSPECTOR-456"
+                        grade: "D_FAILED"
+                        passed: false
+                        photoUrl: "https://cdn.paklog.com/photos/qc-fail-001.jpg"
+                        notes: "Engraving alignment off by 2mm, requires rework"
+                        inspectedAt: "2025-10-31T15:30:00Z"
+                      - checkpointId: "QC-002"
+                        stepId: "STEP-002"
+                        inspectorId: "INSPECTOR-456"
+                        grade: "A_EXCELLENT"
+                        passed: true
+                        photoUrl: "https://cdn.paklog.com/photos/qc-pass-002.jpg"
+                        notes: "Perfect alignment and quality after rework"
+                        inspectedAt: "2025-10-31T16:50:00Z"
+                    components: []
+                    totalSteps: 2
+                    completedSteps: 2
+                    progressPercentage: 100
+                    estimatedLaborMinutes: 150
+                    actualLaborMinutes: 165
+                    billingType: "PER_HOUR"
+                    billingRate: 75.00
+                    totalCost: 206.25
+                    dueDate: "2025-11-02T14:00:00Z"
+                    startedAt: "2025-10-31T14:00:00Z"
+                    completedAt: "2025-10-31T16:50:00Z"
+                    slaHours: 48
+                    slaViolated: false
+                    reworkCount: 1
+                    reworkReason: "Engraving alignment off by 2mm, requires rework"
+                    version: 12
+                    createdAt: "2025-10-31T13:45:00Z"
+                    updatedAt: "2025-10-31T16:50:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/vas/orders/{id}/start:
+    post:
+      operationId: startVASOrder
+      summary: Start VAS order workflow
+      description: |
+        Initiates the workflow execution for a VAS order.
+
+        **Preconditions:**
+        - Order status must be `PENDING`
+        - Order must have workflow steps defined
+
+        **Actions Performed:**
+        - Changes order status from `PENDING` to `IN_PROGRESS`
+        - Records `startedAt` timestamp
+        - Automatically starts the first workflow step (sequence 1)
+        - Publishes `VASWorkflowStarted` event to Kafka
+
+        **State Machine:**
+        ```
+        PENDING --[start]--> IN_PROGRESS
+        ```
+
+        **Business Logic:**
+        - SLA timer begins from the `startedAt` timestamp
+        - Workers can now begin executing the first step
+        - Order cannot be started again once in progress
+
+      tags:
+        - Workflow Management
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: VAS order ID to start
+          schema:
+            type: string
+            format: uuid
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+      responses:
+        '200':
+          description: |
+            Order started successfully. Workflow is now active and workers can begin
+            executing steps. First step is automatically started.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Order started successfully"
+                  orderId:
+                    type: string
+                    example: "67890abc-def1-2345-6789-0abcdef12345"
+                  status:
+                    type: string
+                    example: "IN_PROGRESS"
+                  startedAt:
+                    type: string
+                    format: date-time
+                    example: "2025-11-01T10:00:00Z"
+        '400':
+          description: Invalid state transition (order not in PENDING status)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2025-11-01T10:00:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Order must be PENDING to start"
+                path: "/api/v1/vas/orders/67890abc-def1-2345-6789-0abcdef12345/start"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/vas/orders/{orderId}/steps/{stepId}/complete:
+    post:
+      operationId: completeWorkflowStep
+      summary: Complete a workflow step
+      description: |
+        Marks a workflow step as completed and advances the workflow to the next step.
+
+        **Step Completion Logic:**
+        1. Validates that the step exists and belongs to the order
+        2. Records completion timestamp and calculates actual duration
+        3. Increments `completedSteps` counter
+        4. Updates `progressPercentage` = (completedSteps / totalSteps) * 100
+        5. Adds actual labor minutes to order total
+        6. Checks if step requires quality check
+        7. If quality check required: changes order status to `QUALITY_CHECK`
+        8. If all steps complete and all QC passed: triggers order completion
+        9. Otherwise: automatically starts next step in sequence
+
+        **Automatic Progression:**
+        - The system automatically starts the next step (sequence + 1)
+        - No manual intervention needed between steps
+        - Workflow flows sequentially through all steps
+
+        **Quality Check Handling:**
+        - If step has `requiresQualityCheck: true`, order pauses for QC
+        - Must call `/quality-check` endpoint before proceeding
+        - Failed QC triggers rework (max 2 attempts)
+
+      tags:
+        - Workflow Management
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: VAS order identifier
+          schema:
+            type: string
+            format: uuid
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+        - name: stepId
+          in: path
+          required: true
+          description: Workflow step identifier to complete
+          schema:
+            type: string
+          example: "STEP-001"
+      responses:
+        '200':
+          description: |
+            Step completed successfully. If this was not the final step, the next step
+            has been automatically started. If quality check is required, order status
+            is now QUALITY_CHECK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Step completed successfully"
+                  stepId:
+                    type: string
+                    example: "STEP-001"
+                  completedAt:
+                    type: string
+                    format: date-time
+                    example: "2025-11-01T10:25:00Z"
+                  actualDurationMinutes:
+                    type: integer
+                    example: 25
+                  progressPercentage:
+                    type: integer
+                    example: 25
+                  nextStep:
+                    type: object
+                    nullable: true
+                    properties:
+                      stepId:
+                        type: string
+                        example: "STEP-002"
+                      name:
+                        type: string
+                        example: "Verify Components"
+                      startedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-11-01T10:25:00Z"
+        '400':
+          description: Step already completed or invalid state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2025-11-01T10:00:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Step already completed"
+                path: "/api/v1/vas/orders/67890abc-def1-2345-6789-0abcdef12345/steps/STEP-001/complete"
+        '404':
+          description: Order or step not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2025-11-01T10:00:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Step not found: STEP-999"
+                path: "/api/v1/vas/orders/67890abc-def1-2345-6789-0abcdef12345/steps/STEP-999/complete"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/vas/orders/{id}/quality-check:
+    post:
+      operationId: performQualityCheck
+      summary: Perform quality checkpoint
+      description: |
+        Executes a quality checkpoint for a VAS order with automatic grading and pass/fail evaluation.
+
+        **Quality Grading System:**
+        - **A (Excellent)**: ≥95% pass rate - All criteria met to highest standards
+        - **B (Good)**: 85-94% pass rate - Minor deviations within acceptable limits
+        - **C (Acceptable)**: 75-84% pass rate - Meets minimum quality standards
+        - **D (Failed)**: <75% pass rate - Does not meet quality standards, requires rework
+
+        **Pass/Fail Logic:**
+        - Grades A, B, C: **PASS** → Order returns to `IN_PROGRESS` status
+        - Grade D: **FAIL** → Order moves to `REWORK_REQUIRED` status
+
+        **Rework Handling:**
+        - Maximum 2 rework attempts allowed per order
+        - After 2nd rework attempt failure: Order status changes to `FAILED`
+        - Rework resets incomplete/failed steps for re-execution
+        - Each rework increments `reworkCount` counter
+
+        **Events Published:**
+        - Pass: `QualityCheckPassed` event with grade
+        - Fail: `QualityCheckFailed` event with reason
+
+        **Photo Documentation:**
+        - Optional `photoUrl` for visual evidence
+        - Recommended for all quality checkpoints
+        - Required for failed checkpoints in some workflows
+
+      tags:
+        - Quality Control
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: VAS order identifier
+          schema:
+            type: string
+            format: uuid
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+      requestBody:
+        required: true
+        description: Quality checkpoint data with checklist items and results
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityCheckpoint'
+            examples:
+              passingQualityCheck:
+                summary: Passing Quality Check - Grade A
+                description: Quality check with 100% pass rate, excellent grade
+                value:
+                  checkpointId: "QC-001"
+                  stepId: "STEP-002"
+                  inspectorId: "INSPECTOR-789"
+                  checklistItems:
+                    - "All components present"
+                    - "Correct SKUs verified"
+                    - "Quantities match requirements"
+                    - "No damage observed"
+                    - "Labels are legible"
+                  passedItems:
+                    - "All components present"
+                    - "Correct SKUs verified"
+                    - "Quantities match requirements"
+                    - "No damage observed"
+                    - "Labels are legible"
+                  failedItems: []
+                  photoUrl: "https://cdn.paklog.com/photos/qc-001-pass.jpg"
+                  notes: "Perfect assembly, all quality criteria exceeded"
+              failingQualityCheck:
+                summary: Failing Quality Check - Grade D
+                description: Quality check with critical failures requiring rework
+                value:
+                  checkpointId: "QC-002"
+                  stepId: "STEP-003"
+                  inspectorId: "INSPECTOR-456"
+                  checklistItems:
+                    - "Gift wrap properly aligned"
+                    - "Ribbon tied securely"
+                    - "Card placement correct"
+                    - "No wrinkles in paper"
+                    - "Corners sharp and clean"
+                  passedItems:
+                    - "Ribbon tied securely"
+                    - "Card placement correct"
+                  failedItems:
+                    - "Gift wrap properly aligned"
+                    - "No wrinkles in paper"
+                    - "Corners sharp and clean"
+                  photoUrl: "https://cdn.paklog.com/photos/qc-002-fail.jpg"
+                  notes: "Wrapping paper has multiple wrinkles, corners not crisp, alignment off-center. Requires complete rewrap."
+              borderlineQualityCheck:
+                summary: Borderline Quality Check - Grade C
+                description: Quality check at minimum acceptable threshold (75%)
+                value:
+                  checkpointId: "QC-003"
+                  stepId: "STEP-004"
+                  inspectorId: "INSPECTOR-123"
+                  checklistItems:
+                    - "Label position within 2mm tolerance"
+                    - "Label adhesion secure"
+                    - "Text fully legible"
+                    - "Barcode scannable"
+                    - "No air bubbles"
+                    - "Surface clean before application"
+                    - "Correct label SKU"
+                    - "Expiration date visible"
+                  passedItems:
+                    - "Label position within 2mm tolerance"
+                    - "Label adhesion secure"
+                    - "Barcode scannable"
+                    - "Correct label SKU"
+                    - "Expiration date visible"
+                    - "Surface clean before application"
+                  failedItems:
+                    - "Text fully legible"
+                    - "No air bubbles"
+                  photoUrl: "https://cdn.paklog.com/photos/qc-003-borderline.jpg"
+                  notes: "Minor air bubbles and slight text smudging, but within acceptable limits for this priority level"
+      responses:
+        '200':
+          description: |
+            Quality check performed successfully. Response includes the evaluation results,
+            grade assigned, and pass/fail status. If failed, rework has been initiated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkpointId:
+                    type: string
+                    example: "QC-001"
+                  grade:
+                    type: string
+                    enum: [A_EXCELLENT, B_GOOD, C_ACCEPTABLE, D_FAILED]
+                    example: "A_EXCELLENT"
+                  passed:
+                    type: boolean
+                    example: true
+                  passRate:
+                    type: number
+                    format: double
+                    description: Percentage of checklist items that passed
+                    example: 100.0
+                  totalItems:
+                    type: integer
+                    example: 5
+                  passedItems:
+                    type: integer
+                    example: 5
+                  failedItems:
+                    type: integer
+                    example: 0
+                  orderStatus:
+                    type: string
+                    enum: [IN_PROGRESS, QUALITY_CHECK, REWORK_REQUIRED, FAILED, COMPLETED]
+                    example: "IN_PROGRESS"
+                  reworkCount:
+                    type: integer
+                    description: Number of rework cycles (0-2)
+                    example: 0
+                  message:
+                    type: string
+                    example: "Quality check passed with excellent grade"
+              examples:
+                passedResponse:
+                  summary: Quality Check Passed
+                  value:
+                    checkpointId: "QC-001"
+                    grade: "A_EXCELLENT"
+                    passed: true
+                    passRate: 100.0
+                    totalItems: 5
+                    passedItems: 5
+                    failedItems: 0
+                    orderStatus: "IN_PROGRESS"
+                    reworkCount: 0
+                    message: "Quality check passed with excellent grade"
+                failedResponse:
+                  summary: Quality Check Failed - Rework Required
+                  value:
+                    checkpointId: "QC-002"
+                    grade: "D_FAILED"
+                    passed: false
+                    passRate: 40.0
+                    totalItems: 5
+                    passedItems: 2
+                    failedItems: 3
+                    orderStatus: "REWORK_REQUIRED"
+                    reworkCount: 1
+                    message: "Quality check failed. Rework cycle 1 of 2 initiated."
+                maxReworkExceeded:
+                  summary: Quality Check Failed - Max Rework Exceeded
+                  value:
+                    checkpointId: "QC-003"
+                    grade: "D_FAILED"
+                    passed: false
+                    passRate: 60.0
+                    totalItems: 5
+                    passedItems: 3
+                    failedItems: 2
+                    orderStatus: "FAILED"
+                    reworkCount: 2
+                    message: "Quality check failed. Maximum rework attempts (2) exceeded. Order marked as FAILED."
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/vas/orders/{id}/complete:
+    post:
+      operationId: completeVASOrder
+      summary: Complete VAS order
+      description: |
+        Marks the VAS order as completed and performs final calculations.
+
+        **Completion Actions:**
+        1. Changes order status to `COMPLETED`
+        2. Records `completedAt` timestamp
+        3. Sets `progressPercentage` to 100
+        4. Calculates total cost based on billing type:
+           - **PER_HOUR**: (actualLaborMinutes / 60) × billingRate
+           - **PER_UNIT**: billingRate × 1 (assumes 1 unit per order)
+           - **FLAT_RATE**: billingRate (fixed cost)
+           - **TIERED**: billingRate (tier determined by volume/complexity)
+        5. Checks for SLA violation: completedAt > dueDate
+        6. Publishes completion events to Kafka
+
+        **Events Published:**
+        - `VASOrderCompleted` (always)
+        - `KittingCompleted` (if serviceType is KITTING)
+        - `CustomizationCompleted` (if serviceType is CUSTOMIZATION)
+
+        **Cost Calculation Examples:**
+        - **Per Hour**: 165 actual minutes at $75/hr = $206.25
+        - **Per Unit**: $25.50 per unit × 1 = $25.50
+        - **Flat Rate**: Fixed $15.00 regardless of time
+
+        **SLA Violation:**
+        - `slaViolated: true` if completed after due date
+        - Does not block completion, just marks violation
+        - Used for reporting and customer compensation
+
+      tags:
+        - VAS Orders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: VAS order identifier to complete
+          schema:
+            type: string
+            format: uuid
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+      responses:
+        '200':
+          description: |
+            Order completed successfully. All calculations performed, events published,
+            and final state persisted. Order is now ready for billing and archival.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orderId:
+                    type: string
+                    example: "67890abc-def1-2345-6789-0abcdef12345"
+                  orderNumber:
+                    type: string
+                    example: "VAS-2025-001234"
+                  status:
+                    type: string
+                    example: "COMPLETED"
+                  completedAt:
+                    type: string
+                    format: date-time
+                    example: "2025-11-01T16:50:00Z"
+                  totalCost:
+                    type: number
+                    format: double
+                    description: Final calculated cost in USD
+                    example: 206.25
+                  actualLaborMinutes:
+                    type: integer
+                    example: 165
+                  slaViolated:
+                    type: boolean
+                    example: false
+                  dueDate:
+                    type: string
+                    format: date-time
+                    example: "2025-11-02T14:00:00Z"
+                  message:
+                    type: string
+                    example: "Order completed successfully within SLA"
+              examples:
+                successWithinSLA:
+                  summary: Completed Within SLA
+                  value:
+                    orderId: "67890abc-def1-2345-6789-0abcdef12345"
+                    orderNumber: "VAS-2025-001234"
+                    status: "COMPLETED"
+                    completedAt: "2025-11-01T16:50:00Z"
+                    totalCost: 206.25
+                    actualLaborMinutes: 165
+                    slaViolated: false
+                    dueDate: "2025-11-02T14:00:00Z"
+                    message: "Order completed successfully within SLA"
+                successWithSLAViolation:
+                  summary: Completed With SLA Violation
+                  value:
+                    orderId: "abc12345-def6-7890-abcd-ef1234567890"
+                    orderNumber: "VAS-2025-001235"
+                    status: "COMPLETED"
+                    completedAt: "2025-11-03T10:30:00Z"
+                    totalCost: 75.50
+                    actualLaborMinutes: 180
+                    slaViolated: true
+                    dueDate: "2025-11-02T09:00:00Z"
+                    message: "Order completed but SLA was violated by 25.5 hours"
+        '400':
+          description: Order cannot be completed (not all steps finished or quality checks failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2025-11-01T10:00:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Cannot complete order: 2 steps still incomplete"
+                path: "/api/v1/vas/orders/67890abc-def1-2345-6789-0abcdef12345/complete"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    CreateVASOrderCommand:
+      type: object
+      required:
+        - customerId
+        - warehouseId
+        - serviceType
+        - priority
+        - billingType
+        - billingRate
+      properties:
+        customerId:
+          type: string
+          minLength: 1
+          description: |
+            Customer identifier who requested the VAS order.
+            Must be a valid customer ID from the customer management system.
+          example: "CUST-12345"
+        warehouseId:
+          type: string
+          minLength: 1
+          description: |
+            Warehouse location where the VAS work will be performed.
+            Must be a valid warehouse ID with VAS capabilities.
+          example: "WH-NORTH-01"
+        serviceType:
+          $ref: '#/components/schemas/ServiceType'
+        priority:
+          $ref: '#/components/schemas/ServicePriority'
+        billingType:
+          $ref: '#/components/schemas/BillingType'
+        billingRate:
+          type: number
+          format: double
+          minimum: 0
+          description: |
+            Billing rate in USD. Interpretation depends on billingType:
+            - PER_HOUR: Rate per hour (e.g., 75.00 = $75/hour)
+            - PER_UNIT: Rate per unit (e.g., 25.50 = $25.50/unit)
+            - FLAT_RATE: Fixed total cost (e.g., 15.00 = $15 total)
+            - TIERED: Base rate for tier calculation
+          example: 25.50
+
+    VASOrder:
+      type: object
+      description: Complete VAS order aggregate with all workflow details
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique order identifier
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+        orderNumber:
+          type: string
+          description: Human-readable order number for reference
+          example: "VAS-2025-001234"
+        customerId:
+          type: string
+          example: "CUST-12345"
+        warehouseId:
+          type: string
+          example: "WH-NORTH-01"
+        serviceType:
+          $ref: '#/components/schemas/ServiceType'
+        status:
+          $ref: '#/components/schemas/WorkflowStatus'
+        priority:
+          $ref: '#/components/schemas/ServicePriority'
+        steps:
+          type: array
+          description: Ordered list of workflow steps
+          items:
+            $ref: '#/components/schemas/WorkflowStep'
+        qualityCheckpoints:
+          type: array
+          description: Quality checkpoints performed during workflow
+          items:
+            $ref: '#/components/schemas/QualityCheckpoint'
+        components:
+          type: array
+          description: Kitting components (only for KITTING service type)
+          items:
+            $ref: '#/components/schemas/KittingComponent'
+        totalSteps:
+          type: integer
+          description: Total number of workflow steps
+          example: 4
+        completedSteps:
+          type: integer
+          description: Number of completed steps
+          example: 2
+        progressPercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Completion progress (completedSteps / totalSteps * 100)
+          example: 50
+        estimatedLaborMinutes:
+          type: integer
+          description: Sum of estimated duration for all steps
+          example: 110
+        actualLaborMinutes:
+          type: integer
+          description: Sum of actual duration for completed steps
+          example: 40
+        billingType:
+          $ref: '#/components/schemas/BillingType'
+        billingRate:
+          type: number
+          format: double
+          example: 25.50
+        totalCost:
+          type: number
+          format: double
+          description: Calculated total cost (0 until order completes)
+          example: 206.25
+        dueDate:
+          type: string
+          format: date-time
+          description: SLA due date (createdAt + slaHours)
+          example: "2025-11-02T10:00:00Z"
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When workflow was started
+          example: "2025-11-01T10:00:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When order was completed
+          example: "2025-11-01T16:50:00Z"
+        slaHours:
+          type: integer
+          description: SLA hours configured for this service type
+          example: 24
+        slaViolated:
+          type: boolean
+          description: True if completed after due date
+          example: false
+        reworkCount:
+          type: integer
+          minimum: 0
+          maximum: 2
+          description: Number of rework cycles (max 2)
+          example: 0
+        reworkReason:
+          type: string
+          nullable: true
+          description: Reason for rework if applicable
+          example: null
+        version:
+          type: integer
+          format: int64
+          description: Optimistic locking version
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+          description: Order creation timestamp
+          example: "2025-11-01T09:45:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+          example: "2025-11-01T10:40:00Z"
+
+    WorkflowStep:
+      type: object
+      description: Individual step in the VAS workflow
+      properties:
+        stepId:
+          type: string
+          description: Unique step identifier
+          example: "STEP-001"
+        sequence:
+          type: integer
+          description: Step order in workflow (1-based)
+          example: 1
+        name:
+          type: string
+          description: Step name
+          example: "Pick Components"
+        description:
+          type: string
+          description: Detailed step description
+          example: "Retrieve all components from warehouse locations"
+        completed:
+          type: boolean
+          description: Whether step is completed
+          example: true
+        requiresQualityCheck:
+          type: boolean
+          description: Whether step requires quality checkpoint
+          example: false
+        assignedTo:
+          type: string
+          nullable: true
+          description: Worker ID assigned to this step
+          example: "WORKER-456"
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When step was started
+          example: "2025-11-01T10:00:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When step was completed
+          example: "2025-11-01T10:25:00Z"
+        estimatedDurationMinutes:
+          type: integer
+          description: Estimated time to complete step
+          example: 30
+        actualDurationMinutes:
+          type: integer
+          description: Actual time taken (calculated on completion)
+          example: 25
+        photoUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to photo documentation
+          example: "https://cdn.paklog.com/photos/step-001.jpg"
+        notes:
+          type: string
+          nullable: true
+          description: Worker notes about step execution
+          example: "All components picked successfully"
+
+    QualityCheckpoint:
+      type: object
+      description: Quality checkpoint with grading and evaluation
+      required:
+        - checkpointId
+        - stepId
+        - inspectorId
+        - checklistItems
+        - passedItems
+        - failedItems
+      properties:
+        checkpointId:
+          type: string
+          description: Unique checkpoint identifier
+          example: "QC-001"
+        stepId:
+          type: string
+          description: Associated workflow step ID
+          example: "STEP-002"
+        inspectorId:
+          type: string
+          description: Quality inspector user ID
+          example: "INSPECTOR-789"
+        checklistItems:
+          type: array
+          description: Complete list of quality criteria to check
+          items:
+            type: string
+          example:
+            - "All components present"
+            - "Correct SKUs verified"
+            - "Quantities match requirements"
+            - "No damage observed"
+            - "Labels are legible"
+        passedItems:
+          type: array
+          description: List of criteria that passed inspection
+          items:
+            type: string
+          example:
+            - "All components present"
+            - "Correct SKUs verified"
+            - "Quantities match requirements"
+            - "No damage observed"
+            - "Labels are legible"
+        failedItems:
+          type: array
+          description: List of criteria that failed inspection
+          items:
+            type: string
+          example: []
+        grade:
+          $ref: '#/components/schemas/QualityGrade'
+        passed:
+          type: boolean
+          readOnly: true
+          description: Overall pass/fail result (calculated automatically)
+          example: true
+        photoUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to quality check photo evidence
+          example: "https://cdn.paklog.com/photos/qc-001.jpg"
+        notes:
+          type: string
+          nullable: true
+          description: Inspector notes and observations
+          example: "All components match requirements perfectly"
+        inspectedAt:
+          type: string
+          format: date-time
+          readOnly: true
+          description: When inspection was performed
+          example: "2025-11-01T10:41:00Z"
+
+    KittingComponent:
+      type: object
+      description: Component in a kitting order
+      properties:
+        componentId:
+          type: string
+          description: Unique component identifier
+          example: "COMP-001"
+        sku:
+          type: string
+          description: Product SKU
+          example: "SKU-WIDGET-A"
+        description:
+          type: string
+          description: Component description
+          example: "Premium Widget Type A"
+        requiredQuantity:
+          type: integer
+          minimum: 1
+          description: Required quantity for kit
+          example: 5
+        pickedQuantity:
+          type: integer
+          minimum: 0
+          description: Actual quantity picked
+          example: 5
+        location:
+          type: string
+          description: Warehouse location code
+          example: "A-12-34"
+        lotNumber:
+          type: string
+          description: Inventory lot number
+          example: "LOT-2025-0156"
+        verified:
+          type: boolean
+          description: Whether component has been verified
+          example: true
+
+    ServiceType:
+      type: string
+      enum:
+        - KITTING
+        - LABELING
+        - GIFT_WRAP
+        - CUSTOMIZATION
+        - ASSEMBLY
+        - REPACKAGING
+        - QUALITY_INSPECTION
+        - SORTING
+      description: |
+        Type of value-added service:
+        - **KITTING**: Assemble multiple components into promotional bundles or kits
+        - **LABELING**: Apply custom labels, stickers, or compliance markings
+        - **GIFT_WRAP**: Professional gift wrapping with custom packaging
+        - **CUSTOMIZATION**: Personalization services (engraving, embroidery, printing)
+        - **ASSEMBLY**: Assemble multi-part products or displays
+        - **REPACKAGING**: Change packaging type or consolidate shipments
+        - **QUALITY_INSPECTION**: Detailed quality control and compliance checks
+        - **SORTING**: Sort products by attributes (size, color, condition, etc.)
+      example: "KITTING"
+
+    WorkflowStatus:
+      type: string
+      enum:
+        - PENDING
+        - IN_PROGRESS
+        - QUALITY_CHECK
+        - COMPLETED
+        - FAILED
+        - REWORK_REQUIRED
+        - CANCELLED
+      description: |
+        Order workflow status:
+        - **PENDING**: Order created, awaiting start
+        - **IN_PROGRESS**: Workflow actively executing
+        - **QUALITY_CHECK**: Paused for quality checkpoint
+        - **COMPLETED**: All steps done, order finished successfully
+        - **FAILED**: Order failed (max rework exceeded or critical error)
+        - **REWORK_REQUIRED**: Quality check failed, rework in progress
+        - **CANCELLED**: Order cancelled by user
+      example: "IN_PROGRESS"
+
+    ServicePriority:
+      type: string
+      enum:
+        - LOW
+        - NORMAL
+        - HIGH
+        - URGENT
+      description: |
+        Order priority level for scheduling:
+        - **LOW**: Standard processing, no rush
+        - **NORMAL**: Regular priority, default for most orders
+        - **HIGH**: Expedited processing, higher in queue
+        - **URGENT**: Immediate attention, top priority
+      example: "HIGH"
+
+    BillingType:
+      type: string
+      enum:
+        - PER_UNIT
+        - PER_HOUR
+        - FLAT_RATE
+        - TIERED
+      description: |
+        Billing calculation method:
+        - **PER_UNIT**: Fixed rate per unit processed
+        - **PER_HOUR**: Hourly rate based on actual labor time
+        - **FLAT_RATE**: Fixed total cost regardless of time
+        - **TIERED**: Variable rate based on volume or complexity tiers
+      example: "PER_UNIT"
+
+    QualityGrade:
+      type: string
+      enum:
+        - A_EXCELLENT
+        - B_GOOD
+        - C_ACCEPTABLE
+        - D_FAILED
+      description: |
+        Quality evaluation grade:
+        - **A_EXCELLENT**: ≥95% pass rate - Exceptional quality
+        - **B_GOOD**: 85-94% pass rate - Above average quality
+        - **C_ACCEPTABLE**: 75-84% pass rate - Meets minimum standards
+        - **D_FAILED**: <75% pass rate - Does not meet standards
+      example: "A_EXCELLENT"
+
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2025-11-01T10:00:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: Error type/category
+          example: "Bad Request"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Order must be PENDING to start"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/vas/orders/67890abc-def1-2345-6789-0abcdef12345/start"
+        errors:
+          type: array
+          description: Detailed validation errors (for 422 responses)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "customerId"
+              message:
+                type: string
+                example: "must not be blank"
+              rejectedValue:
+                type: string
+                nullable: true
+                example: null
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-01T10:00:00Z"
+            status: 400
+            error: "Bad Request"
+            message: "Invalid request parameters"
+            path: "/api/v1/vas/orders"
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-01T10:00:00Z"
+            status: 422
+            error: "Unprocessable Entity"
+            message: "Validation failed"
+            path: "/api/v1/vas/orders"
+            errors:
+              - field: "customerId"
+                message: "must not be blank"
+                rejectedValue: null
+              - field: "billingRate"
+                message: "must be greater than or equal to 0"
+                rejectedValue: -10.5
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-01T10:00:00Z"
+            status: 404
+            error: "Not Found"
+            message: "VAS order not found with id: 67890abc-def1-2345-6789-0abcdef12345"
+            path: "/api/v1/vas/orders/67890abc-def1-2345-6789-0abcdef12345"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-11-01T10:00:00Z"
+            status: 500
+            error: "Internal Server Error"
+            message: "An unexpected error occurred"
+            path: "/api/v1/vas/orders"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT-based authentication. Include the token in the Authorization header:
+        ```
+        Authorization: Bearer <token>
+        ```
+
+security:
+  - bearerAuth: []

@@ -1,0 +1,36 @@
+{
+  "tableName": "dp_inventory_stock_level_v1",
+  "tableType": "REALTIME",
+  "tenants": {"server": "domain-fulfillment", "broker": "domain-fulfillment"},
+  "segmentsConfig": {
+    "timeColumnName": "event_time",
+    "replication": "2",
+    "retentionTimeUnit": "DAYS",
+    "retentionTimeValue": "30"
+  },
+  "tableIndexConfig": {
+    "bloomFilterColumns": ["sku"],
+    "rangeIndexColumns": ["event_time"]
+  },
+  "ingestionConfig": {
+    "transformConfigs": [
+      {"columnName": "sku", "transformFunction": "jsonPathString($, '$.data.sku')"},
+      {"columnName": "event_time", "transformFunction": "fromDateTime(jsonPathString($, '$.time'), 'yyyy-MM-dd''T''HH:mm:ss[.SSS]XXX')"},
+      {"columnName": "quantity_on_hand", "transformFunction": "jsonPathInt($, '$.data.new_stock_level.quantity_on_hand')"},
+      {"columnName": "quantity_allocated", "transformFunction": "jsonPathInt($, '$.data.new_stock_level.quantity_allocated')"},
+      {"columnName": "available_to_promise", "transformFunction": "jsonPathInt($, '$.data.new_stock_level.available_to_promise')"}
+    ]
+  },
+  "upsertConfig": {"mode": "FULL", "primaryKeyColumns": ["sku"], "hashFunction": "NONE"},
+  "metadata": {"customConfigs": {"product.owner": "inventory-platform@paklog.com", "product.sla": "p95<2s", "product.kind": "source-aligned"}},
+  "streamConfigs": {
+    "streamType": "kafka",
+    "stream.kafka.topic.name": "fulfillment.inventory.v1.events",
+    "stream.kafka.consumer.type": "lowlevel",
+    "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
+    "stream.kafka.broker.list": "localhost:9092",
+    "realtime.segment.flush.threshold.time": "1h",
+    "realtime.segment.flush.threshold.rows": "500000"
+  }
+}
+

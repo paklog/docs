@@ -1,0 +1,20 @@
+name: dp_value_added_services_events_v1
+service: value-added-services
+domain: support
+kind: source-aligned
+description: VAS unified events stream for billing and analytics.
+owner: vas-team@paklog.com
+kafka_topics:
+  - support-intelligence.value-added-services.events
+pinot_table: dp_value_added_services_events_v1
+schema_file: pinot/schemas/value-added-services/dp_value_added_services_events_v1.schema.json
+table_files:
+  dev: pinot/tables/value-added-services/dp_value_added_services_events_v1.table.dev.json
+  staging: pinot/tables/value-added-services/dp_value_added_services_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, vas]
+

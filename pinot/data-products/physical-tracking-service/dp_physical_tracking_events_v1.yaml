@@ -1,0 +1,31 @@
+name: dp_physical_tracking_events_v1
+service: physical-tracking-service
+domain: wes
+kind: source-aligned
+description: >-
+  Physical tracking domain events (license plate lifecycle, movements, and location
+  state changes) ingested from Kafka into Pinot for real-time visibility.
+owner: wes-platform@paklog.com
+kafka_topics:
+  - licenseplate.moved
+  - licenseplate.created
+  - licenseplate.item.added
+  - licenseplate.item.removed
+  - licenseplate.consumed
+  - location.state.changed
+  - location.blocked
+  - location.unblocked
+  - physical.movement
+  - rtls.position.update
+pinot_table: dp_physical_tracking_events_v1
+schema_file: pinot/schemas/physical-tracking-service/dp_physical_tracking_events_v1.schema.json
+table_files:
+  dev: pinot/tables/physical-tracking-service/dp_physical_tracking_events_v1.table.dev.json
+  staging: pinot/tables/physical-tracking-service/dp_physical_tracking_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, wes, tracking]
+

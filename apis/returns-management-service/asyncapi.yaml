@@ -1,0 +1,995 @@
+asyncapi: 3.0.0
+
+info:
+  title: Returns Management Events API
+  version: 1.0.0
+  description: |
+    # Returns Management Event-Driven Architecture
+
+    This AsyncAPI specification defines all domain events published and consumed by the
+    Returns Management microservice. The service uses event-driven architecture for
+    asynchronous communication with other bounded contexts.
+
+    ## Architecture Pattern
+    - **Pattern**: Event-Driven Architecture with Domain Events
+    - **Message Broker**: Apache Kafka (production), RabbitMQ (development)
+    - **Event Format**: JSON with CloudEvents envelope
+    - **Ordering**: Guaranteed per partition (keyed by RMA number)
+
+    ## Event Categories
+
+    ### Published Events (Outbound)
+    Events published by this service when return state changes occur:
+    - `return-initiated` - Customer creates return request
+    - `rma-approved` - RMA approved by agent/system
+    - `rma-denied` - RMA denied
+    - `return-received` - Item received at warehouse
+    - `condition-assessed` - Item condition inspected
+    - `disposition-determined` - Disposition decision made
+    - `refund-processed` - Refund calculated and initiated
+    - `return-completed` - Full return processing complete
+    - `fraud-detected` - Fraud indicators detected
+
+    ### Consumed Events (Inbound)
+    Events consumed from other services:
+    - `order-delivered` - Order delivery confirmation (from Order Service)
+    - `customer-updated` - Customer information changed (from Customer Service)
+
+    ## Integration Points
+    - **Inventory Service**: Consumes disposition events for stock updates
+    - **Payment Service**: Consumes refund events to process payments
+    - **Notification Service**: Consumes all events for customer communications
+    - **Analytics Service**: Consumes all events for reporting
+    - **Fraud Service**: Consumes fraud detection events for model training
+
+  contact:
+    name: Paklog Team
+    email: support@paklog.com
+  license:
+    name: Proprietary
+
+defaultContentType: application/json
+
+servers:
+  kafka-dev:
+    host: localhost:9092
+    protocol: kafka
+    description: Development Kafka broker
+    tags:
+      - name: env:development
+
+  kafka-staging:
+    host: kafka-staging.paklog.internal:9092
+    protocol: kafka
+    description: Staging Kafka cluster
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: env:staging
+
+  kafka-prod:
+    host: kafka.paklog.internal:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: env:production
+
+channels:
+  returnInitiated:
+    address: paklog.returns.return-initiated.v1
+    messages:
+      ReturnInitiatedEvent:
+        $ref: '#/components/messages/ReturnInitiatedEvent'
+    description: |
+      Published when a customer initiates a new return request.
+
+      **Consumers:**
+      - Notification Service (send RMA confirmation email)
+      - Analytics Service (track return metrics)
+      - Fraud Service (update customer return history)
+
+  rmaApproved:
+    address: paklog.returns.rma-approved.v1
+    messages:
+      RmaApprovedEvent:
+        $ref: '#/components/messages/RmaApprovedEvent'
+    description: |
+      Published when an RMA is approved and return label is generated.
+
+      **Consumers:**
+      - Notification Service (send approval email with return label)
+      - Shipping Service (generate return shipping label)
+      - Analytics Service (track approval rates)
+
+  rmaDenied:
+    address: paklog.returns.rma-denied.v1
+    messages:
+      RmaDeniedEvent:
+        $ref: '#/components/messages/RmaDeniedEvent'
+    description: |
+      Published when an RMA is denied.
+
+      **Consumers:**
+      - Notification Service (send denial notification with reason)
+      - Analytics Service (track denial reasons)
+      - Fraud Service (update fraud patterns)
+
+  returnReceived:
+    address: paklog.returns.return-received.v1
+    messages:
+      ReturnReceivedEvent:
+        $ref: '#/components/messages/ReturnReceivedEvent'
+    description: |
+      Published when a returned item is physically received at warehouse.
+
+      **Consumers:**
+      - Notification Service (send receipt confirmation)
+      - Warehouse Service (schedule inspection)
+      - Analytics Service (track return volumes by warehouse)
+
+  conditionAssessed:
+    address: paklog.returns.condition-assessed.v1
+    messages:
+      ConditionAssessedEvent:
+        $ref: '#/components/messages/ConditionAssessedEvent'
+    description: |
+      Published when item condition has been assessed by warehouse staff.
+
+      **Consumers:**
+      - Analytics Service (track condition grades)
+      - Quality Service (track product quality issues)
+
+  dispositionDetermined:
+    address: paklog.returns.disposition-determined.v1
+    messages:
+      DispositionDeterminedEvent:
+        $ref: '#/components/messages/DispositionDeterminedEvent'
+    description: |
+      Published when disposition decision is made for a returned item.
+
+      **Consumers:**
+      - Inventory Service (update stock levels, create refurbish/liquidate tasks)
+      - Analytics Service (track disposition patterns)
+      - Finance Service (track recovery value)
+
+  refundProcessed:
+    address: paklog.returns.refund-processed.v1
+    messages:
+      RefundProcessedEvent:
+        $ref: '#/components/messages/RefundProcessedEvent'
+    description: |
+      Published when refund has been calculated and initiated.
+
+      **Consumers:**
+      - Payment Service (process refund to original payment method)
+      - Notification Service (send refund confirmation)
+      - Finance Service (record refund in ledger)
+      - Analytics Service (track refund amounts)
+
+  returnCompleted:
+    address: paklog.returns.return-completed.v1
+    messages:
+      ReturnCompletedEvent:
+        $ref: '#/components/messages/ReturnCompletedEvent'
+    description: |
+      Published when entire return processing is complete.
+
+      **Consumers:**
+      - Notification Service (send completion notification)
+      - Analytics Service (update return completion metrics)
+      - Customer Service (update customer return history)
+
+  fraudDetected:
+    address: paklog.returns.fraud-detected.v1
+    messages:
+      FraudDetectedEvent:
+        $ref: '#/components/messages/FraudDetectedEvent'
+    description: |
+      Published when fraud indicators are detected in a return request.
+
+      **Consumers:**
+      - Fraud Service (investigate and review)
+      - Notification Service (alert fraud team)
+      - Analytics Service (track fraud patterns)
+      - Risk Service (update customer risk profile)
+
+  orderDelivered:
+    address: paklog.orders.order-delivered.v1
+    messages:
+      OrderDeliveredEvent:
+        $ref: '#/components/messages/OrderDeliveredEvent'
+    description: |
+      Consumed from Order Service when order is delivered to customer.
+      Used to track delivery dates for return window calculations.
+
+operations:
+  publishReturnInitiated:
+    action: send
+    channel:
+      $ref: '#/channels/returnInitiated'
+    summary: Publish return initiated event
+    description: Published when a customer initiates a return request
+    messages:
+      - $ref: '#/channels/returnInitiated/messages/ReturnInitiatedEvent'
+
+  publishRmaApproved:
+    action: send
+    channel:
+      $ref: '#/channels/rmaApproved'
+    summary: Publish RMA approved event
+    description: Published when an RMA is approved
+    messages:
+      - $ref: '#/channels/rmaApproved/messages/RmaApprovedEvent'
+
+  publishRmaDenied:
+    action: send
+    channel:
+      $ref: '#/channels/rmaDenied'
+    summary: Publish RMA denied event
+    description: Published when an RMA is denied
+    messages:
+      - $ref: '#/channels/rmaDenied/messages/RmaDeniedEvent'
+
+  publishReturnReceived:
+    action: send
+    channel:
+      $ref: '#/channels/returnReceived'
+    summary: Publish return received event
+    description: Published when return is received at warehouse
+    messages:
+      - $ref: '#/channels/returnReceived/messages/ReturnReceivedEvent'
+
+  publishConditionAssessed:
+    action: send
+    channel:
+      $ref: '#/channels/conditionAssessed'
+    summary: Publish condition assessed event
+    description: Published when item condition is assessed
+    messages:
+      - $ref: '#/channels/conditionAssessed/messages/ConditionAssessedEvent'
+
+  publishDispositionDetermined:
+    action: send
+    channel:
+      $ref: '#/channels/dispositionDetermined'
+    summary: Publish disposition determined event
+    description: Published when disposition decision is made
+    messages:
+      - $ref: '#/channels/dispositionDetermined/messages/DispositionDeterminedEvent'
+
+  publishRefundProcessed:
+    action: send
+    channel:
+      $ref: '#/channels/refundProcessed'
+    summary: Publish refund processed event
+    description: Published when refund is calculated and initiated
+    messages:
+      - $ref: '#/channels/refundProcessed/messages/RefundProcessedEvent'
+
+  publishReturnCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/returnCompleted'
+    summary: Publish return completed event
+    description: Published when return processing is complete
+    messages:
+      - $ref: '#/channels/returnCompleted/messages/ReturnCompletedEvent'
+
+  publishFraudDetected:
+    action: send
+    channel:
+      $ref: '#/channels/fraudDetected'
+    summary: Publish fraud detected event
+    description: Published when fraud indicators are detected
+    messages:
+      - $ref: '#/channels/fraudDetected/messages/FraudDetectedEvent'
+
+  consumeOrderDelivered:
+    action: receive
+    channel:
+      $ref: '#/channels/orderDelivered'
+    summary: Consume order delivered event
+    description: Consumed from Order Service to track delivery dates
+    messages:
+      - $ref: '#/channels/orderDelivered/messages/OrderDeliveredEvent'
+
+components:
+  messages:
+    ReturnInitiatedEvent:
+      name: ReturnInitiatedEvent
+      title: Return Initiated
+      summary: Customer has initiated a return request
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/ReturnInitiatedEventPayload'
+      examples:
+        - name: ElectronicsReturn
+          summary: Customer initiating return for defective laptop
+          payload:
+            aggregateId: "ret_1a2b3c4d5e6f"
+            rmaNumber: "RMA-20251101-A1B2C3"
+            customerId: "CUST-123456"
+            orderId: "ORD-789012"
+            productIds:
+              - "PROD-LAPTOP-001"
+            returnReason: "DEFECTIVE: Screen flickering, keyboard issues"
+            occurredAt: "2025-11-01T10:00:00Z"
+
+    RmaApprovedEvent:
+      name: RmaApprovedEvent
+      title: RMA Approved
+      summary: Return merchandise authorization has been approved
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/RmaApprovedEventPayload'
+      examples:
+        - name: StandardApproval
+          summary: RMA approved with return label generated
+          payload:
+            aggregateId: "ret_1a2b3c4d5e6f"
+            rmaNumber: "RMA-20251101-A1B2C3"
+            customerId: "CUST-123456"
+            approvedBy: "agent-001"
+            returnLabel: "LABEL-RMA-20251101-A1B2C3"
+            occurredAt: "2025-11-01T11:30:00Z"
+
+    RmaDeniedEvent:
+      name: RmaDeniedEvent
+      title: RMA Denied
+      summary: Return merchandise authorization has been denied
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/RmaDeniedEventPayload'
+      examples:
+        - name: FraudDenial
+          summary: RMA denied due to high fraud risk
+          payload:
+            aggregateId: "ret_2b3c4d5e6f7g"
+            rmaNumber: "RMA-20251101-X9Y8Z7"
+            customerId: "CUST-789012"
+            denialReason: "High fraud risk detected. Multiple returns from different addresses."
+            deniedBy: "fraud-system"
+            occurredAt: "2025-11-01T12:00:00Z"
+
+    ReturnReceivedEvent:
+      name: ReturnReceivedEvent
+      title: Return Received
+      summary: Returned item has been received at warehouse
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/ReturnReceivedEventPayload'
+      examples:
+        - name: WarehouseReceipt
+          summary: Return received at San Francisco warehouse
+          payload:
+            aggregateId: "ret_1a2b3c4d5e6f"
+            rmaNumber: "RMA-20251101-A1B2C3"
+            warehouseId: "WH-SF-001"
+            receivedBy: "warehouse-clerk-042"
+            itemCount: 1
+            occurredAt: "2025-11-05T09:15:00Z"
+
+    ConditionAssessedEvent:
+      name: ConditionAssessedEvent
+      title: Condition Assessed
+      summary: Item condition has been inspected and graded
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/ConditionAssessedEventPayload'
+      examples:
+        - name: GradeA
+          summary: Item assessed as Grade A - perfect condition
+          payload:
+            aggregateId: "ret_3c4d5e6f7g8h"
+            rmaNumber: "RMA-20251101-B2C3D4"
+            lineItemId: "LINE-001"
+            conditionGrade: "A"
+            qualityScore: 98
+            assessedBy: "inspector-015"
+            occurredAt: "2025-11-05T11:30:00Z"
+
+        - name: GradeC
+          summary: Item assessed as Grade C - needs refurbishment
+          payload:
+            aggregateId: "ret_1a2b3c4d5e6f"
+            rmaNumber: "RMA-20251101-A1B2C3"
+            lineItemId: "LINE-001"
+            conditionGrade: "C"
+            qualityScore: 65
+            assessedBy: "inspector-015"
+            occurredAt: "2025-11-05T11:45:00Z"
+
+    DispositionDeterminedEvent:
+      name: DispositionDeterminedEvent
+      title: Disposition Determined
+      summary: Disposition decision made for returned item
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/DispositionDeterminedEventPayload'
+      examples:
+        - name: Resale
+          summary: Item approved for resale
+          payload:
+            aggregateId: "ret_3c4d5e6f7g8h"
+            rmaNumber: "RMA-20251101-B2C3D4"
+            lineItemId: "LINE-001"
+            dispositionType: "RESALE"
+            conditionGrade: "A"
+            estimatedRecoveryValue: 1249.99
+            occurredAt: "2025-11-05T12:00:00Z"
+
+        - name: Refurbish
+          summary: Item requires refurbishment
+          payload:
+            aggregateId: "ret_1a2b3c4d5e6f"
+            rmaNumber: "RMA-20251101-A1B2C3"
+            lineItemId: "LINE-001"
+            dispositionType: "REFURBISH"
+            conditionGrade: "C"
+            estimatedRecoveryValue: 899.99
+            occurredAt: "2025-11-05T12:00:00Z"
+
+    RefundProcessedEvent:
+      name: RefundProcessedEvent
+      title: Refund Processed
+      summary: Refund has been calculated and initiated
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/RefundProcessedEventPayload'
+      examples:
+        - name: FullRefund
+          summary: Full refund - Grade A condition
+          payload:
+            aggregateId: "ret_3c4d5e6f7g8h"
+            rmaNumber: "RMA-20251101-B2C3D4"
+            customerId: "CUST-456789"
+            refundAmount: 1299.99
+            restockingFee: 0.00
+            currency: "USD"
+            paymentMethod: "ORIGINAL_PAYMENT_METHOD"
+            occurredAt: "2025-11-05T14:00:00Z"
+
+        - name: PartialRefund
+          summary: Partial refund - Grade C with restocking fee
+          payload:
+            aggregateId: "ret_1a2b3c4d5e6f"
+            rmaNumber: "RMA-20251101-A1B2C3"
+            customerId: "CUST-123456"
+            refundAmount: 1169.99
+            restockingFee: 130.00
+            currency: "USD"
+            paymentMethod: "ORIGINAL_PAYMENT_METHOD"
+            occurredAt: "2025-11-05T14:30:00Z"
+
+    ReturnCompletedEvent:
+      name: ReturnCompletedEvent
+      title: Return Completed
+      summary: Return processing has been completed
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/ReturnCompletedEventPayload'
+      examples:
+        - name: SingleItemReturn
+          summary: Single item return completed
+          payload:
+            aggregateId: "ret_1a2b3c4d5e6f"
+            rmaNumber: "RMA-20251101-A1B2C3"
+            customerId: "CUST-123456"
+            totalRefundAmount: 1169.99
+            itemsProcessed: 1
+            occurredAt: "2025-11-05T14:30:00Z"
+
+    FraudDetectedEvent:
+      name: FraudDetectedEvent
+      title: Fraud Detected
+      summary: Fraud indicators detected in return request
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/FraudDetectedEventPayload'
+      examples:
+        - name: HighRisk
+          summary: High-risk return requiring manual review
+          payload:
+            aggregateId: "ret_4d5e6f7g8h9i"
+            rmaNumber: "RMA-20251101-F1G2H3"
+            customerId: "CUST-999888"
+            fraudScore: 85
+            riskLevel: "HIGH"
+            indicators:
+              - "FREQUENT_RETURNER"
+              - "DIFFERENT_ADDRESS"
+              - "HIGH_VALUE_ITEM"
+              - "OUTSIDE_WINDOW"
+            requiresManualReview: true
+            occurredAt: "2025-11-01T10:05:00Z"
+
+    OrderDeliveredEvent:
+      name: OrderDeliveredEvent
+      title: Order Delivered
+      summary: Order has been delivered to customer (consumed from Order Service)
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/OrderDeliveredEventPayload'
+      examples:
+        - name: StandardDelivery
+          summary: Order successfully delivered
+          payload:
+            orderId: "ORD-789012"
+            customerId: "CUST-123456"
+            deliveryDate: "2025-10-15T10:30:00Z"
+            deliveryAddress: "123 Main St, San Francisco, CA 94102"
+            carrier: "FedEx"
+            trackingNumber: "FDX123456789"
+            occurredAt: "2025-10-15T10:30:00Z"
+
+  schemas:
+    ReturnInitiatedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - customerId
+        - orderId
+        - productIds
+        - returnReason
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          description: Internal return identifier
+          example: "ret_1a2b3c4d5e6f"
+        rmaNumber:
+          type: string
+          description: RMA number for customer reference
+          pattern: '^RMA-\d{8}-[A-Z0-9]{6}$'
+          example: "RMA-20251101-A1B2C3"
+        customerId:
+          type: string
+          description: Customer identifier
+          example: "CUST-123456"
+        orderId:
+          type: string
+          description: Original order identifier
+          example: "ORD-789012"
+        productIds:
+          type: array
+          description: List of product IDs being returned
+          items:
+            type: string
+          example: ["PROD-LAPTOP-001"]
+        returnReason:
+          type: string
+          description: Primary return reason
+          example: "DEFECTIVE: Screen flickering"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred (ISO 8601)
+          example: "2025-11-01T10:00:00Z"
+
+    RmaApprovedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - customerId
+        - approvedBy
+        - returnLabel
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          example: "ret_1a2b3c4d5e6f"
+        rmaNumber:
+          type: string
+          example: "RMA-20251101-A1B2C3"
+        customerId:
+          type: string
+          example: "CUST-123456"
+        approvedBy:
+          type: string
+          description: Identifier of approver (agent ID or system)
+          example: "agent-001"
+        returnLabel:
+          type: string
+          description: Return shipping label identifier
+          example: "LABEL-RMA-20251101-A1B2C3"
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T11:30:00Z"
+
+    RmaDeniedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - customerId
+        - denialReason
+        - deniedBy
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          example: "ret_2b3c4d5e6f7g"
+        rmaNumber:
+          type: string
+          example: "RMA-20251101-X9Y8Z7"
+        customerId:
+          type: string
+          example: "CUST-789012"
+        denialReason:
+          type: string
+          description: Reason for denial
+          example: "Outside return window"
+        deniedBy:
+          type: string
+          description: Identifier of person/system denying
+          example: "fraud-system"
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T12:00:00Z"
+
+    ReturnReceivedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - warehouseId
+        - receivedBy
+        - itemCount
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          example: "ret_1a2b3c4d5e6f"
+        rmaNumber:
+          type: string
+          example: "RMA-20251101-A1B2C3"
+        warehouseId:
+          type: string
+          description: Warehouse where return was received
+          example: "WH-SF-001"
+        receivedBy:
+          type: string
+          description: Identifier of receiving clerk
+          example: "warehouse-clerk-042"
+        itemCount:
+          type: integer
+          description: Number of items received
+          example: 1
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-05T09:15:00Z"
+
+    ConditionAssessedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - lineItemId
+        - conditionGrade
+        - qualityScore
+        - assessedBy
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          example: "ret_1a2b3c4d5e6f"
+        rmaNumber:
+          type: string
+          example: "RMA-20251101-A1B2C3"
+        lineItemId:
+          type: string
+          description: Line item identifier
+          example: "LINE-001"
+        conditionGrade:
+          type: string
+          enum: [A, B, C, D]
+          description: |
+            Condition grade:
+            - A (95-100): Perfect condition
+            - B (80-94): Minor wear, fully functional
+            - C (60-79): Noticeable wear, needs refurbishment
+            - D (0-59): Damaged, may not be functional
+          example: "C"
+        qualityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Numeric quality score
+          example: 65
+        assessedBy:
+          type: string
+          description: Inspector identifier
+          example: "inspector-015"
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-05T11:45:00Z"
+
+    DispositionDeterminedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - lineItemId
+        - dispositionType
+        - conditionGrade
+        - estimatedRecoveryValue
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          example: "ret_1a2b3c4d5e6f"
+        rmaNumber:
+          type: string
+          example: "RMA-20251101-A1B2C3"
+        lineItemId:
+          type: string
+          example: "LINE-001"
+        dispositionType:
+          type: string
+          enum:
+            - RESALE
+            - REFURBISH
+            - LIQUIDATE
+            - RECYCLE
+            - DESTROY
+          description: |
+            Disposition decision:
+            - RESALE: Resell as-is
+            - REFURBISH: Repair and resell
+            - LIQUIDATE: Sell to liquidators
+            - RECYCLE: Recycle for parts
+            - DESTROY: Dispose safely
+          example: "REFURBISH"
+        conditionGrade:
+          type: string
+          enum: [A, B, C, D]
+          example: "C"
+        estimatedRecoveryValue:
+          type: number
+          format: decimal
+          description: Estimated recovery value in USD
+          example: 899.99
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-05T12:00:00Z"
+
+    RefundProcessedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - customerId
+        - refundAmount
+        - restockingFee
+        - currency
+        - paymentMethod
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          example: "ret_1a2b3c4d5e6f"
+        rmaNumber:
+          type: string
+          example: "RMA-20251101-A1B2C3"
+        customerId:
+          type: string
+          example: "CUST-123456"
+        refundAmount:
+          type: number
+          format: decimal
+          description: Final refund amount (after fees)
+          example: 1169.99
+        restockingFee:
+          type: number
+          format: decimal
+          description: Restocking fee deducted
+          example: 130.00
+        currency:
+          type: string
+          description: Currency code (ISO 4217)
+          example: "USD"
+        paymentMethod:
+          type: string
+          description: Payment method for refund
+          example: "ORIGINAL_PAYMENT_METHOD"
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-05T14:30:00Z"
+
+    ReturnCompletedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - customerId
+        - totalRefundAmount
+        - itemsProcessed
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          example: "ret_1a2b3c4d5e6f"
+        rmaNumber:
+          type: string
+          example: "RMA-20251101-A1B2C3"
+        customerId:
+          type: string
+          example: "CUST-123456"
+        totalRefundAmount:
+          type: number
+          format: decimal
+          description: Total refund amount
+          example: 1169.99
+        itemsProcessed:
+          type: integer
+          description: Number of items processed
+          example: 1
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-05T14:30:00Z"
+
+    FraudDetectedEventPayload:
+      type: object
+      required:
+        - aggregateId
+        - rmaNumber
+        - customerId
+        - fraudScore
+        - riskLevel
+        - indicators
+        - requiresManualReview
+        - occurredAt
+      properties:
+        aggregateId:
+          type: string
+          example: "ret_4d5e6f7g8h9i"
+        rmaNumber:
+          type: string
+          example: "RMA-20251101-F1G2H3"
+        customerId:
+          type: string
+          example: "CUST-999888"
+        fraudScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Calculated fraud score (0-100)
+          example: 85
+        riskLevel:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+          description: Risk level classification
+          example: "HIGH"
+        indicators:
+          type: array
+          description: List of fraud indicators detected
+          items:
+            type: string
+            enum:
+              - HIGH_VALUE_ITEM
+              - FREQUENT_RETURNER
+              - DIFFERENT_ADDRESS
+              - MISSING_SERIAL
+              - OUTSIDE_WINDOW
+          example:
+            - "FREQUENT_RETURNER"
+            - "HIGH_VALUE_ITEM"
+        requiresManualReview:
+          type: boolean
+          description: Whether manual fraud review is required
+          example: true
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:05:00Z"
+
+    OrderDeliveredEventPayload:
+      type: object
+      required:
+        - orderId
+        - customerId
+        - deliveryDate
+        - deliveryAddress
+        - occurredAt
+      properties:
+        orderId:
+          type: string
+          example: "ORD-789012"
+        customerId:
+          type: string
+          example: "CUST-123456"
+        deliveryDate:
+          type: string
+          format: date-time
+          example: "2025-10-15T10:30:00Z"
+        deliveryAddress:
+          type: string
+          example: "123 Main St, San Francisco, CA 94102"
+        carrier:
+          type: string
+          example: "FedEx"
+        trackingNumber:
+          type: string
+          example: "FDX123456789"
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-10-15T10:30:00Z"
+
+  messageTraits:
+    commonHeaders:
+      headers:
+        type: object
+        properties:
+          ce-id:
+            type: string
+            description: CloudEvents unique event identifier
+            example: "evt_a1b2c3d4e5f6"
+          ce-source:
+            type: string
+            description: Event source (service name)
+            example: "paklog.returns-management"
+          ce-specversion:
+            type: string
+            description: CloudEvents specification version
+            example: "1.0"
+          ce-type:
+            type: string
+            description: Event type
+            example: "com.paklog.returns.return-initiated.v1"
+          ce-time:
+            type: string
+            format: date-time
+            description: Event timestamp
+            example: "2025-11-01T10:00:00Z"
+          ce-datacontenttype:
+            type: string
+            description: Content type of data
+            example: "application/json"
+          kafka-key:
+            type: string
+            description: Kafka partition key (RMA number for ordering)
+            example: "RMA-20251101-A1B2C3"
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: SASL/SCRAM-SHA-256 authentication for Kafka
+
+  parameters:
+    rmaNumberKey:
+      description: RMA number used as Kafka partition key to ensure ordering
+      schema:
+        type: string
+        pattern: '^RMA-\d{8}-[A-Z0-9]{6}$'

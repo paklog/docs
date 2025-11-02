@@ -1,0 +1,262 @@
+openapi: 3.0.3
+info:
+  title: Cartonization Service API
+  description: |-
+    A RESTful API for managing carton inventory and calculating optimal packing solutions.
+    This service operates within the Cartonization Bounded Context. It is responsible for all bin-packing algorithms and business rules related to packing.
+    It consumes data from the Product Catalog API to retrieve item dimensions when needed.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+tags:
+  - name: Cartons
+    description: Operations for managing the inventory of available shipping cartons.
+  - name: Cartonization
+    description: The core operation for calculating packing solutions.
+
+paths:
+  /cartons:
+    post:
+      tags:
+        - Cartons
+      summary: Create a new carton type
+      description: Adds a new carton specification to the inventory.
+      operationId: createCarton
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCartonRequest'
+      responses:
+        '201':
+          description: Carton created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carton'
+    get:
+      tags:
+        - Cartons
+      summary: List all carton types
+      description: Retrieves a list of all available cartons in the inventory.
+      operationId: listCartons
+      parameters:
+        - name: activeOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: A list of available cartons.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Carton'
+
+  /cartons/{cartonId}:
+    get:
+      tags:
+        - Cartons
+      summary: Get carton by ID
+      operationId: getCartonById
+      parameters:
+        - name: cartonId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carton'
+        '404':
+          description: Carton not found.
+    delete:
+      tags:
+        - Cartons
+      summary: Deactivate a carton
+      description: Deactivates a carton, making it unavailable for future packing solutions.
+      operationId: deactivateCarton
+      parameters:
+        - name: cartonId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Carton deactivated successfully.
+
+  /packing-solutions:
+    post:
+      tags:
+        - Cartonization
+      summary: Calculate a packing solution
+      description: |-
+        Accepts a list of SKUs and quantities and returns the optimal packing solution.
+        This endpoint triggers the core bin-packing algorithm. The service will internally fetch product dimensions from the Product Catalog service.
+      operationId: calculatePackingSolution
+      parameters:
+        - name: X-Request-ID
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: The list of items that need to be packed.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PackingRequest'
+            example:
+              items:
+                - sku: "EXAMPLE-SKU-123"
+                  quantity: 2
+                - sku: "WIDGET-BLUE-LARGE"
+                  quantity: 1
+      responses:
+        '200':
+          description: Optimal packing solution found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackingSolution'
+
+components:
+  schemas:
+    # Carton Aggregate Root
+    Carton:
+      type: object
+      description: The Carton aggregate root, representing a type of shippable box.
+      required:
+        - name
+        - dimensions
+        - maxWeight
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier for the carton type.
+          readOnly: true
+        name:
+          type: string
+          description: A human-readable name for the carton.
+          example: "Medium Cube Box (12x12x12)"
+        dimensions:
+          $ref: '#/components/schemas/DimensionSet'
+        maxWeight:
+          $ref: '#/components/schemas/WeightMeasurement'
+
+    # Request and Response Objects
+    CreateCartonRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        length:
+          type: number
+          format: float
+        width:
+          type: number
+          format: float
+        height:
+          type: number
+          format: float
+        dimensionUnit:
+          type: string
+        maxWeight:
+          type: number
+          format: float
+        weightUnit:
+          type: string
+
+    PackingRequest:
+      type: object
+      description: A request to find a packing solution for a set of items.
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ItemToPack'
+        orderId:
+          type: string
+        optimizeForMinimumBoxes:
+          type: boolean
+        allowMixedCategories:
+          type: boolean
+
+    PackingSolution:
+      type: object
+      description: The calculated packing solution, describing which cartons to use.
+      properties:
+        packages:
+          type: array
+          description: A list of packages, where each package represents one physical box to be shipped.
+          items:
+            $ref: '#/components/schemas/PackedCarton'
+
+    PackedCarton:
+      type: object
+      description: Represents a single physical carton with its assigned contents.
+      properties:
+        cartonId:
+          type: string
+          format: uuid
+          description: The ID of the carton type to be used for this package.
+        items:
+          type: array
+          description: The specific items from the order that go into this carton.
+          items:
+            $ref: '#/components/schemas/ItemToPack'
+
+    ItemToPack:
+      type: object
+      description: Represents a line item in a cartonization request or a packed carton.
+      properties:
+        sku:
+          type: string
+          example: "EXAMPLE-SKU-123"
+        quantity:
+          type: integer
+          example: 2
+
+    # Reusable Value Objects
+    DimensionSet:
+      type: object
+      properties:
+        length:
+          $ref: '#/components/schemas/DimensionMeasurement'
+        width:
+          $ref: '#/components/schemas/DimensionMeasurement'
+        height:
+          $ref: '#/components/schemas/DimensionMeasurement'
+
+    DimensionMeasurement:
+      type: object
+      properties:
+        value:
+          type: number
+          format: float
+        unit:
+          type: string
+          enum: [MM, CM, M, IN, FT]
+
+    WeightMeasurement:
+      type: object
+      properties:
+        value:
+          type: number
+          format: float
+        unit:
+          type: string
+          enum: [G, KG, LB, OZ]

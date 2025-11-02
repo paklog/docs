@@ -1,0 +1,777 @@
+asyncapi: 2.6.0
+info:
+  title: Task Execution Service Events
+  version: 1.0.0
+  description: |
+    Event-driven API for Task Execution Service using Apache Kafka.
+    This service publishes and subscribes to events related to task creation, assignment, execution, and completion
+    across all warehouse work types including picking, packing, putaway, replenishment, and counting.
+  contact:
+    name: WES Team
+    email: wes-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  development:
+    url: localhost:9092
+    protocol: kafka
+    description: Local Kafka broker
+  production:
+    url: kafka-cluster.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+
+defaultContentType: application/json
+
+channels:
+  task.created:
+    description: Published when a new task is created
+    publish:
+      operationId: publishTaskCreated
+      summary: Task created event
+      message:
+        $ref: '#/components/messages/TaskCreated'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Task ID
+
+  task.assigned:
+    description: Published when a task is assigned to a worker
+    publish:
+      operationId: publishTaskAssigned
+      summary: Task assigned event
+      message:
+        $ref: '#/components/messages/TaskAssigned'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Task ID
+
+  task.started:
+    description: Published when task execution starts
+    publish:
+      operationId: publishTaskStarted
+      summary: Task started event
+      message:
+        $ref: '#/components/messages/TaskStarted'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Task ID
+
+  task.completed:
+    description: Published when a task is completed
+    publish:
+      operationId: publishTaskCompleted
+      summary: Task completed event
+      message:
+        $ref: '#/components/messages/TaskCompleted'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Task ID
+
+  task.failed:
+    description: Published when a task fails
+    publish:
+      operationId: publishTaskFailed
+      summary: Task failed event
+      message:
+        $ref: '#/components/messages/TaskFailed'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Task ID
+
+  task.cancelled:
+    description: Published when a task is cancelled
+    publish:
+      operationId: publishTaskCancelled
+      summary: Task cancelled event
+      message:
+        $ref: '#/components/messages/TaskCancelled'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Task ID
+
+  task.priority.changed:
+    description: Published when task priority changes
+    publish:
+      operationId: publishTaskPriorityChanged
+      summary: Task priority changed event
+      message:
+        $ref: '#/components/messages/TaskPriorityChanged'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Task ID
+
+  task.queue.rebalanced:
+    description: Published when task queue is rebalanced
+    publish:
+      operationId: publishQueueRebalanced
+      summary: Queue rebalanced event
+      message:
+        $ref: '#/components/messages/QueueRebalanced'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Queue ID
+
+  wave.released:
+    description: Subscribe to wave release events from Wave Planning Service
+    subscribe:
+      operationId: onWaveReleased
+      summary: Handle wave release and create pick tasks
+      message:
+        $ref: '#/components/messages/WaveReleased'
+
+  inventory.moved:
+    description: Subscribe to inventory movement events
+    subscribe:
+      operationId: onInventoryMoved
+      summary: Handle inventory movements
+      message:
+        $ref: '#/components/messages/InventoryMoved'
+
+  order.packed:
+    description: Subscribe to order packing completion events
+    subscribe:
+      operationId: onOrderPacked
+      summary: Create shipping tasks from packed orders
+      message:
+        $ref: '#/components/messages/OrderPacked'
+
+  inventory.received:
+    description: Subscribe to inventory receiving events
+    subscribe:
+      operationId: onInventoryReceived
+      summary: Create putaway tasks for received inventory
+      message:
+        $ref: '#/components/messages/InventoryReceived'
+
+  inventory.low.stock:
+    description: Subscribe to low stock alerts
+    subscribe:
+      operationId: onLowStock
+      summary: Create replenishment tasks for low stock
+      message:
+        $ref: '#/components/messages/LowStock'
+
+  location.cycle.count.due:
+    description: Subscribe to cycle count schedule
+    subscribe:
+      operationId: onCycleCountDue
+      summary: Create counting tasks
+      message:
+        $ref: '#/components/messages/CycleCountDue'
+
+components:
+  messages:
+    TaskCreated:
+      name: TaskCreated
+      title: Task Created Event
+      summary: Emitted when a new task is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskCreatedPayload'
+
+    TaskAssigned:
+      name: TaskAssigned
+      title: Task Assigned Event
+      summary: Emitted when a task is assigned to a worker
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskAssignedPayload'
+
+    TaskStarted:
+      name: TaskStarted
+      title: Task Started Event
+      summary: Emitted when task execution begins
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskStartedPayload'
+
+    TaskCompleted:
+      name: TaskCompleted
+      title: Task Completed Event
+      summary: Emitted when a task is completed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskCompletedPayload'
+
+    TaskFailed:
+      name: TaskFailed
+      title: Task Failed Event
+      summary: Emitted when a task fails
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskFailedPayload'
+
+    TaskCancelled:
+      name: TaskCancelled
+      title: Task Cancelled Event
+      summary: Emitted when a task is cancelled
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskCancelledPayload'
+
+    TaskPriorityChanged:
+      name: TaskPriorityChanged
+      title: Task Priority Changed Event
+      summary: Emitted when task priority changes
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskPriorityChangedPayload'
+
+    QueueRebalanced:
+      name: QueueRebalanced
+      title: Queue Rebalanced Event
+      summary: Emitted when task queue is rebalanced
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/QueueRebalancedPayload'
+
+    WaveReleased:
+      name: WaveReleased
+      title: Wave Released Event
+      summary: Received when a wave is released for picking
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveReleasedPayload'
+
+    InventoryMoved:
+      name: InventoryMoved
+      title: Inventory Moved Event
+      summary: Received when inventory is moved
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InventoryMovedPayload'
+
+    OrderPacked:
+      name: OrderPacked
+      title: Order Packed Event
+      summary: Received when an order is packed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OrderPackedPayload'
+
+    InventoryReceived:
+      name: InventoryReceived
+      title: Inventory Received Event
+      summary: Received when inventory arrives at warehouse
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InventoryReceivedPayload'
+
+    LowStock:
+      name: LowStock
+      title: Low Stock Event
+      summary: Received when inventory falls below threshold
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LowStockPayload'
+
+    CycleCountDue:
+      name: CycleCountDue
+      title: Cycle Count Due Event
+      summary: Received when cycle count is scheduled
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/CycleCountDuePayload'
+
+  schemas:
+    TaskCreatedPayload:
+      type: object
+      required:
+        - taskId
+        - taskType
+        - warehouseId
+        - status
+        - priority
+        - createdAt
+      properties:
+        taskId:
+          type: string
+          description: Unique task identifier
+        taskType:
+          type: string
+          enum: [PICK, PACK, PUTAWAY, REPLENISH, COUNT, MOVE, SHIP, RECEIVE]
+        warehouseId:
+          type: string
+        status:
+          type: string
+          enum: [PENDING]
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        sourceLocation:
+          type: string
+        destinationLocation:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        lpn:
+          type: string
+        waveId:
+          type: string
+        orderId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        estimatedDuration:
+          type: integer
+          description: Estimated duration in minutes
+        metadata:
+          type: object
+          additionalProperties: true
+
+    TaskAssignedPayload:
+      type: object
+      required:
+        - taskId
+        - workerId
+        - assignedAt
+      properties:
+        taskId:
+          type: string
+        taskType:
+          type: string
+          enum: [PICK, PACK, PUTAWAY, REPLENISH, COUNT, MOVE, SHIP, RECEIVE]
+        workerId:
+          type: string
+        workerName:
+          type: string
+        assignedAt:
+          type: string
+          format: date-time
+        assignedBy:
+          type: string
+          description: System or user who assigned
+        assignmentMethod:
+          type: string
+          enum: [MANUAL, AUTO, RECOMMENDED]
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        estimatedDuration:
+          type: integer
+
+    TaskStartedPayload:
+      type: object
+      required:
+        - taskId
+        - workerId
+        - startedAt
+      properties:
+        taskId:
+          type: string
+        taskType:
+          type: string
+          enum: [PICK, PACK, PUTAWAY, REPLENISH, COUNT, MOVE, SHIP, RECEIVE]
+        workerId:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        deviceId:
+          type: string
+        sourceLocation:
+          type: string
+        destinationLocation:
+          type: string
+
+    TaskCompletedPayload:
+      type: object
+      required:
+        - taskId
+        - workerId
+        - completedAt
+        - actualQuantity
+      properties:
+        taskId:
+          type: string
+        taskType:
+          type: string
+          enum: [PICK, PACK, PUTAWAY, REPLENISH, COUNT, MOVE, SHIP, RECEIVE]
+        workerId:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        actualDuration:
+          type: integer
+          description: Actual duration in minutes
+        expectedQuantity:
+          type: integer
+        actualQuantity:
+          type: integer
+        variance:
+          type: integer
+          description: Difference between expected and actual
+        productId:
+          type: string
+        sourceLocation:
+          type: string
+        destinationLocation:
+          type: string
+        lpn:
+          type: string
+        orderId:
+          type: string
+        waveId:
+          type: string
+        scans:
+          type: array
+          items:
+            type: object
+            properties:
+              barcode:
+                type: string
+              scanType:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+
+    TaskFailedPayload:
+      type: object
+      required:
+        - taskId
+        - workerId
+        - failedAt
+        - reason
+      properties:
+        taskId:
+          type: string
+        taskType:
+          type: string
+          enum: [PICK, PACK, PUTAWAY, REPLENISH, COUNT, MOVE, SHIP, RECEIVE]
+        workerId:
+          type: string
+        failedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+        reasonCode:
+          type: string
+          enum: [INVENTORY_UNAVAILABLE, LOCATION_BLOCKED, EQUIPMENT_FAILURE, DAMAGE, OTHER]
+        notes:
+          type: string
+        partialCompletion:
+          type: boolean
+        completedQuantity:
+          type: integer
+
+    TaskCancelledPayload:
+      type: object
+      required:
+        - taskId
+        - reason
+        - cancelledAt
+      properties:
+        taskId:
+          type: string
+        taskType:
+          type: string
+          enum: [PICK, PACK, PUTAWAY, REPLENISH, COUNT, MOVE, SHIP, RECEIVE]
+        reason:
+          type: string
+        cancelledAt:
+          type: string
+          format: date-time
+        cancelledBy:
+          type: string
+        wasAssigned:
+          type: boolean
+        assignedWorkerId:
+          type: string
+
+    TaskPriorityChangedPayload:
+      type: object
+      required:
+        - taskId
+        - oldPriority
+        - newPriority
+        - changedAt
+      properties:
+        taskId:
+          type: string
+        oldPriority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        newPriority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        reason:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        changedBy:
+          type: string
+
+    QueueRebalancedPayload:
+      type: object
+      required:
+        - queueId
+        - rebalancedAt
+        - tasksReordered
+      properties:
+        queueId:
+          type: string
+        queueName:
+          type: string
+        taskType:
+          type: string
+          enum: [PICK, PACK, PUTAWAY, REPLENISH, COUNT, MOVE, SHIP, RECEIVE]
+        rebalancedAt:
+          type: string
+          format: date-time
+        tasksReordered:
+          type: integer
+        rebalanceReason:
+          type: string
+        oldDepth:
+          type: integer
+        newDepth:
+          type: integer
+
+    WaveReleasedPayload:
+      type: object
+      required:
+        - waveId
+        - warehouseId
+        - orderIds
+        - releaseTime
+      properties:
+        waveId:
+          type: string
+        warehouseId:
+          type: string
+        orderIds:
+          type: array
+          items:
+            type: string
+        assignedPickers:
+          type: array
+          items:
+            type: string
+        releaseTime:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        estimatedDuration:
+          type: integer
+        totalPicks:
+          type: integer
+        pickDetails:
+          type: array
+          items:
+            type: object
+            properties:
+              orderId:
+                type: string
+              productId:
+                type: string
+              sku:
+                type: string
+              quantity:
+                type: integer
+              pickLocation:
+                type: string
+              zone:
+                type: string
+
+    InventoryMovedPayload:
+      type: object
+      required:
+        - movementId
+        - productId
+        - fromLocation
+        - toLocation
+        - quantity
+        - movedAt
+      properties:
+        movementId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        fromLocation:
+          type: string
+        toLocation:
+          type: string
+        quantity:
+          type: integer
+        lpn:
+          type: string
+        movementType:
+          type: string
+          enum: [PICK, PUTAWAY, MOVE, TRANSFER]
+        movedAt:
+          type: string
+          format: date-time
+        movedBy:
+          type: string
+
+    OrderPackedPayload:
+      type: object
+      required:
+        - orderId
+        - warehouseId
+        - packedAt
+      properties:
+        orderId:
+          type: string
+        warehouseId:
+          type: string
+        packedAt:
+          type: string
+          format: date-time
+        packedBy:
+          type: string
+        carrier:
+          type: string
+        shippingMethod:
+          type: string
+        trackingNumber:
+          type: string
+        weight:
+          type: number
+        dimensions:
+          type: object
+          properties:
+            length:
+              type: number
+            width:
+              type: number
+            height:
+              type: number
+        readyForShipment:
+          type: boolean
+
+    InventoryReceivedPayload:
+      type: object
+      required:
+        - receiptId
+        - warehouseId
+        - receivedAt
+      properties:
+        receiptId:
+          type: string
+        warehouseId:
+          type: string
+        receivedAt:
+          type: string
+          format: date-time
+        receivedBy:
+          type: string
+        receivingLocation:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              sku:
+                type: string
+              quantity:
+                type: integer
+              lpn:
+                type: string
+              suggestedLocation:
+                type: string
+
+    LowStockPayload:
+      type: object
+      required:
+        - productId
+        - locationId
+        - currentQuantity
+        - threshold
+      properties:
+        productId:
+          type: string
+        sku:
+          type: string
+        locationId:
+          type: string
+        currentQuantity:
+          type: integer
+        threshold:
+          type: integer
+        recommendedReplenishment:
+          type: integer
+        replenishFromLocation:
+          type: string
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        detectedAt:
+          type: string
+          format: date-time
+
+    CycleCountDuePayload:
+      type: object
+      required:
+        - locationId
+        - dueDate
+      properties:
+        locationId:
+          type: string
+        zone:
+          type: string
+        aisle:
+          type: string
+        countType:
+          type: string
+          enum: [ABC, RANDOM, FULL]
+        dueDate:
+          type: string
+          format: date-time
+        expectedProducts:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              sku:
+                type: string
+              expectedQuantity:
+                type: integer
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]

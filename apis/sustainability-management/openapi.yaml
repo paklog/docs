@@ -1,0 +1,1663 @@
+openapi: 3.1.0
+info:
+  title: Paklog Sustainability Management API
+  version: 1.0.0
+  description: |
+    ## Overview
+
+    The Sustainability Management API enables comprehensive tracking and reporting of environmental, social, and governance (ESG) metrics within the Paklog logistics platform.
+
+    This service provides capabilities for:
+    - **Carbon Footprint Tracking**: Record and monitor emissions across Scope 1, 2, and 3
+    - **Green Initiatives**: Manage sustainability projects and track their impact
+    - **ESG Reporting**: Generate detailed environmental, social, and governance reports
+    - **Emission Source Management**: Configure and maintain emission calculation factors
+    - **Sustainability Metrics**: Track custom sustainability KPIs
+
+    ## Architecture
+
+    Built using:
+    - **Spring Boot 3.2.5** with Java 21
+    - **MongoDB** for data persistence
+    - **Apache Kafka** for event-driven communication
+    - **CloudEvents** specification for event formatting
+    - **Domain-Driven Design** (DDD) principles
+
+    ## Carbon Accounting Standards
+
+    This API follows the **GHG Protocol** (Greenhouse Gas Protocol) for carbon accounting:
+    - **Scope 1**: Direct emissions from owned/controlled sources (vehicles, forklifts)
+    - **Scope 2**: Indirect emissions from purchased energy (electricity, heating)
+    - **Scope 3**: All other indirect emissions (transportation, supply chain)
+
+    ## Rate Limits
+
+    Currently no rate limits are enforced. This is an internal microservice designed for service-to-service communication.
+
+    ## Support
+
+    For issues and questions, contact the Paklog Platform Team.
+
+  contact:
+    name: Paklog Platform Team
+    email: platform@paklog.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8100
+    description: Local development server
+  - url: http://sustainability-service:8100
+    description: Kubernetes internal service
+  - url: https://api.paklog.com/sustainability/v1
+    description: Production API Gateway
+
+tags:
+  - name: Emissions
+    description: |
+      Carbon footprint recording and tracking endpoints.
+
+      Use these endpoints to record emissions from various sources (vehicles, electricity, transportation, etc.)
+      and retrieve historical emissions data for analysis and reporting.
+
+  - name: Initiatives
+    description: |
+      Green initiative management endpoints.
+
+      Track sustainability projects, their progress, costs, and environmental impact.
+      Initiatives can be used to measure ROI of sustainability investments.
+
+  - name: Reports
+    description: |
+      ESG (Environmental, Social, Governance) reporting endpoints.
+
+      Generate comprehensive sustainability reports aggregating data across all metrics.
+      Reports can be generated monthly, quarterly, or annually.
+
+  - name: Emission Sources
+    description: |
+      Emission source configuration endpoints.
+
+      Manage the catalog of emission sources and their calculation factors.
+      These are used to calculate CO2e (carbon dioxide equivalent) from activity data.
+
+  - name: Metrics
+    description: |
+      Custom sustainability metrics tracking.
+
+      Track any sustainability KPI beyond standard carbon accounting, such as
+      water usage, waste generation, renewable energy percentage, etc.
+
+paths:
+  /api/v1/sustainability/emissions:
+    post:
+      tags:
+        - Emissions
+      summary: Record carbon emissions
+      description: |
+        Records a carbon footprint entry for a specific warehouse and date.
+
+        This endpoint accepts emission data from various sources (e.g., diesel fuel, electricity, transportation)
+        and stores it for tracking and reporting purposes.
+
+        **Use cases**:
+        - Recording daily fuel consumption from warehouse vehicles
+        - Logging electricity usage from warehouse operations
+        - Tracking transportation emissions from third-party logistics
+        - Documenting supply chain emissions from suppliers
+
+        **Business rules**:
+        - Emissions are categorized by Scope (1, 2, or 3) according to GHG Protocol
+        - Multiple emission sources can be recorded in a single entry
+        - Total CO2e is automatically calculated from the sum of all sources
+        - Historical records cannot be modified (append-only for audit trail)
+
+      operationId: recordEmission
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordEmissionCommand'
+            examples:
+              scope1_diesel:
+                summary: Scope 1 - Diesel fuel consumption
+                description: Recording direct emissions from diesel-powered forklifts
+                value:
+                  warehouseId: "WH-NYC-001"
+                  recordDate: "2025-11-01"
+                  emissionType: "SCOPE1_DIRECT"
+                  emissionsBySource:
+                    "Forklift Fleet": 156.8
+                    "Delivery Vans": 268.0
+                    "Backup Generator": 45.2
+                  notes: "Monthly fuel consumption - all diesel vehicles"
+
+              scope2_electricity:
+                summary: Scope 2 - Electricity consumption
+                description: Recording indirect emissions from purchased electricity
+                value:
+                  warehouseId: "WH-LA-005"
+                  recordDate: "2025-11-01"
+                  emissionType: "SCOPE2_ENERGY"
+                  emissionsBySource:
+                    "Warehouse Lighting": 1840.0
+                    "HVAC Systems": 3680.0
+                    "Conveyor Systems": 920.0
+                    "Cold Storage": 2300.0
+                  notes: "November electricity bill - 10,000 kWh total"
+
+              scope3_transportation:
+                summary: Scope 3 - Third-party transportation
+                description: Recording supply chain emissions from contracted carriers
+                value:
+                  warehouseId: "WH-CHI-003"
+                  recordDate: "2025-11-01"
+                  emissionType: "SCOPE3_TRANSPORTATION"
+                  emissionsBySource:
+                    "Last-Mile Delivery": 2450.0
+                    "Long-Haul Trucking": 8900.0
+                    "Air Freight": 15600.0
+                  notes: "October shipments - 450 deliveries, 1200 km average distance"
+
+              scope3_supply_chain:
+                summary: Scope 3 - Supply chain emissions
+                description: Recording emissions from upstream suppliers
+                value:
+                  warehouseId: "WH-MIA-007"
+                  recordDate: "2025-11-01"
+                  emissionType: "SCOPE3_SUPPLY_CHAIN"
+                  emissionsBySource:
+                    "Cardboard Packaging": 340.0
+                    "Plastic Wrapping": 180.0
+                    "Wooden Pallets": 220.0
+                  notes: "Packaging materials received in Q3 2025"
+
+      responses:
+        '201':
+          description: Emission record created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarbonFootprint'
+              examples:
+                created_emission:
+                  summary: Successfully created emission record
+                  value:
+                    footprintId: "cf-2025-11-01-wh-nyc-001-uuid-1234"
+                    warehouseId: "WH-NYC-001"
+                    recordDate: "2025-11-01"
+                    emissionType: "SCOPE1_DIRECT"
+                    emissionsBySource:
+                      "Forklift Fleet": 156.8
+                      "Delivery Vans": 268.0
+                      "Backup Generator": 45.2
+                    totalCO2eKg: 470.0
+                    calculationMethod: "GHG Protocol - Scope 1 Direct Emissions"
+                    notes: "Monthly fuel consumption - all diesel vehicles"
+
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_date:
+                  summary: Invalid date format
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "Invalid date format. Expected ISO-8601 (YYYY-MM-DD)"
+                    path: "/api/v1/sustainability/emissions"
+
+                missing_warehouse:
+                  summary: Missing warehouse ID
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "warehouseId is required and cannot be null"
+                    path: "/api/v1/sustainability/emissions"
+
+                empty_emissions:
+                  summary: No emission sources provided
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "emissionsBySource cannot be empty. At least one emission source is required"
+                    path: "/api/v1/sustainability/emissions"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Emissions
+      summary: Get emissions for date range
+      description: |
+        Retrieves all carbon footprint records for a specific warehouse within a date range.
+
+        **Use cases**:
+        - Generating monthly/quarterly carbon reports
+        - Analyzing emission trends over time
+        - Comparing emissions across different warehouses
+        - Identifying high-emission periods for optimization
+
+        **Query capabilities**:
+        - Filter by warehouse ID (required)
+        - Filter by date range (start and end dates)
+        - Results are ordered by record date (newest first)
+
+      operationId: getEmissions
+      parameters:
+        - name: warehouseId
+          in: query
+          required: true
+          description: The unique identifier of the warehouse
+          schema:
+            type: string
+          example: "WH-NYC-001"
+
+        - name: startDate
+          in: query
+          required: true
+          description: Start date of the reporting period (inclusive, ISO-8601 format)
+          schema:
+            type: string
+            format: date
+          example: "2025-10-01"
+
+        - name: endDate
+          in: query
+          required: true
+          description: End date of the reporting period (inclusive, ISO-8601 format)
+          schema:
+            type: string
+            format: date
+          example: "2025-10-31"
+
+      responses:
+        '200':
+          description: List of emission records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CarbonFootprint'
+              examples:
+                monthly_emissions:
+                  summary: October 2025 emissions for NYC warehouse
+                  value:
+                    - footprintId: "cf-2025-10-15-wh-nyc-001"
+                      warehouseId: "WH-NYC-001"
+                      recordDate: "2025-10-15"
+                      emissionType: "SCOPE1_DIRECT"
+                      emissionsBySource:
+                        "Forklift Fleet": 145.2
+                        "Delivery Vans": 289.6
+                      totalCO2eKg: 434.8
+                      calculationMethod: "GHG Protocol - Scope 1"
+                      notes: "Mid-month fuel consumption"
+
+                    - footprintId: "cf-2025-10-15-wh-nyc-001-scope2"
+                      warehouseId: "WH-NYC-001"
+                      recordDate: "2025-10-15"
+                      emissionType: "SCOPE2_ENERGY"
+                      emissionsBySource:
+                        "Electricity": 1840.0
+                      totalCO2eKg: 1840.0
+                      calculationMethod: "GHG Protocol - Scope 2"
+                      notes: "Electricity consumption 2000 kWh @ 0.92 kg CO2e/kWh"
+
+                    - footprintId: "cf-2025-10-31-wh-nyc-001"
+                      warehouseId: "WH-NYC-001"
+                      recordDate: "2025-10-31"
+                      emissionType: "SCOPE3_TRANSPORTATION"
+                      emissionsBySource:
+                        "Last-Mile Delivery": 3200.0
+                        "Long-Haul": 6800.0
+                      totalCO2eKg: 10000.0
+                      calculationMethod: "GHG Protocol - Scope 3"
+                      notes: "October shipments total"
+
+                empty_result:
+                  summary: No emissions found for date range
+                  value: []
+
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_date_range:
+                  summary: End date before start date
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "endDate must be after or equal to startDate"
+                    path: "/api/v1/sustainability/emissions"
+
+  /api/v1/sustainability/initiatives:
+    post:
+      tags:
+        - Initiatives
+      summary: Create a green initiative
+      description: |
+        Creates a new sustainability initiative to track environmental improvement projects.
+
+        **Use cases**:
+        - Installing solar panels to reduce Scope 2 emissions
+        - Transitioning fleet to electric vehicles
+        - Implementing waste reduction programs
+        - Optimizing routes to reduce fuel consumption
+        - Installing energy-efficient lighting systems
+
+        **Tracking capabilities**:
+        - Target vs. actual CO2e reduction
+        - Estimated vs. actual costs
+        - ROI calculation (cost savings / investment)
+        - Progress percentage toward goals
+        - Timeline management (planned vs. actual completion)
+
+      operationId: createGreenInitiative
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGreenInitiativeCommand'
+            examples:
+              solar_panels:
+                summary: Solar panel installation project
+                description: Large-scale renewable energy initiative
+                value:
+                  name: "Solar Panel Installation - NYC Warehouse"
+                  description: "Install 500 kW solar array on warehouse roof to offset 40% of electricity consumption. Expected to reduce grid dependency and Scope 2 emissions significantly. Includes battery storage for peak demand management."
+                  startDate: "2025-11-15"
+                  targetCompletionDate: "2026-03-01"
+                  targetReductionCO2eKg: 184000.0
+                  estimatedCost: 750000.0
+                  owner: "John Smith - Facilities Manager"
+
+              ev_fleet:
+                summary: Electric vehicle fleet conversion
+                description: Replace diesel delivery vans with electric vehicles
+                value:
+                  name: "EV Fleet Conversion - Last Mile Delivery"
+                  description: "Replace 25 diesel delivery vans with electric vehicles. Includes installation of 30 Level 2 charging stations at the warehouse. Expected to eliminate 80% of Scope 1 emissions from last-mile delivery operations."
+                  startDate: "2025-12-01"
+                  targetCompletionDate: "2026-06-30"
+                  targetReductionCO2eKg: 125000.0
+                  estimatedCost: 1200000.0
+                  owner: "Sarah Johnson - Fleet Manager"
+
+              led_retrofit:
+                summary: LED lighting retrofit
+                description: Quick win project for immediate energy savings
+                value:
+                  name: "LED Lighting Retrofit - All Facilities"
+                  description: "Replace all fluorescent and halogen lighting with LED fixtures across 3 warehouse locations. Motion sensors and daylight harvesting controls included. Estimated 60% reduction in lighting energy consumption."
+                  startDate: "2025-11-01"
+                  targetCompletionDate: "2025-12-15"
+                  targetReductionCO2eKg: 35000.0
+                  estimatedCost: 85000.0
+                  owner: "Mike Chen - Operations Director"
+
+              waste_reduction:
+                summary: Waste reduction and recycling program
+                description: Comprehensive waste management initiative
+                value:
+                  name: "Zero Waste to Landfill Program"
+                  description: "Implement comprehensive recycling and composting program. Partner with recycling vendors for cardboard, plastic, metal, and organic waste. Target 95% waste diversion from landfill. Includes employee training and waste stream audits."
+                  startDate: "2026-01-01"
+                  targetCompletionDate: "2026-12-31"
+                  targetReductionCO2eKg: 45000.0
+                  estimatedCost: 120000.0
+                  owner: "Emily Rodriguez - Sustainability Coordinator"
+
+      responses:
+        '201':
+          description: Green initiative created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GreenInitiative'
+              examples:
+                created_initiative:
+                  summary: Newly created initiative
+                  value:
+                    initiativeId: "gi-2025-solar-nyc-uuid-5678"
+                    name: "Solar Panel Installation - NYC Warehouse"
+                    description: "Install 500 kW solar array on warehouse roof to offset 40% of electricity consumption"
+                    status: "PLANNED"
+                    startDate: "2025-11-15"
+                    targetCompletionDate: "2026-03-01"
+                    actualCompletionDate: null
+                    targetReductionCO2eKg: 184000.0
+                    actualReductionCO2eKg: 0.0
+                    estimatedCost: 750000.0
+                    actualCost: 0.0
+                    owner: "John Smith - Facilities Manager"
+
+        '400':
+          description: Invalid initiative data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_dates:
+                  summary: Target completion before start date
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "targetCompletionDate must be after startDate"
+                    path: "/api/v1/sustainability/initiatives"
+
+                negative_reduction:
+                  summary: Invalid reduction target
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "targetReductionCO2eKg must be a positive number"
+                    path: "/api/v1/sustainability/initiatives"
+
+  /api/v1/sustainability/initiatives/active:
+    get:
+      tags:
+        - Initiatives
+      summary: Get active initiatives
+      description: |
+        Retrieves all green initiatives that are currently active (status: PLANNED or IN_PROGRESS).
+
+        This endpoint is useful for:
+        - Dashboard displays showing current sustainability projects
+        - Portfolio management of ongoing initiatives
+        - Tracking overall progress toward sustainability goals
+        - Identifying initiatives that need attention or resources
+
+        **Returned statuses**:
+        - PLANNED: Initiative scheduled but not yet started
+        - IN_PROGRESS: Initiative currently being executed
+
+        **Excluded statuses**:
+        - COMPLETED: Finished initiatives (use separate endpoint for historical data)
+        - CANCELLED: Abandoned initiatives
+        - ON_HOLD: Paused initiatives
+
+      operationId: getActiveInitiatives
+      responses:
+        '200':
+          description: List of active green initiatives
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GreenInitiative'
+              examples:
+                active_portfolio:
+                  summary: Active sustainability portfolio
+                  value:
+                    - initiativeId: "gi-2025-solar-nyc"
+                      name: "Solar Panel Installation - NYC Warehouse"
+                      description: "Install 500 kW solar array"
+                      status: "IN_PROGRESS"
+                      startDate: "2025-11-15"
+                      targetCompletionDate: "2026-03-01"
+                      actualCompletionDate: null
+                      targetReductionCO2eKg: 184000.0
+                      actualReductionCO2eKg: 45000.0
+                      estimatedCost: 750000.0
+                      actualCost: 425000.0
+                      owner: "John Smith"
+
+                    - initiativeId: "gi-2026-ev-fleet"
+                      name: "EV Fleet Conversion"
+                      description: "Replace diesel vans with EVs"
+                      status: "PLANNED"
+                      startDate: "2025-12-01"
+                      targetCompletionDate: "2026-06-30"
+                      actualCompletionDate: null
+                      targetReductionCO2eKg: 125000.0
+                      actualReductionCO2eKg: 0.0
+                      estimatedCost: 1200000.0
+                      actualCost: 0.0
+                      owner: "Sarah Johnson"
+
+                    - initiativeId: "gi-2025-led-retrofit"
+                      name: "LED Lighting Retrofit"
+                      description: "Replace all lighting with LED"
+                      status: "IN_PROGRESS"
+                      startDate: "2025-11-01"
+                      targetCompletionDate: "2025-12-15"
+                      actualCompletionDate: null
+                      targetReductionCO2eKg: 35000.0
+                      actualReductionCO2eKg: 18000.0
+                      estimatedCost: 85000.0
+                      actualCost: 62000.0
+                      owner: "Mike Chen"
+
+  /api/v1/sustainability/reports/generate:
+    post:
+      tags:
+        - Reports
+      summary: Generate ESG report
+      description: |
+        Generates a comprehensive Environmental, Social, and Governance (ESG) report for a warehouse.
+
+        This endpoint aggregates data from multiple sources:
+        - All carbon footprint records (Scope 1, 2, 3) for the period
+        - Energy consumption metrics
+        - Waste generation and recycling data
+        - Water usage statistics
+        - Workforce and safety metrics
+        - Compliance and audit information
+
+        **Reporting periods**:
+        - **MONTHLY**: Single month report (e.g., October 2025)
+        - **QUARTERLY**: Three-month aggregate (Q1, Q2, Q3, Q4)
+        - **ANNUAL**: Full year summary
+
+        **Report contents**:
+        - Environmental metrics (emissions, energy, water, waste)
+        - Social metrics (workforce, safety, training)
+        - Governance metrics (compliance, audits)
+        - Performance assessment (EXCELLENT/GOOD/AVERAGE/NEEDS_IMPROVEMENT)
+        - Carbon intensity (CO2e per order/shipment)
+        - Year-over-year comparison trends
+
+        **Use cases**:
+        - Regulatory compliance reporting (EPA, SEC Climate Disclosure)
+        - Investor relations and ESG ratings (CDP, SASB, GRI)
+        - Internal sustainability tracking and goal monitoring
+        - Customer sustainability reporting requirements
+        - Supply chain transparency initiatives
+
+      operationId: generateESGReport
+      parameters:
+        - name: warehouseId
+          in: query
+          required: true
+          description: The unique identifier of the warehouse
+          schema:
+            type: string
+          example: "WH-NYC-001"
+
+        - name: yearMonth
+          in: query
+          required: true
+          description: The reporting period in YYYY-MM format (for monthly reports)
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}$'
+          example: "2025-10"
+
+      responses:
+        '200':
+          description: ESG report generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ESGReport'
+              examples:
+                monthly_report:
+                  summary: October 2025 ESG Report
+                  description: Comprehensive monthly sustainability report
+                  value:
+                    reportId: "esg-2025-10-wh-nyc-001"
+                    warehouseId: "WH-NYC-001"
+                    period: "MONTHLY"
+                    reportMonth: "2025-10"
+                    year: 2025
+                    generatedAt: "2025-11-01"
+                    totalCO2eScope1Kg: 8450.0
+                    totalCO2eScope2Kg: 18400.0
+                    totalCO2eScope3Kg: 42300.0
+                    totalEnergyKwh: 20000.0
+                    renewableEnergyPercentage: 15.5
+                    waterUsageCubicMeters: 450.0
+                    wasteGeneratedTons: 12.5
+                    wasteRecycledPercentage: 68.0
+                    workforceCount: 125
+                    workplaceSafetyScore: 94.5
+                    trainingHoursPerEmployee: 8
+                    complianceCertified: true
+                    auditsPassed: 3
+                    additionalMetrics:
+                      ordersProcessed: 15680
+                      carbonIntensityPerOrder: 4.41
+                      performanceRating: "GOOD"
+                      renewableEnergyKwh: 3100.0
+                      gridEnergyKwh: 16900.0
+                      wasteRecycledTons: 8.5
+                      wasteLandfillTons: 4.0
+                      safetyIncidents: 2
+                      lostTimeAccidents: 0
+
+                quarterly_report:
+                  summary: Q3 2025 ESG Report
+                  description: Quarterly aggregate report (July-September)
+                  value:
+                    reportId: "esg-2025-q3-wh-nyc-001"
+                    warehouseId: "WH-NYC-001"
+                    period: "QUARTERLY"
+                    reportMonth: "2025-09"
+                    year: 2025
+                    generatedAt: "2025-10-01"
+                    totalCO2eScope1Kg: 26800.0
+                    totalCO2eScope2Kg: 54200.0
+                    totalCO2eScope3Kg: 128500.0
+                    totalEnergyKwh: 59000.0
+                    renewableEnergyPercentage: 18.2
+                    waterUsageCubicMeters: 1340.0
+                    wasteGeneratedTons: 38.5
+                    wasteRecycledPercentage: 71.5
+                    workforceCount: 125
+                    workplaceSafetyScore: 96.0
+                    trainingHoursPerEmployee: 24
+                    complianceCertified: true
+                    auditsPassed: 8
+                    additionalMetrics:
+                      ordersProcessed: 48950
+                      carbonIntensityPerOrder: 4.28
+                      performanceRating: "EXCELLENT"
+                      improvementVsPreviousQuarter: 8.5
+
+        '400':
+          description: Invalid report parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_year_month:
+                  summary: Invalid date format
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "yearMonth must be in YYYY-MM format (e.g., 2025-10)"
+                    path: "/api/v1/sustainability/reports/generate"
+
+                future_date:
+                  summary: Future reporting period
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "Cannot generate report for future period"
+                    path: "/api/v1/sustainability/reports/generate"
+
+        '404':
+          description: Warehouse not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                warehouse_not_found:
+                  summary: Unknown warehouse ID
+                  value:
+                    timestamp: "2025-11-01T14:30:00Z"
+                    status: 404
+                    error: "Not Found"
+                    message: "Warehouse with ID 'WH-INVALID-999' not found"
+                    path: "/api/v1/sustainability/reports/generate"
+
+  /api/v1/sustainability/emission-sources:
+    get:
+      tags:
+        - Emission Sources
+      summary: List all emission sources
+      description: |
+        Retrieves the catalog of all configured emission sources and their calculation factors.
+
+        Emission sources define how to calculate CO2e from activity data (e.g., liters of fuel, kWh of electricity).
+
+        **Use cases**:
+        - Displaying available emission types in data entry forms
+        - Understanding emission factors for calculation verification
+        - Auditing emission calculation methodology
+        - Comparing factors against industry standards
+
+      operationId: listEmissionSources
+      parameters:
+        - name: active
+          in: query
+          required: false
+          description: Filter by active status (true = only active sources, false = only inactive)
+          schema:
+            type: boolean
+          example: true
+
+        - name: type
+          in: query
+          required: false
+          description: Filter by emission type (Scope 1, 2, or 3)
+          schema:
+            type: string
+            enum:
+              - SCOPE1_DIRECT
+              - SCOPE2_ENERGY
+              - SCOPE3_TRANSPORTATION
+              - SCOPE3_SUPPLY_CHAIN
+          example: "SCOPE1_DIRECT"
+
+      responses:
+        '200':
+          description: List of emission sources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EmissionSource'
+              examples:
+                all_sources:
+                  summary: All active emission sources
+                  value:
+                    - sourceId: "es-diesel-fuel"
+                      name: "Diesel Fuel"
+                      type: "SCOPE1_DIRECT"
+                      description: "Diesel combustion in owned vehicles and equipment. Emission factor based on EPA guidelines for diesel fuel consumption."
+                      emissionFactorCO2ePerUnit: 2.68
+                      unit: "liters"
+                      active: true
+                      createdAt: "2025-01-15T10:00:00Z"
+                      updatedAt: "2025-01-15T10:00:00Z"
+
+                    - sourceId: "es-gasoline"
+                      name: "Gasoline"
+                      type: "SCOPE1_DIRECT"
+                      description: "Gasoline combustion in owned vehicles. Emission factor from EPA stationary combustion guidelines."
+                      emissionFactorCO2ePerUnit: 2.31
+                      unit: "liters"
+                      active: true
+                      createdAt: "2025-01-15T10:00:00Z"
+                      updatedAt: "2025-01-15T10:00:00Z"
+
+                    - sourceId: "es-electricity-grid"
+                      name: "Grid Electricity"
+                      type: "SCOPE2_ENERGY"
+                      description: "Electricity purchased from the grid. Emission factor based on US national average grid mix (eGRID 2024 data)."
+                      emissionFactorCO2ePerUnit: 0.92
+                      unit: "kWh"
+                      active: true
+                      createdAt: "2025-01-15T10:00:00Z"
+                      updatedAt: "2025-01-15T10:00:00Z"
+
+                    - sourceId: "es-natural-gas"
+                      name: "Natural Gas"
+                      type: "SCOPE1_DIRECT"
+                      description: "Natural gas combustion for heating and backup power generation."
+                      emissionFactorCO2ePerUnit: 0.184
+                      unit: "cubic meters"
+                      active: true
+                      createdAt: "2025-01-15T10:00:00Z"
+                      updatedAt: "2025-01-15T10:00:00Z"
+
+                    - sourceId: "es-cardboard-packaging"
+                      name: "Cardboard Packaging"
+                      type: "SCOPE3_SUPPLY_CHAIN"
+                      description: "Embodied emissions in cardboard boxes and packaging materials. Life-cycle assessment from production to end-of-life."
+                      emissionFactorCO2ePerUnit: 1.05
+                      unit: "kg"
+                      active: true
+                      createdAt: "2025-01-15T10:00:00Z"
+                      updatedAt: "2025-01-15T10:00:00Z"
+
+                    - sourceId: "es-truck-transport"
+                      name: "Heavy Truck Transportation"
+                      type: "SCOPE3_TRANSPORTATION"
+                      description: "Third-party freight transportation by heavy trucks. Emission factor per ton-kilometer from GHG Protocol transport tool."
+                      emissionFactorCO2ePerUnit: 0.062
+                      unit: "ton-km"
+                      active: true
+                      createdAt: "2025-01-15T10:00:00Z"
+                      updatedAt: "2025-01-15T10:00:00Z"
+
+    post:
+      tags:
+        - Emission Sources
+      summary: Create new emission source
+      description: |
+        Creates a new emission source configuration for carbon calculation.
+
+        **Use cases**:
+        - Adding new fuel types (e.g., biodiesel, hydrogen)
+        - Configuring regional electricity grid factors
+        - Adding new packaging materials
+        - Defining custom emission sources for specialized equipment
+
+        **Important**: Emission factors should be based on recognized standards:
+        - GHG Protocol emission factors
+        - EPA emission factors (US)
+        - DEFRA conversion factors (UK)
+        - Life-cycle assessment (LCA) databases
+
+      operationId: createEmissionSource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateEmissionSourceCommand'
+            examples:
+              biodiesel:
+                summary: Biodiesel fuel source
+                value:
+                  name: "B20 Biodiesel"
+                  type: "SCOPE1_DIRECT"
+                  description: "20% biodiesel blend (B20) used in fleet vehicles. Lower emission factor than pure diesel due to renewable content."
+                  emissionFactorCO2ePerUnit: 2.42
+                  unit: "liters"
+
+              solar_electricity:
+                summary: Solar electricity source
+                value:
+                  name: "On-site Solar Generation"
+                  type: "SCOPE2_ENERGY"
+                  description: "Electricity generated by on-site solar panels. Zero operational emissions (embodied emissions in panel manufacturing not included)."
+                  emissionFactorCO2ePerUnit: 0.0
+                  unit: "kWh"
+
+              plastic_film:
+                summary: Plastic packaging material
+                value:
+                  name: "Plastic Stretch Film"
+                  type: "SCOPE3_SUPPLY_CHAIN"
+                  description: "LDPE stretch film for pallet wrapping. Emission factor includes production and disposal."
+                  emissionFactorCO2ePerUnit: 1.95
+                  unit: "kg"
+
+      responses:
+        '201':
+          description: Emission source created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmissionSource'
+
+  /api/v1/sustainability/metrics:
+    post:
+      tags:
+        - Metrics
+      summary: Record sustainability metric
+      description: |
+        Records a custom sustainability metric beyond standard carbon accounting.
+
+        **Use cases**:
+        - Tracking water consumption
+        - Recording waste generation by type
+        - Monitoring renewable energy percentage
+        - Logging recycling rates
+        - Tracking employee sustainability training hours
+        - Recording biodiversity metrics
+
+      operationId: recordMetric
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordMetricCommand'
+            examples:
+              water_usage:
+                summary: Monthly water consumption
+                value:
+                  warehouseId: "WH-NYC-001"
+                  metricName: "Water Consumption"
+                  unit: "CUBIC_METERS"
+                  value: 450.0
+                  recordDate: "2025-10-31"
+                  category: "Environmental"
+                  source: "Water Utility Bill"
+                  notes: "October 2025 water usage - warehouse operations and restrooms"
+
+              waste_recycled:
+                summary: Recycling rate tracking
+                value:
+                  warehouseId: "WH-LA-005"
+                  metricName: "Cardboard Recycled"
+                  unit: "TONS"
+                  value: 8.5
+                  recordDate: "2025-10-31"
+                  category: "Waste Management"
+                  source: "Recycling Vendor Report"
+                  notes: "October cardboard recycling - 68% of total waste stream"
+
+              renewable_energy:
+                summary: Solar generation tracking
+                value:
+                  warehouseId: "WH-MIA-007"
+                  metricName: "Solar Energy Generated"
+                  unit: "KWH"
+                  value: 3100.0
+                  recordDate: "2025-10-31"
+                  category: "Energy"
+                  source: "Solar Inverter System"
+                  notes: "October solar generation - 15.5% of total energy consumption"
+
+              employee_training:
+                summary: Sustainability training hours
+                value:
+                  warehouseId: "WH-CHI-003"
+                  metricName: "Sustainability Training Hours"
+                  unit: "CO2E_KG"
+                  value: 240.0
+                  recordDate: "2025-10-31"
+                  category: "Social"
+                  source: "HR Training System"
+                  notes: "October training - 30 employees x 8 hours sustainability certification"
+
+      responses:
+        '201':
+          description: Metric recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SustainabilityMetric'
+
+    get:
+      tags:
+        - Metrics
+      summary: Get sustainability metrics
+      description: |
+        Retrieves sustainability metrics for a warehouse and time period.
+
+        Supports filtering by:
+        - Warehouse ID
+        - Date range
+        - Metric category (Environmental, Social, Governance)
+        - Metric name
+
+      operationId: getMetrics
+      parameters:
+        - name: warehouseId
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "WH-NYC-001"
+
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2025-10-01"
+
+        - name: endDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+          example: "2025-10-31"
+
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          example: "Environmental"
+
+      responses:
+        '200':
+          description: List of sustainability metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SustainabilityMetric'
+
+components:
+  schemas:
+    RecordEmissionCommand:
+      type: object
+      required:
+        - warehouseId
+        - recordDate
+        - emissionType
+        - emissionsBySource
+      properties:
+        warehouseId:
+          type: string
+          description: Unique identifier of the warehouse
+          example: "WH-NYC-001"
+
+        recordDate:
+          type: string
+          format: date
+          description: Date when the emissions occurred (ISO-8601 format)
+          example: "2025-11-01"
+
+        emissionType:
+          $ref: '#/components/schemas/EmissionType'
+
+        emissionsBySource:
+          type: object
+          description: |
+            Map of emission sources to their CO2e values in kilograms.
+            Key = source name (e.g., "Forklift Fleet", "Warehouse Lighting")
+            Value = CO2e in kg
+          additionalProperties:
+            type: number
+            format: double
+            minimum: 0
+          example:
+            "Forklift Fleet": 156.8
+            "Delivery Vans": 268.0
+            "Backup Generator": 45.2
+          minProperties: 1
+
+        notes:
+          type: string
+          description: Optional notes about the emission record (context, data sources, anomalies)
+          maxLength: 1000
+          example: "Monthly fuel consumption - all diesel vehicles"
+
+    CreateGreenInitiativeCommand:
+      type: object
+      required:
+        - name
+        - description
+        - startDate
+        - targetCompletionDate
+        - targetReductionCO2eKg
+        - estimatedCost
+        - owner
+      properties:
+        name:
+          type: string
+          description: Short, descriptive name of the initiative
+          maxLength: 200
+          example: "Solar Panel Installation - NYC Warehouse"
+
+        description:
+          type: string
+          description: Detailed description of the initiative, including goals and approach
+          maxLength: 2000
+          example: "Install 500 kW solar array on warehouse roof to offset 40% of electricity consumption"
+
+        startDate:
+          type: string
+          format: date
+          description: Planned or actual start date
+          example: "2025-11-15"
+
+        targetCompletionDate:
+          type: string
+          format: date
+          description: Target completion date
+          example: "2026-03-01"
+
+        targetReductionCO2eKg:
+          type: number
+          format: double
+          description: Target CO2e reduction in kilograms per year
+          minimum: 0
+          example: 184000.0
+
+        estimatedCost:
+          type: number
+          format: double
+          description: Estimated project cost in USD
+          minimum: 0
+          example: 750000.0
+
+        owner:
+          type: string
+          description: Person or team responsible for the initiative
+          maxLength: 200
+          example: "John Smith - Facilities Manager"
+
+    CreateEmissionSourceCommand:
+      type: object
+      required:
+        - name
+        - type
+        - description
+        - emissionFactorCO2ePerUnit
+        - unit
+      properties:
+        name:
+          type: string
+          description: Name of the emission source
+          maxLength: 200
+          example: "Diesel Fuel"
+
+        type:
+          $ref: '#/components/schemas/EmissionType'
+
+        description:
+          type: string
+          description: Detailed description including methodology and data sources
+          maxLength: 1000
+          example: "Diesel combustion in owned vehicles. Based on EPA emission factors."
+
+        emissionFactorCO2ePerUnit:
+          type: number
+          format: double
+          description: CO2e emission factor per unit
+          minimum: 0
+          example: 2.68
+
+        unit:
+          type: string
+          description: Unit of measurement (liters, kWh, kg, ton-km, etc.)
+          maxLength: 50
+          example: "liters"
+
+    RecordMetricCommand:
+      type: object
+      required:
+        - warehouseId
+        - metricName
+        - unit
+        - value
+        - recordDate
+        - category
+        - source
+      properties:
+        warehouseId:
+          type: string
+          example: "WH-NYC-001"
+
+        metricName:
+          type: string
+          maxLength: 200
+          example: "Water Consumption"
+
+        unit:
+          $ref: '#/components/schemas/MetricUnit'
+
+        value:
+          type: number
+          format: double
+          example: 450.0
+
+        recordDate:
+          type: string
+          format: date
+          example: "2025-10-31"
+
+        category:
+          type: string
+          description: Category (Environmental, Social, Governance, Custom)
+          maxLength: 100
+          example: "Environmental"
+
+        source:
+          type: string
+          description: Data source or measurement system
+          maxLength: 200
+          example: "Water Utility Bill"
+
+        notes:
+          type: string
+          maxLength: 1000
+          example: "October 2025 water usage"
+
+    CarbonFootprint:
+      type: object
+      description: |
+        Represents a carbon footprint record for a specific date and warehouse.
+
+        Carbon footprints are categorized by Scope according to the GHG Protocol:
+        - **Scope 1**: Direct emissions from owned/controlled sources
+        - **Scope 2**: Indirect emissions from purchased energy
+        - **Scope 3**: All other indirect emissions in the value chain
+
+      properties:
+        footprintId:
+          type: string
+          description: Unique identifier for this footprint record
+          example: "cf-2025-11-01-wh-nyc-001-uuid-1234"
+
+        warehouseId:
+          type: string
+          description: Warehouse identifier
+          example: "WH-NYC-001"
+
+        recordDate:
+          type: string
+          format: date
+          description: Date of the emission record
+          example: "2025-11-01"
+
+        emissionType:
+          $ref: '#/components/schemas/EmissionType'
+
+        emissionsBySource:
+          type: object
+          description: Breakdown of emissions by source
+          additionalProperties:
+            type: number
+            format: double
+          example:
+            "Forklift Fleet": 156.8
+            "Delivery Vans": 268.0
+
+        totalCO2eKg:
+          type: number
+          format: double
+          description: Total CO2 equivalent in kilograms
+          example: 470.0
+
+        calculationMethod:
+          type: string
+          description: Method or standard used for calculation
+          example: "GHG Protocol - Scope 1 Direct Emissions"
+
+        notes:
+          type: string
+          description: Additional context or notes
+          example: "Monthly fuel consumption - all diesel vehicles"
+
+    GreenInitiative:
+      type: object
+      description: |
+        Represents a sustainability initiative or project.
+
+        Tracks environmental improvement projects from planning through completion,
+        including target vs. actual performance metrics.
+
+      properties:
+        initiativeId:
+          type: string
+          description: Unique identifier
+          example: "gi-2025-solar-nyc-uuid-5678"
+
+        name:
+          type: string
+          description: Initiative name
+          example: "Solar Panel Installation - NYC Warehouse"
+
+        description:
+          type: string
+          description: Detailed description
+          example: "Install 500 kW solar array on warehouse roof"
+
+        status:
+          $ref: '#/components/schemas/InitiativeStatus'
+
+        startDate:
+          type: string
+          format: date
+          example: "2025-11-15"
+
+        targetCompletionDate:
+          type: string
+          format: date
+          example: "2026-03-01"
+
+        actualCompletionDate:
+          type: string
+          format: date
+          nullable: true
+          description: Actual completion date (null if not completed)
+          example: null
+
+        targetReductionCO2eKg:
+          type: number
+          format: double
+          description: Target annual CO2e reduction in kg
+          example: 184000.0
+
+        actualReductionCO2eKg:
+          type: number
+          format: double
+          description: Actual annual CO2e reduction achieved in kg
+          example: 0.0
+
+        estimatedCost:
+          type: number
+          format: double
+          description: Estimated project cost in USD
+          example: 750000.0
+
+        actualCost:
+          type: number
+          format: double
+          description: Actual project cost in USD
+          example: 0.0
+
+        owner:
+          type: string
+          description: Project owner or responsible party
+          example: "John Smith - Facilities Manager"
+
+    ESGReport:
+      type: object
+      description: |
+        Comprehensive Environmental, Social, and Governance (ESG) report.
+
+        Aggregates sustainability data across multiple dimensions:
+        - **Environmental**: Carbon emissions, energy, water, waste
+        - **Social**: Workforce, safety, training
+        - **Governance**: Compliance, audits, certifications
+
+      properties:
+        reportId:
+          type: string
+          example: "esg-2025-10-wh-nyc-001"
+
+        warehouseId:
+          type: string
+          example: "WH-NYC-001"
+
+        period:
+          $ref: '#/components/schemas/ReportingPeriod'
+
+        reportMonth:
+          type: string
+          description: Reporting month in YYYY-MM format
+          example: "2025-10"
+
+        year:
+          type: integer
+          description: Reporting year
+          example: 2025
+
+        generatedAt:
+          type: string
+          format: date
+          description: Report generation date
+          example: "2025-11-01"
+
+        totalCO2eScope1Kg:
+          type: number
+          format: double
+          description: Total Scope 1 emissions in kg CO2e
+          example: 8450.0
+
+        totalCO2eScope2Kg:
+          type: number
+          format: double
+          description: Total Scope 2 emissions in kg CO2e
+          example: 18400.0
+
+        totalCO2eScope3Kg:
+          type: number
+          format: double
+          description: Total Scope 3 emissions in kg CO2e
+          example: 42300.0
+
+        totalEnergyKwh:
+          type: number
+          format: double
+          description: Total energy consumption in kWh
+          example: 20000.0
+
+        renewableEnergyPercentage:
+          type: number
+          format: double
+          description: Percentage of energy from renewable sources
+          minimum: 0
+          maximum: 100
+          example: 15.5
+
+        waterUsageCubicMeters:
+          type: number
+          format: double
+          description: Water consumption in cubic meters
+          example: 450.0
+
+        wasteGeneratedTons:
+          type: number
+          format: double
+          description: Total waste generated in metric tons
+          example: 12.5
+
+        wasteRecycledPercentage:
+          type: number
+          format: double
+          description: Percentage of waste diverted from landfill
+          minimum: 0
+          maximum: 100
+          example: 68.0
+
+        workforceCount:
+          type: integer
+          description: Number of employees
+          example: 125
+
+        workplaceSafetyScore:
+          type: number
+          format: double
+          description: Safety score (0-100)
+          minimum: 0
+          maximum: 100
+          example: 94.5
+
+        trainingHoursPerEmployee:
+          type: integer
+          description: Average training hours per employee
+          example: 8
+
+        complianceCertified:
+          type: boolean
+          description: Compliance certification status
+          example: true
+
+        auditsPassed:
+          type: integer
+          description: Number of audits passed
+          example: 3
+
+        additionalMetrics:
+          type: object
+          description: Additional custom metrics and calculated values
+          additionalProperties: true
+          example:
+            ordersProcessed: 15680
+            carbonIntensityPerOrder: 4.41
+            performanceRating: "GOOD"
+
+    EmissionSource:
+      type: object
+      description: Configuration for an emission source and its calculation factor
+      properties:
+        sourceId:
+          type: string
+          example: "es-diesel-fuel"
+
+        name:
+          type: string
+          example: "Diesel Fuel"
+
+        type:
+          $ref: '#/components/schemas/EmissionType'
+
+        description:
+          type: string
+          example: "Diesel combustion in owned vehicles. Based on EPA emission factors."
+
+        emissionFactorCO2ePerUnit:
+          type: number
+          format: double
+          description: CO2e per unit
+          example: 2.68
+
+        unit:
+          type: string
+          description: Unit of measurement
+          example: "liters"
+
+        active:
+          type: boolean
+          description: Whether this source is active
+          example: true
+
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:00:00Z"
+
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:00:00Z"
+
+    SustainabilityMetric:
+      type: object
+      description: Custom sustainability metric
+      properties:
+        metricId:
+          type: string
+          example: "sm-water-2025-10-nyc"
+
+        warehouseId:
+          type: string
+          example: "WH-NYC-001"
+
+        metricName:
+          type: string
+          example: "Water Consumption"
+
+        unit:
+          $ref: '#/components/schemas/MetricUnit'
+
+        value:
+          type: number
+          format: double
+          example: 450.0
+
+        recordDate:
+          type: string
+          format: date
+          example: "2025-10-31"
+
+        category:
+          type: string
+          example: "Environmental"
+
+        source:
+          type: string
+          example: "Water Utility Bill"
+
+        notes:
+          type: string
+          example: "October 2025 water usage"
+
+    EmissionType:
+      type: string
+      description: |
+        Emission classification according to GHG Protocol:
+        - **SCOPE1_DIRECT**: Direct emissions from owned/controlled sources (company vehicles, on-site fuel combustion)
+        - **SCOPE2_ENERGY**: Indirect emissions from purchased electricity, heat, or steam
+        - **SCOPE3_TRANSPORTATION**: Emissions from third-party transportation and logistics
+        - **SCOPE3_SUPPLY_CHAIN**: Other supply chain emissions (packaging, suppliers, waste)
+      enum:
+        - SCOPE1_DIRECT
+        - SCOPE2_ENERGY
+        - SCOPE3_TRANSPORTATION
+        - SCOPE3_SUPPLY_CHAIN
+      example: "SCOPE1_DIRECT"
+
+    InitiativeStatus:
+      type: string
+      description: |
+        Status of a green initiative:
+        - **PLANNED**: Scheduled but not yet started
+        - **IN_PROGRESS**: Currently being executed
+        - **COMPLETED**: Successfully finished
+        - **CANCELLED**: Abandoned or terminated
+        - **ON_HOLD**: Temporarily paused
+      enum:
+        - PLANNED
+        - IN_PROGRESS
+        - COMPLETED
+        - CANCELLED
+        - ON_HOLD
+      example: "IN_PROGRESS"
+
+    ReportingPeriod:
+      type: string
+      description: |
+        Reporting period granularity:
+        - **MONTHLY**: Single month
+        - **QUARTERLY**: Three months (Q1, Q2, Q3, Q4)
+        - **ANNUAL**: Full calendar year
+      enum:
+        - MONTHLY
+        - QUARTERLY
+        - ANNUAL
+      example: "MONTHLY"
+
+    MetricUnit:
+      type: string
+      description: |
+        Unit of measurement for sustainability metrics:
+        - **CO2E_KG**: Kilograms of CO2 equivalent
+        - **KWH**: Kilowatt-hours (energy)
+        - **LITERS**: Liters (fuel, water)
+        - **CUBIC_METERS**: Cubic meters (water, gas)
+        - **TONS**: Metric tons (waste, materials)
+      enum:
+        - CO2E_KG
+        - KWH
+        - LITERS
+        - CUBIC_METERS
+        - TONS
+      example: "CUBIC_METERS"
+
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2025-11-01T14:30:00Z"
+
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+
+        error:
+          type: string
+          description: Error type
+          example: "Bad Request"
+
+        message:
+          type: string
+          description: Human-readable error message
+          example: "warehouseId is required and cannot be null"
+
+        path:
+          type: string
+          description: API endpoint that generated the error
+          example: "/api/v1/sustainability/emissions"
+
+        validationErrors:
+          type: array
+          description: Field-level validation errors (if applicable)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "recordDate"
+              message:
+                type: string
+                example: "must be a valid date in ISO-8601 format"

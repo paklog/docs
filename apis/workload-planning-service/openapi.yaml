@@ -1,0 +1,953 @@
+openapi: 3.0.3
+info:
+  title: Workload Planning Service API
+  description: |
+    The Workload Planning Service provides intelligent workforce planning, demand forecasting, and labor optimization.
+    It forecasts workload demand using time series analysis, plans optimal workforce allocation across shifts,
+    balances labor supply with operational demand, optimizes labor costs while meeting service levels, and provides
+    actionable recommendations for staffing decisions. The service uses multiple forecasting models including
+    Moving Average, Exponential Smoothing, and seasonal decomposition.
+  version: 1.0.0
+  contact:
+    name: WMS Team
+    email: wms-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+  - url: https://workload-planning.paklog.com
+    description: Production
+
+tags:
+  - name: Forecasts
+    description: Demand forecasting operations
+  - name: Workload Plans
+    description: Workload planning operations
+  - name: Workers
+    description: Worker assignment operations
+  - name: Optimization
+    description: Plan optimization operations
+  - name: Recommendations
+    description: Staffing recommendations
+  - name: Approval
+    description: Plan approval workflow
+
+paths:
+  /forecasts:
+    get:
+      tags:
+        - Forecasts
+      summary: List forecasts
+      description: Retrieve list of demand forecasts
+      operationId: listForecasts
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/ForecastPeriod'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: List of forecasts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  forecasts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DemandForecast'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Forecasts
+      summary: Generate forecast
+      description: Generate a new demand forecast
+      operationId: generateForecast
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateForecastRequest'
+            examples:
+              dailyForecast:
+                summary: Daily forecast for next 7 days
+                value:
+                  warehouseId: WH-001
+                  period: DAILY
+                  forecastDate: "2025-10-19"
+                  workloadCategories:
+                    - PICKING
+                    - PACKING
+                    - PUTAWAY
+                  model: EXPONENTIAL_SMOOTHING
+              hourlyForecast:
+                summary: Hourly forecast for next 24 hours
+                value:
+                  warehouseId: WH-001
+                  period: HOURLY
+                  forecastDate: "2025-10-19"
+                  workloadCategories:
+                    - PICKING
+                  model: MOVING_AVERAGE
+      responses:
+        '201':
+          description: Forecast generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /forecasts/{forecastId}:
+    get:
+      tags:
+        - Forecasts
+      summary: Get forecast
+      description: Retrieve forecast details
+      operationId: getForecast
+      parameters:
+        - name: forecastId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Forecast details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /forecasts/warehouse/{warehouseId}/latest:
+    get:
+      tags:
+        - Forecasts
+      summary: Get latest forecast
+      description: Get most recent forecast for warehouse
+      operationId: getLatestForecast
+      parameters:
+        - name: warehouseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: query
+          schema:
+            $ref: '#/components/schemas/ForecastPeriod'
+      responses:
+        '200':
+          description: Latest forecast
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /plans:
+    get:
+      tags:
+        - Workload Plans
+      summary: List workload plans
+      description: Retrieve list of workload plans
+      operationId: listPlans
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PlanStatus'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: List of workload plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WorkloadPlan'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+    post:
+      tags:
+        - Workload Plans
+      summary: Create workload plan
+      description: Create a new workload plan
+      operationId: createPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkloadPlanRequest'
+      responses:
+        '201':
+          description: Plan created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadPlanDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /plans/{planId}:
+    get:
+      tags:
+        - Workload Plans
+      summary: Get workload plan
+      description: Retrieve workload plan details
+      operationId: getPlan
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '200':
+          description: Plan details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadPlanDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Workload Plans
+      summary: Update workload plan
+      description: Update workload plan (only DRAFT status)
+      operationId: updatePlan
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePlanRequest'
+      responses:
+        '200':
+          description: Plan updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadPlanDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags:
+        - Workload Plans
+      summary: Cancel workload plan
+      description: Cancel a workload plan
+      operationId: cancelPlan
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Plan cancelled
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /plans/{planId}/workers:
+    post:
+      tags:
+        - Workers
+      summary: Assign worker to plan
+      description: Assign a worker to a shift in the plan
+      operationId: assignWorker
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignWorkerRequest'
+      responses:
+        '200':
+          description: Worker assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadPlanDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    delete:
+      tags:
+        - Workers
+      summary: Remove worker from plan
+      description: Remove a worker assignment from the plan
+      operationId: removeWorker
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+        - name: workerId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: shiftType
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ShiftType'
+      responses:
+        '200':
+          description: Worker removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadPlanDetails'
+
+  /plans/{planId}/optimize:
+    post:
+      tags:
+        - Optimization
+      summary: Optimize workload plan
+      description: Optimize worker assignments in the plan
+      operationId: optimizePlan
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                minimizeCost:
+                  type: boolean
+                  default: true
+                maximizeUtilization:
+                  type: boolean
+                  default: true
+                balanceWorkload:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Plan optimized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizationResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /plans/{planId}/approve:
+    post:
+      tags:
+        - Approval
+      summary: Approve workload plan
+      description: Approve a workload plan (DRAFT → APPROVED)
+      operationId: approvePlan
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approvedBy:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Plan approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadPlanDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /plans/{planId}/publish:
+    post:
+      tags:
+        - Approval
+      summary: Publish workload plan
+      description: Publish approved plan to workers (APPROVED → PUBLISHED)
+      operationId: publishPlan
+      parameters:
+        - $ref: '#/components/parameters/PlanId'
+      responses:
+        '200':
+          description: Plan published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadPlanDetails'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /recommendations:
+    get:
+      tags:
+        - Recommendations
+      summary: Get staffing recommendations
+      description: Get intelligent staffing recommendations
+      operationId: getRecommendations
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Staffing recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkloadRecommendation'
+
+  /metrics/warehouse/{warehouseId}:
+    get:
+      tags:
+        - Workload Plans
+      summary: Get warehouse metrics
+      description: Get workload planning metrics for warehouse
+      operationId: getWarehouseMetrics
+      parameters:
+        - name: warehouseId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Warehouse metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseMetrics'
+
+components:
+  parameters:
+    PlanId:
+      name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+
+    WarehouseId:
+      name: warehouseId
+      in: query
+      schema:
+        type: string
+
+    DateFrom:
+      name: dateFrom
+      in: query
+      schema:
+        type: string
+        format: date-time
+
+    DateTo:
+      name: dateTo
+      in: query
+      schema:
+        type: string
+        format: date-time
+
+    PageNumber:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+
+    PageSize:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+
+  schemas:
+    DemandForecast:
+      type: object
+      required:
+        - forecastId
+        - warehouseId
+        - period
+        - forecastDate
+        - generatedAt
+      properties:
+        forecastId:
+          type: string
+        warehouseId:
+          type: string
+        period:
+          $ref: '#/components/schemas/ForecastPeriod'
+        forecastDate:
+          type: string
+          format: date
+        model:
+          type: string
+          enum: [MOVING_AVERAGE, EXPONENTIAL_SMOOTHING, ARIMA, SEASONAL]
+        accuracy:
+          type: number
+          format: percentage
+        confidenceLevel:
+          type: number
+          default: 95
+        generatedAt:
+          type: string
+          format: date-time
+
+    ForecastDetails:
+      allOf:
+        - $ref: '#/components/schemas/DemandForecast'
+        - type: object
+          properties:
+            predictions:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkloadPrediction'
+            historicalData:
+              type: array
+              items:
+                $ref: '#/components/schemas/HistoricalDataPoint'
+
+    ForecastPeriod:
+      type: string
+      enum:
+        - HOURLY
+        - DAILY
+        - WEEKLY
+        - MONTHLY
+
+    WorkloadPrediction:
+      type: object
+      properties:
+        category:
+          $ref: '#/components/schemas/WorkloadCategory'
+        predictedVolume:
+          type: integer
+        confidenceInterval:
+          type: object
+          properties:
+            lower:
+              type: integer
+            upper:
+              type: integer
+        requiredWorkers:
+          type: integer
+        requiredHours:
+          type: number
+
+    WorkloadCategory:
+      type: string
+      enum:
+        - RECEIVING
+        - PUTAWAY
+        - PICKING
+        - PACKING
+        - SHIPPING
+        - REPLENISHMENT
+        - CYCLE_COUNTING
+        - RETURNS
+
+    HistoricalDataPoint:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        actualVolume:
+          type: integer
+        category:
+          $ref: '#/components/schemas/WorkloadCategory'
+
+    WorkloadPlan:
+      type: object
+      required:
+        - planId
+        - warehouseId
+        - planDate
+        - status
+        - createdAt
+      properties:
+        planId:
+          type: string
+        warehouseId:
+          type: string
+        planDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/PlanStatus'
+        totalWorkers:
+          type: integer
+        totalHours:
+          type: number
+        estimatedCost:
+          type: number
+        utilization:
+          type: number
+          format: percentage
+        createdAt:
+          type: string
+          format: date-time
+
+    WorkloadPlanDetails:
+      allOf:
+        - $ref: '#/components/schemas/WorkloadPlan'
+        - type: object
+          properties:
+            plannedVolumes:
+              type: array
+              items:
+                type: object
+                properties:
+                  category:
+                    $ref: '#/components/schemas/WorkloadCategory'
+                  volume:
+                    type: integer
+            workerAssignments:
+              type: array
+              items:
+                $ref: '#/components/schemas/WorkerAssignment'
+            shiftPlans:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShiftPlan'
+
+    PlanStatus:
+      type: string
+      enum:
+        - DRAFT
+        - APPROVED
+        - PUBLISHED
+        - CANCELLED
+
+    WorkerAssignment:
+      type: object
+      properties:
+        workerId:
+          type: string
+        workerName:
+          type: string
+        shiftType:
+          $ref: '#/components/schemas/ShiftType'
+        workloadCategory:
+          $ref: '#/components/schemas/WorkloadCategory'
+        skillLevel:
+          $ref: '#/components/schemas/SkillLevel'
+        plannedHours:
+          type: number
+        expectedProductivity:
+          type: number
+
+    ShiftType:
+      type: string
+      enum:
+        - DAY_SHIFT
+        - EVENING_SHIFT
+        - NIGHT_SHIFT
+        - WEEKEND_SHIFT
+
+    SkillLevel:
+      type: string
+      enum:
+        - NOVICE
+        - INTERMEDIATE
+        - ADVANCED
+        - EXPERT
+
+    ShiftPlan:
+      type: object
+      properties:
+        shiftType:
+          $ref: '#/components/schemas/ShiftType'
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
+        requiredWorkers:
+          type: integer
+        assignedWorkers:
+          type: integer
+        workloadCategories:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkloadCategory'
+
+    GenerateForecastRequest:
+      type: object
+      required:
+        - warehouseId
+        - period
+        - forecastDate
+      properties:
+        warehouseId:
+          type: string
+        period:
+          $ref: '#/components/schemas/ForecastPeriod'
+        forecastDate:
+          type: string
+          format: date
+        workloadCategories:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkloadCategory'
+        model:
+          type: string
+          enum: [MOVING_AVERAGE, EXPONENTIAL_SMOOTHING, ARIMA, SEASONAL]
+          default: EXPONENTIAL_SMOOTHING
+
+    CreateWorkloadPlanRequest:
+      type: object
+      required:
+        - warehouseId
+        - planDate
+      properties:
+        warehouseId:
+          type: string
+        planDate:
+          type: string
+          format: date
+        forecastId:
+          type: string
+          description: Use existing forecast
+        plannedVolumes:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                $ref: '#/components/schemas/WorkloadCategory'
+              volume:
+                type: integer
+
+    UpdatePlanRequest:
+      type: object
+      properties:
+        plannedVolumes:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                $ref: '#/components/schemas/WorkloadCategory'
+              volume:
+                type: integer
+
+    AssignWorkerRequest:
+      type: object
+      required:
+        - workerId
+        - shiftType
+        - workloadCategory
+      properties:
+        workerId:
+          type: string
+        workerName:
+          type: string
+        shiftType:
+          $ref: '#/components/schemas/ShiftType'
+        workloadCategory:
+          $ref: '#/components/schemas/WorkloadCategory'
+        skillLevel:
+          $ref: '#/components/schemas/SkillLevel'
+
+    OptimizationResult:
+      type: object
+      properties:
+        plan:
+          $ref: '#/components/schemas/WorkloadPlanDetails'
+        improvements:
+          type: object
+          properties:
+            costReduction:
+              type: number
+              format: percentage
+            utilizationIncrease:
+              type: number
+              format: percentage
+            workloadBalance:
+              type: number
+              format: percentage
+        changes:
+          type: array
+          items:
+            type: string
+
+    WorkloadRecommendation:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+        date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [UNDERSTAFFED, OPTIMAL, OVERSTAFFED]
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                $ref: '#/components/schemas/WorkloadCategory'
+              shiftType:
+                $ref: '#/components/schemas/ShiftType'
+              currentWorkers:
+                type: integer
+              recommendedWorkers:
+                type: integer
+              reason:
+                type: string
+              priority:
+                type: string
+                enum: [LOW, MEDIUM, HIGH, URGENT]
+
+    WarehouseMetrics:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+        totalPlans:
+          type: integer
+        avgUtilization:
+          type: number
+          format: percentage
+        avgAccuracy:
+          type: number
+          format: percentage
+        laborCostTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              cost:
+                type: number
+        productivityTrend:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              unitsPerHour:
+                type: number
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - bearerAuth: []
+  - apiKey: []

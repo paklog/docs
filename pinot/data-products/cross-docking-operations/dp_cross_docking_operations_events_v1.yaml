@@ -1,0 +1,20 @@
+name: dp_cross_docking_operations_events_v1
+service: cross-docking-operations
+domain: transportation
+kind: source-aligned
+description: Cross-docking domain events from transportation logistics.
+owner: cross-docking-owners@paklog.com
+kafka_topics:
+  - transportation-logistics.cross-docking.events
+pinot_table: dp_cross_docking_operations_events_v1
+schema_file: pinot/schemas/cross-docking-operations/dp_cross_docking_operations_events_v1.schema.json
+table_files:
+  dev: pinot/tables/cross-docking-operations/dp_cross_docking_operations_events_v1.table.dev.json
+  staging: pinot/tables/cross-docking-operations/dp_cross_docking_operations_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, transportation]
+

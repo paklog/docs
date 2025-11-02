@@ -1,0 +1,1648 @@
+asyncapi: 3.0.0
+info:
+  title: Paklog Sustainability Management - Event API
+  version: 1.0.0
+  description: |
+    ## Overview
+
+    The Sustainability Management service participates in Paklog's event-driven architecture through Apache Kafka,
+    publishing sustainability-related events and consuming operational events from other microservices.
+
+    This AsyncAPI specification documents all event flows, message formats, and integration patterns.
+
+    ## Event-Driven Architecture
+
+    ### CloudEvents Standard
+
+    All events follow the [CloudEvents](https://cloudevents.io/) v1.0 specification, providing:
+    - Standardized event metadata (id, source, type, time)
+    - Interoperability across services and platforms
+    - Built-in event versioning
+    - Extensibility through custom attributes
+
+    ### Event Patterns
+
+    The service implements several event patterns:
+    - **Event Notification**: Broadcast state changes (e.g., ESGReportGeneratedEvent)
+    - **Event-Carried State Transfer**: Include relevant data to reduce coupling
+    - **Domain Events**: Represent business facts (e.g., SustainabilityGoalAchievedEvent)
+
+    ## Integration Points
+
+    ### Published Events
+
+    The Sustainability Management service publishes events when:
+    - Carbon footprints are calculated
+    - Sustainability goals are achieved
+    - ESG reports are generated
+    - Green initiatives are completed
+    - Certifications are obtained
+    - Carbon offsets are purchased
+
+    ### Consumed Events
+
+    The service consumes events from:
+    - **Transportation Service**: Shipment dispatches, route completions
+    - **Equipment Management**: Energy consumption by warehouse equipment
+    - **Cartonization Service**: Packaging material usage
+    - **Warehouse Operations**: Waste generation, operational metrics
+    - **Last-Mile Delivery**: Delivery vehicle emissions
+
+    ## Kafka Configuration
+
+    - **Bootstrap Servers**: Configurable via `KAFKA_BOOTSTRAP_SERVERS` (default: localhost:9092)
+    - **Consumer Group**: `sustainability-management`
+    - **Serialization**: CloudEvents JSON format
+    - **Delivery Semantics**: At-least-once delivery
+    - **Retention**: 7 days (configurable per topic)
+
+    ## Event Ordering
+
+    Events within the same partition are strictly ordered. The service uses warehouse ID as the partition key
+    to ensure all events for a warehouse are processed in order.
+
+    ## Error Handling
+
+    Failed event processing follows these patterns:
+    - **Retries**: Automatic retry with exponential backoff (3 attempts)
+    - **Dead Letter Queue**: Failed events sent to `sustainability-dlq` topic
+    - **Monitoring**: Metrics exposed via /actuator/prometheus
+
+    ## Security
+
+    - Events may contain business-sensitive data
+    - Kafka cluster should use TLS encryption in production
+    - SASL authentication recommended for production deployments
+
+  contact:
+    name: Paklog Platform Team
+    email: platform@paklog.com
+  license:
+    name: Proprietary
+
+servers:
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka broker
+    tags:
+      - name: env:development
+
+  kubernetes:
+    host: kafka-service.paklog.svc.cluster.local:9092
+    protocol: kafka
+    description: Kubernetes internal Kafka service
+    tags:
+      - name: env:kubernetes
+
+  production:
+    host: kafka.paklog.com:9093
+    protocol: kafka-secure
+    description: Production Kafka cluster with TLS
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: env:production
+
+channels:
+  sustainability.emissions.calculated:
+    address: sustainability.emissions.calculated
+    description: |
+      Published when carbon emissions are calculated and recorded.
+
+      **Downstream consumers**:
+      - Analytics Service: Aggregates emissions data for dashboards
+      - Reporting Service: Includes in periodic sustainability reports
+      - Alerting Service: Triggers alerts if emissions exceed thresholds
+      - Data Lake: Archives for historical analysis
+
+      **Partition Key**: `warehouseId`
+
+    messages:
+      EmissionsCalculatedEvent:
+        $ref: '#/components/messages/EmissionsCalculatedEvent'
+
+  sustainability.goal.achieved:
+    address: sustainability.goal.achieved
+    description: |
+      Published when a sustainability goal or target is achieved.
+
+      **Downstream consumers**:
+      - Notification Service: Sends congratulatory messages to stakeholders
+      - Gamification Service: Awards badges/points to responsible teams
+      - Reporting Service: Highlights achievements in reports
+      - Analytics Service: Tracks goal achievement trends
+
+      **Partition Key**: `warehouseId`
+
+    messages:
+      SustainabilityGoalAchievedEvent:
+        $ref: '#/components/messages/SustainabilityGoalAchievedEvent'
+
+  sustainability.waste.recorded:
+    address: sustainability.waste.recorded
+    description: |
+      Published when waste generation is tracked and categorized.
+
+      **Downstream consumers**:
+      - Analytics Service: Waste trend analysis
+      - Compliance Service: Regulatory reporting
+      - Vendor Management: Coordinates waste collection
+      - Billing Service: Waste disposal cost allocation
+
+      **Partition Key**: `warehouseId`
+
+    messages:
+      WasteStreamRecordedEvent:
+        $ref: '#/components/messages/WasteStreamRecordedEvent'
+
+  sustainability.renewable.used:
+    address: sustainability.renewable.used
+    description: |
+      Published when renewable energy is consumed or generated.
+
+      **Downstream consumers**:
+      - Energy Management: Balances grid vs renewable usage
+      - Billing Service: Tracks renewable energy credits
+      - Reporting Service: Calculates renewable percentage
+      - Analytics Service: ROI analysis for renewable investments
+
+      **Partition Key**: `warehouseId`
+
+    messages:
+      RenewableEnergyUsedEvent:
+        $ref: '#/components/messages/RenewableEnergyUsedEvent'
+
+  sustainability.route.optimized:
+    address: sustainability.route.optimized
+    description: |
+      Published when a low-emission delivery route is calculated and selected.
+
+      **Downstream consumers**:
+      - Transportation Service: Uses optimized routes for dispatch
+      - Analytics Service: Measures emission savings from optimization
+      - Customer Service: Communicates eco-friendly delivery to customers
+
+      **Partition Key**: `routeId`
+
+    messages:
+      GreenRouteOptimizedEvent:
+        $ref: '#/components/messages/GreenRouteOptimizedEvent'
+
+  sustainability.certification.achieved:
+    address: sustainability.certification.achieved
+    description: |
+      Published when a sustainability certification is obtained.
+
+      **Downstream consumers**:
+      - Marketing Service: Announces certifications
+      - Customer Service: Updates company profile
+      - Vendor Management: Qualifies for eco-conscious partnerships
+      - Reporting Service: Includes in ESG reports
+
+      **Partition Key**: `certificationType`
+
+    messages:
+      CertificationAchievedEvent:
+        $ref: '#/components/messages/CertificationAchievedEvent'
+
+  sustainability.offset.purchased:
+    address: sustainability.offset.purchased
+    description: |
+      Published when carbon offsets are purchased to neutralize emissions.
+
+      **Downstream consumers**:
+      - Finance Service: Tracks offset expenses
+      - Reporting Service: Adjusts net carbon footprint
+      - Vendor Management: Manages offset provider relationships
+      - Compliance Service: Verifies offset legitimacy
+
+      **Partition Key**: `warehouseId`
+
+    messages:
+      OffsetPurchasedEvent:
+        $ref: '#/components/messages/OffsetPurchasedEvent'
+
+  sustainability.report.generated:
+    address: sustainability.report.generated
+    description: |
+      Published when an ESG report is generated.
+
+      **Downstream consumers**:
+      - Reporting Service: Distributes reports to stakeholders
+      - Document Management: Archives reports
+      - Notification Service: Alerts recipients
+      - Analytics Service: Tracks reporting cadence and metrics
+
+      **Partition Key**: `warehouseId`
+
+    messages:
+      ESGReportGeneratedEvent:
+        $ref: '#/components/messages/ESGReportGeneratedEvent'
+
+  sustainability.initiative.completed:
+    address: sustainability.initiative.completed
+    description: |
+      Published when a green initiative project is completed.
+
+      **Downstream consumers**:
+      - Project Management: Updates initiative portfolio
+      - Finance Service: Closes project budget
+      - HR Service: Recognizes team contributions
+      - Analytics Service: Calculates ROI and impact
+
+      **Partition Key**: `initiativeId`
+
+    messages:
+      InitiativeCompletedEvent:
+        $ref: '#/components/messages/InitiativeCompletedEvent'
+
+  # Consumed event channels
+
+  transportation.shipment.dispatched:
+    address: transportation.shipment.dispatched
+    description: |
+      Consumed from Transportation Service when a shipment is dispatched.
+
+      **Processing logic**:
+      - Extract transportation mode (truck, air, sea, rail)
+      - Calculate estimated emissions based on distance and vehicle type
+      - Record as Scope 3 transportation emissions
+      - Update monthly carbon footprint
+
+      **Error handling**:
+      - Skip if vehicle type is unknown (log warning)
+      - Default to average emission factors if specific factors unavailable
+
+    messages:
+      ShipmentDispatchedEvent:
+        $ref: '#/components/messages/ShipmentDispatchedEvent'
+
+  equipment.energy.consumed:
+    address: equipment.energy.consumed
+    description: |
+      Consumed from Equipment Management when warehouse equipment uses energy.
+
+      **Processing logic**:
+      - Classify energy type (electricity, natural gas, diesel)
+      - Determine emission scope (Scope 1 for fuel, Scope 2 for electricity)
+      - Apply appropriate emission factors
+      - Aggregate by warehouse and time period
+
+      **Energy sources tracked**:
+      - Forklifts (electric or diesel)
+      - Conveyor systems
+      - HVAC systems
+      - Lighting
+      - Cold storage refrigeration
+
+    messages:
+      EnergyConsumedEvent:
+        $ref: '#/components/messages/EnergyConsumedEvent'
+
+  cartonization.packaging.used:
+    address: cartonization.packaging.used
+    description: |
+      Consumed from Cartonization Service when packaging materials are used.
+
+      **Processing logic**:
+      - Identify packaging material type (cardboard, plastic, wood, metal)
+      - Calculate embodied emissions from material production
+      - Record as Scope 3 supply chain emissions
+      - Track recycled content percentage
+
+      **Material categories**:
+      - Corrugated cardboard boxes
+      - Plastic bubble wrap and stretch film
+      - Wooden pallets and crates
+      - Metal strapping and containers
+      - Biodegradable packing peanuts
+
+    messages:
+      PackagingUsedEvent:
+        $ref: '#/components/messages/PackagingUsedEvent'
+
+  warehouse.waste.generated:
+    address: warehouse.waste.generated
+    description: |
+      Consumed from Warehouse Operations when waste is generated.
+
+      **Processing logic**:
+      - Categorize waste type (recyclable, compostable, landfill, hazardous)
+      - Calculate emissions from waste disposal
+      - Update waste diversion metrics
+      - Track recycling rates
+
+      **Waste streams**:
+      - Cardboard and paper (recyclable)
+      - Plastic shrink wrap (recyclable)
+      - Organic waste (compostable)
+      - General refuse (landfill)
+      - Electronics and batteries (hazardous)
+
+    messages:
+      WasteGeneratedEvent:
+        $ref: '#/components/messages/WasteGeneratedEvent'
+
+  lastmile.route.completed:
+    address: lastmile.route.completed
+    description: |
+      Consumed from Last-Mile Delivery when a delivery route is completed.
+
+      **Processing logic**:
+      - Extract actual distance traveled and fuel consumed
+      - Calculate real emissions (vs. estimated)
+      - Compare optimized route vs. actual route
+      - Record efficiency metrics
+
+      **Emission factors**:
+      - Diesel vans: 2.68 kg CO2e/liter
+      - Gasoline vans: 2.31 kg CO2e/liter
+      - Electric vehicles: Based on grid electricity factor
+      - Hybrid vehicles: Blended factor based on usage
+
+    messages:
+      RouteCompletedEvent:
+        $ref: '#/components/messages/RouteCompletedEvent'
+
+operations:
+  publishEmissionsCalculated:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.emissions.calculated'
+    summary: Publish carbon emissions calculated event
+    description: |
+      Publishes an event when carbon emissions are calculated and recorded.
+
+      **Trigger**: After successfully recording a carbon footprint entry via REST API
+
+      **Timing**: Synchronous (published immediately after database write)
+
+  publishGoalAchieved:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.goal.achieved'
+    summary: Publish sustainability goal achieved event
+    description: |
+      Publishes an event when a sustainability goal or target is met.
+
+      **Trigger**: When measured metrics exceed goal thresholds
+
+      **Examples**:
+      - Monthly emissions below target
+      - Renewable energy percentage above target
+      - Waste diversion rate above target
+
+  publishWasteRecorded:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.waste.recorded'
+    summary: Publish waste stream recorded event
+    description: Publishes when waste generation is tracked
+
+  publishRenewableUsed:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.renewable.used'
+    summary: Publish renewable energy used event
+    description: Publishes when renewable energy is consumed or generated
+
+  publishRouteOptimized:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.route.optimized'
+    summary: Publish green route optimized event
+    description: Publishes when a low-emission route is calculated
+
+  publishCertificationAchieved:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.certification.achieved'
+    summary: Publish certification achieved event
+    description: Publishes when a sustainability certification is obtained
+
+  publishOffsetPurchased:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.offset.purchased'
+    summary: Publish carbon offset purchased event
+    description: Publishes when carbon offsets are acquired
+
+  publishReportGenerated:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.report.generated'
+    summary: Publish ESG report generated event
+    description: Publishes when an ESG report is created
+
+  publishInitiativeCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/sustainability.initiative.completed'
+    summary: Publish green initiative completed event
+    description: Publishes when a sustainability project is finished
+
+  consumeShipmentDispatched:
+    action: receive
+    channel:
+      $ref: '#/channels/transportation.shipment.dispatched'
+    summary: Consume shipment dispatched events
+    description: |
+      Consumes events from Transportation Service about shipment dispatches.
+
+      **Processing**:
+      1. Extract shipment details (origin, destination, distance, vehicle type)
+      2. Calculate estimated transportation emissions
+      3. Record as Scope 3 transportation emissions
+      4. Update warehouse carbon footprint
+
+  consumeEnergyConsumed:
+    action: receive
+    channel:
+      $ref: '#/channels/equipment.energy.consumed'
+    summary: Consume energy consumption events
+    description: |
+      Consumes events from Equipment Management about energy usage.
+
+      **Processing**:
+      1. Identify energy type and source
+      2. Classify as Scope 1 (fuel) or Scope 2 (electricity)
+      3. Apply emission factors
+      4. Aggregate and record
+
+  consumePackagingUsed:
+    action: receive
+    channel:
+      $ref: '#/channels/cartonization.packaging.used'
+    summary: Consume packaging usage events
+    description: |
+      Consumes events from Cartonization Service about packaging materials.
+
+      **Processing**:
+      1. Identify material type and quantity
+      2. Calculate embodied emissions
+      3. Record as Scope 3 supply chain emissions
+      4. Track material efficiency
+
+  consumeWasteGenerated:
+    action: receive
+    channel:
+      $ref: '#/channels/warehouse.waste.generated'
+    summary: Consume waste generation events
+    description: |
+      Consumes events from Warehouse Operations about waste.
+
+      **Processing**:
+      1. Categorize waste stream
+      2. Calculate disposal emissions
+      3. Update waste diversion metrics
+      4. Record in sustainability metrics
+
+  consumeRouteCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/lastmile.route.completed'
+    summary: Consume route completion events
+    description: |
+      Consumes events from Last-Mile Delivery about completed routes.
+
+      **Processing**:
+      1. Extract actual fuel consumption
+      2. Calculate real emissions
+      3. Compare to estimated emissions
+      4. Update efficiency metrics
+
+components:
+  messages:
+    EmissionsCalculatedEvent:
+      name: EmissionsCalculatedEvent
+      title: Emissions Calculated Event
+      summary: Published when carbon emissions are calculated
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/EmissionsCalculatedPayload'
+      examples:
+        - name: scope1_emissions
+          summary: Scope 1 emissions from diesel vehicles
+          payload:
+            specversion: "1.0"
+            id: "ec-2025-11-01-uuid-1234"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.emissions.calculated.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T14:30:00Z"
+            subject: "WH-NYC-001"
+            data:
+              footprintId: "cf-2025-11-01-wh-nyc-001"
+              warehouseId: "WH-NYC-001"
+              recordDate: "2025-11-01"
+              emissionType: "SCOPE1_DIRECT"
+              emissionSources:
+                - sourceName: "Forklift Fleet"
+                  co2eKg: 156.8
+                  fuelType: "Diesel"
+                  fuelConsumedLiters: 58.5
+                - sourceName: "Delivery Vans"
+                  co2eKg: 268.0
+                  fuelType: "Diesel"
+                  fuelConsumedLiters: 100.0
+              totalCO2eKg: 424.8
+              totalCO2eTons: 0.4248
+              emissionScope: "SCOPE1_DIRECT"
+              calculationMethod: "GHG Protocol - Scope 1 Direct Emissions"
+              calculatedAt: "2025-11-01T14:30:00Z"
+
+        - name: scope2_emissions
+          summary: Scope 2 emissions from electricity
+          payload:
+            specversion: "1.0"
+            id: "ec-2025-11-01-uuid-5678"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.emissions.calculated.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T15:00:00Z"
+            subject: "WH-LA-005"
+            data:
+              footprintId: "cf-2025-11-01-wh-la-005"
+              warehouseId: "WH-LA-005"
+              recordDate: "2025-11-01"
+              emissionType: "SCOPE2_ENERGY"
+              emissionSources:
+                - sourceName: "Grid Electricity"
+                  co2eKg: 1840.0
+                  energyType: "Electricity"
+                  energyConsumedKwh: 2000.0
+                  gridEmissionFactor: 0.92
+              totalCO2eKg: 1840.0
+              totalCO2eTons: 1.84
+              emissionScope: "SCOPE2_ENERGY"
+              calculationMethod: "GHG Protocol - Scope 2 Location-based"
+              calculatedAt: "2025-11-01T15:00:00Z"
+
+    SustainabilityGoalAchievedEvent:
+      name: SustainabilityGoalAchievedEvent
+      title: Sustainability Goal Achieved Event
+      summary: Published when a sustainability target is met
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/SustainabilityGoalAchievedPayload'
+      examples:
+        - name: emissions_reduction_goal
+          summary: Monthly emissions below target
+          payload:
+            specversion: "1.0"
+            id: "sga-2025-11-01-uuid-9012"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.goal.achieved.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T23:59:59Z"
+            subject: "WH-NYC-001"
+            data:
+              goalId: "goal-emissions-reduction-2025-10"
+              warehouseId: "WH-NYC-001"
+              goalType: "EMISSIONS_REDUCTION"
+              goalDescription: "Reduce October emissions by 10% vs. October 2024"
+              targetValue: 60000.0
+              actualValue: 55800.0
+              unit: "kg CO2e"
+              achievedDate: "2025-11-01"
+              period: "MONTHLY"
+              periodIdentifier: "2025-10"
+              performancePercentage: 107.0
+              improvement: "7% below target"
+              previousYearValue: 66667.0
+              yearOverYearReduction: 16.3
+
+        - name: renewable_energy_goal
+          summary: Renewable energy percentage target met
+          payload:
+            specversion: "1.0"
+            id: "sga-2025-11-01-uuid-3456"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.goal.achieved.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T18:00:00Z"
+            subject: "WH-MIA-007"
+            data:
+              goalId: "goal-renewable-energy-2025"
+              warehouseId: "WH-MIA-007"
+              goalType: "RENEWABLE_ENERGY_PERCENTAGE"
+              goalDescription: "Achieve 25% renewable energy by end of 2025"
+              targetValue: 25.0
+              actualValue: 26.5
+              unit: "percentage"
+              achievedDate: "2025-11-01"
+              period: "ANNUAL"
+              periodIdentifier: "2025"
+              performancePercentage: 106.0
+              improvement: "6% above target"
+              solarGenerationKwh: 53000.0
+              totalEnergyKwh: 200000.0
+
+    WasteStreamRecordedEvent:
+      name: WasteStreamRecordedEvent
+      title: Waste Stream Recorded Event
+      summary: Published when waste generation is tracked
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/WasteStreamRecordedPayload'
+      examples:
+        - name: monthly_waste
+          summary: October waste generation summary
+          payload:
+            specversion: "1.0"
+            id: "wsr-2025-11-01-uuid-7890"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.waste.recorded.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T12:00:00Z"
+            subject: "WH-NYC-001"
+            data:
+              wasteRecordId: "waste-2025-10-wh-nyc-001"
+              warehouseId: "WH-NYC-001"
+              recordDate: "2025-10-31"
+              period: "MONTHLY"
+              wasteStreams:
+                - wasteType: "Cardboard"
+                  category: "Recyclable"
+                  weightTons: 6.5
+                  disposalMethod: "Recycled"
+                  vendorName: "EcoRecycle Inc"
+                  co2eKg: 32.5
+                - wasteType: "Plastic Film"
+                  category: "Recyclable"
+                  weightTons: 2.0
+                  disposalMethod: "Recycled"
+                  vendorName: "PlasticReclaim LLC"
+                  co2eKg: 40.0
+                - wasteType: "General Waste"
+                  category: "Landfill"
+                  weightTons: 4.0
+                  disposalMethod: "Landfill"
+                  vendorName: "WasteManagement Co"
+                  co2eKg: 320.0
+              totalWasteTons: 12.5
+              totalRecycledTons: 8.5
+              totalLandfillTons: 4.0
+              diversionRate: 68.0
+              totalCO2eKg: 392.5
+
+    RenewableEnergyUsedEvent:
+      name: RenewableEnergyUsedEvent
+      title: Renewable Energy Used Event
+      summary: Published when renewable energy is consumed
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/RenewableEnergyUsedPayload'
+      examples:
+        - name: solar_generation
+          summary: Daily solar energy generation
+          payload:
+            specversion: "1.0"
+            id: "reu-2025-11-01-uuid-2468"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.renewable.used.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T23:59:59Z"
+            subject: "WH-MIA-007"
+            data:
+              energyRecordId: "solar-2025-11-01-wh-mia-007"
+              warehouseId: "WH-MIA-007"
+              recordDate: "2025-11-01"
+              renewableType: "Solar"
+              energyGeneratedKwh: 1250.0
+              energyConsumedKwh: 1150.0
+              excessEnergyKwh: 100.0
+              gridOffset: "Grid-tied with net metering"
+              emissionsAvoidedKg: 1058.0
+              equivalentTreesPlanted: 48
+              solarArrayCapacityKw: 500.0
+              peakGenerationKw: 485.0
+              utilizationPercentage: 97.0
+
+    GreenRouteOptimizedEvent:
+      name: GreenRouteOptimizedEvent
+      title: Green Route Optimized Event
+      summary: Published when a low-emission route is calculated
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/GreenRouteOptimizedPayload'
+      examples:
+        - name: optimized_route
+          summary: Last-mile delivery route optimized for emissions
+          payload:
+            specversion: "1.0"
+            id: "gro-2025-11-01-uuid-1357"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.route.optimized.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T08:30:00Z"
+            subject: "route-nyc-delivery-001"
+            data:
+              routeId: "route-2025-11-01-nyc-001"
+              warehouseId: "WH-NYC-001"
+              routeDate: "2025-11-01"
+              vehicleType: "Electric Van"
+              optimizationAlgorithm: "Green Routing v2.0"
+              originalDistanceKm: 85.0
+              optimizedDistanceKm: 72.0
+              distanceReductionPercentage: 15.3
+              originalCO2eKg: 18.5
+              optimizedCO2eKg: 4.2
+              emissionReductionKg: 14.3
+              emissionReductionPercentage: 77.3
+              stopsCount: 24
+              estimatedDurationMinutes: 180
+              routeFeatures:
+                - "Avoided highway tolls"
+                - "Reduced idling time"
+                - "Optimized charging stops"
+                - "Traffic-aware routing"
+
+    CertificationAchievedEvent:
+      name: CertificationAchievedEvent
+      title: Certification Achieved Event
+      summary: Published when a sustainability certification is obtained
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/CertificationAchievedPayload'
+      examples:
+        - name: leed_certification
+          summary: LEED Gold certification achieved
+          payload:
+            specversion: "1.0"
+            id: "ca-2025-11-15-uuid-9753"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.certification.achieved.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-15T10:00:00Z"
+            subject: "WH-NYC-001"
+            data:
+              certificationId: "cert-leed-gold-wh-nyc-001"
+              warehouseId: "WH-NYC-001"
+              certificationType: "LEED"
+              certificationLevel: "Gold"
+              certificationBody: "U.S. Green Building Council"
+              issuedDate: "2025-11-15"
+              expirationDate: "2030-11-15"
+              validityYears: 5
+              certificationScope: "Warehouse Building and Operations"
+              pointsAchieved: 68
+              pointsRequired: 60
+              categories:
+                - category: "Energy & Atmosphere"
+                  points: 22
+                - category: "Sustainable Sites"
+                  points: 15
+                - category: "Water Efficiency"
+                  points: 12
+                - category: "Materials & Resources"
+                  points: 11
+                - category: "Indoor Environmental Quality"
+                  points: 8
+              investmentUSD: 850000.0
+              estimatedAnnualSavingsUSD: 125000.0
+              paybackPeriodYears: 6.8
+
+    OffsetPurchasedEvent:
+      name: OffsetPurchasedEvent
+      title: Carbon Offset Purchased Event
+      summary: Published when carbon offsets are acquired
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/OffsetPurchasedPayload'
+      examples:
+        - name: reforestation_offset
+          summary: Reforestation carbon offset purchase
+          payload:
+            specversion: "1.0"
+            id: "op-2025-11-20-uuid-8642"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.offset.purchased.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-20T14:00:00Z"
+            subject: "WH-NYC-001"
+            data:
+              offsetId: "offset-2025-q4-reforestation"
+              warehouseId: "WH-NYC-001"
+              purchaseDate: "2025-11-20"
+              offsetType: "Reforestation"
+              projectName: "Amazon Rainforest Restoration Project"
+              projectLocation: "Brazil"
+              offsetProvider: "Verified Carbon Standard (Verra)"
+              certificationStandard: "VCS"
+              registryId: "VCS-1234"
+              vintageYear: 2025
+              offsetCO2eTons: 50.0
+              pricePerTonUSD: 18.50
+              totalCostUSD: 925.0
+              retirementDate: "2025-11-20"
+              purposeDescription: "Offset Q4 2025 Scope 3 transportation emissions"
+              additionalBenefits:
+                - "Biodiversity conservation"
+                - "Local employment"
+                - "Water quality improvement"
+
+    ESGReportGeneratedEvent:
+      name: ESGReportGeneratedEvent
+      title: ESG Report Generated Event
+      summary: Published when an ESG report is created
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/ESGReportGeneratedPayload'
+      examples:
+        - name: monthly_esg_report
+          summary: October 2025 ESG Report
+          payload:
+            specversion: "1.0"
+            id: "erg-2025-11-01-uuid-7531"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.report.generated.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T09:00:00Z"
+            subject: "WH-NYC-001"
+            data:
+              reportId: "esg-2025-10-wh-nyc-001"
+              warehouseId: "WH-NYC-001"
+              period: "MONTHLY"
+              reportMonth: "2025-10"
+              year: 2025
+              generatedAt: "2025-11-01T09:00:00Z"
+              reportFormat: "JSON"
+              environmental:
+                totalCO2eScope1Kg: 8450.0
+                totalCO2eScope2Kg: 18400.0
+                totalCO2eScope3Kg: 42300.0
+                totalCO2eTons: 69.15
+                totalEnergyKwh: 20000.0
+                renewableEnergyPercentage: 15.5
+                waterUsageCubicMeters: 450.0
+                wasteGeneratedTons: 12.5
+                wasteRecycledPercentage: 68.0
+              social:
+                workforceCount: 125
+                workplaceSafetyScore: 94.5
+                trainingHoursPerEmployee: 8
+                safetyIncidents: 2
+                lostTimeAccidents: 0
+              governance:
+                complianceCertified: true
+                auditsPassed: 3
+                policiesUpdated: 2
+              performance:
+                rating: "GOOD"
+                carbonIntensityPerOrder: 4.41
+                ordersProcessed: 15680
+                improvementVsPreviousMonth: 5.2
+              reportUrl: "https://reports.paklog.com/esg/2025-10/wh-nyc-001.pdf"
+
+    InitiativeCompletedEvent:
+      name: InitiativeCompletedEvent
+      title: Green Initiative Completed Event
+      summary: Published when a sustainability project is finished
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/InitiativeCompletedPayload'
+      examples:
+        - name: led_retrofit_completed
+          summary: LED lighting retrofit project completed
+          payload:
+            specversion: "1.0"
+            id: "ic-2025-12-15-uuid-9876"
+            source: "paklog/sustainability-management"
+            type: "com.paklog.sustainability.initiative.completed.v1"
+            datacontenttype: "application/json"
+            time: "2025-12-15T16:30:00Z"
+            subject: "gi-2025-led-retrofit"
+            data:
+              initiativeId: "gi-2025-led-retrofit"
+              name: "LED Lighting Retrofit - All Facilities"
+              description: "Replace all fluorescent lighting with LED fixtures"
+              startDate: "2025-11-01"
+              targetCompletionDate: "2025-12-15"
+              actualCompletionDate: "2025-12-15"
+              completedOnTime: true
+              durationDays: 45
+              targetReductionCO2eKg: 35000.0
+              actualReductionCO2eKg: 38500.0
+              reductionAchievementPercentage: 110.0
+              estimatedCostUSD: 85000.0
+              actualCostUSD: 82000.0
+              costVariancePercentage: -3.5
+              underBudget: true
+              roi: 6.8
+              paybackPeriodYears: 3.2
+              owner: "Mike Chen - Operations Director"
+              warehousesAffected:
+                - "WH-NYC-001"
+                - "WH-LA-005"
+                - "WH-CHI-003"
+              keyAchievements:
+                - "Installed 1,850 LED fixtures"
+                - "60% reduction in lighting energy"
+                - "Improved workplace illumination"
+                - "Motion sensors in low-traffic areas"
+
+    ShipmentDispatchedEvent:
+      name: ShipmentDispatchedEvent
+      title: Shipment Dispatched Event
+      summary: Consumed from Transportation Service
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/ShipmentDispatchedPayload'
+      examples:
+        - name: truck_shipment
+          summary: Long-haul truck shipment
+          payload:
+            specversion: "1.0"
+            id: "sd-2025-11-01-uuid-4321"
+            source: "paklog/transportation-service"
+            type: "com.paklog.transportation.shipment.dispatched.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T06:00:00Z"
+            subject: "shipment-12345"
+            data:
+              shipmentId: "shipment-12345"
+              warehouseId: "WH-NYC-001"
+              dispatchTime: "2025-11-01T06:00:00Z"
+              origin:
+                warehouseId: "WH-NYC-001"
+                city: "New York"
+                state: "NY"
+                postalCode: "10001"
+              destination:
+                customerId: "cust-9876"
+                city: "Boston"
+                state: "MA"
+                postalCode: "02101"
+              transportMode: "TRUCK"
+              vehicleType: "Heavy Truck - Diesel"
+              vehicleCapacityTons: 20.0
+              loadWeightTons: 15.5
+              loadUtilization: 77.5
+              distanceKm: 350.0
+              estimatedFuelConsumptionLiters: 105.0
+              carrierId: "carrier-abc-123"
+              carrierName: "ABC Freight Lines"
+
+    EnergyConsumedEvent:
+      name: EnergyConsumedEvent
+      title: Energy Consumed Event
+      summary: Consumed from Equipment Management
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/EnergyConsumedPayload'
+      examples:
+        - name: forklift_energy
+          summary: Daily forklift energy consumption
+          payload:
+            specversion: "1.0"
+            id: "ee-2025-11-01-uuid-5555"
+            source: "paklog/equipment-management"
+            type: "com.paklog.equipment.energy.consumed.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T23:59:59Z"
+            subject: "WH-NYC-001"
+            data:
+              equipmentId: "forklift-fleet-nyc"
+              warehouseId: "WH-NYC-001"
+              equipmentType: "Forklift Fleet"
+              energyType: "Diesel"
+              consumptionDate: "2025-11-01"
+              quantityConsumed: 58.5
+              unit: "liters"
+              operatingHours: 16.0
+              efficiency: "Standard operating efficiency"
+
+    PackagingUsedEvent:
+      name: PackagingUsedEvent
+      title: Packaging Used Event
+      summary: Consumed from Cartonization Service
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/PackagingUsedPayload'
+      examples:
+        - name: daily_packaging
+          summary: Daily packaging material usage
+          payload:
+            specversion: "1.0"
+            id: "pu-2025-11-01-uuid-6666"
+            source: "paklog/cartonization-service"
+            type: "com.paklog.cartonization.packaging.used.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T23:59:59Z"
+            subject: "WH-NYC-001"
+            data:
+              warehouseId: "WH-NYC-001"
+              usageDate: "2025-11-01"
+              materials:
+                - materialType: "Corrugated Cardboard"
+                  quantityKg: 320.0
+                  recycledContentPercentage: 80.0
+                  ordersPackaged: 450
+                - materialType: "Plastic Bubble Wrap"
+                  quantityKg: 45.0
+                  recycledContentPercentage: 30.0
+                  ordersPackaged: 180
+                - materialType: "Paper Tape"
+                  quantityKg: 8.5
+                  recycledContentPercentage: 100.0
+                  ordersPackaged: 450
+              totalWeightKg: 373.5
+              totalOrders: 450
+
+    WasteGeneratedEvent:
+      name: WasteGeneratedEvent
+      title: Waste Generated Event
+      summary: Consumed from Warehouse Operations
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/WasteGeneratedPayload'
+      examples:
+        - name: daily_waste
+          summary: Daily waste generation
+          payload:
+            specversion: "1.0"
+            id: "wg-2025-11-01-uuid-7777"
+            source: "paklog/warehouse-operations"
+            type: "com.paklog.warehouse.waste.generated.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T18:00:00Z"
+            subject: "WH-NYC-001"
+            data:
+              warehouseId: "WH-NYC-001"
+              generationDate: "2025-11-01"
+              wasteStreams:
+                - wasteType: "Cardboard"
+                  category: "Recyclable"
+                  weightKg: 215.0
+                - wasteType: "Plastic Film"
+                  category: "Recyclable"
+                  weightKg: 68.0
+                - wasteType: "General Waste"
+                  category: "Landfill"
+                  weightKg: 142.0
+              totalWeightKg: 425.0
+
+    RouteCompletedEvent:
+      name: RouteCompletedEvent
+      title: Route Completed Event
+      summary: Consumed from Last-Mile Delivery
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/RouteCompletedPayload'
+      examples:
+        - name: completed_route
+          summary: Electric vehicle delivery route completed
+          payload:
+            specversion: "1.0"
+            id: "rc-2025-11-01-uuid-8888"
+            source: "paklog/lastmile-delivery"
+            type: "com.paklog.lastmile.route.completed.v1"
+            datacontenttype: "application/json"
+            time: "2025-11-01T17:30:00Z"
+            subject: "route-nyc-001"
+            data:
+              routeId: "route-2025-11-01-nyc-001"
+              warehouseId: "WH-NYC-001"
+              vehicleId: "ev-van-012"
+              vehicleType: "Electric Van"
+              completionTime: "2025-11-01T17:30:00Z"
+              plannedDistanceKm: 72.0
+              actualDistanceKm: 75.0
+              distanceVariance: 4.2
+              energyConsumedKwh: 18.75
+              stopsCompleted: 24
+              stopsFailed: 0
+              actualDurationMinutes: 195
+              plannedDurationMinutes: 180
+
+  schemas:
+    EmissionsCalculatedPayload:
+      type: object
+      description: Payload for emissions calculated event
+      required:
+        - footprintId
+        - warehouseId
+        - recordDate
+        - emissionType
+        - emissionSources
+        - totalCO2eKg
+        - calculatedAt
+      properties:
+        footprintId:
+          type: string
+          description: Unique footprint identifier
+        warehouseId:
+          type: string
+          description: Warehouse identifier
+        recordDate:
+          type: string
+          format: date
+          description: Emission record date
+        emissionType:
+          type: string
+          enum: [SCOPE1_DIRECT, SCOPE2_ENERGY, SCOPE3_TRANSPORTATION, SCOPE3_SUPPLY_CHAIN]
+        emissionSources:
+          type: array
+          items:
+            type: object
+            properties:
+              sourceName:
+                type: string
+              co2eKg:
+                type: number
+              fuelType:
+                type: string
+              fuelConsumedLiters:
+                type: number
+              energyType:
+                type: string
+              energyConsumedKwh:
+                type: number
+        totalCO2eKg:
+          type: number
+        totalCO2eTons:
+          type: number
+        emissionScope:
+          type: string
+        calculationMethod:
+          type: string
+        calculatedAt:
+          type: string
+          format: date-time
+
+    SustainabilityGoalAchievedPayload:
+      type: object
+      required:
+        - goalId
+        - warehouseId
+        - goalType
+        - targetValue
+        - actualValue
+        - achievedDate
+      properties:
+        goalId:
+          type: string
+        warehouseId:
+          type: string
+        goalType:
+          type: string
+        goalDescription:
+          type: string
+        targetValue:
+          type: number
+        actualValue:
+          type: number
+        unit:
+          type: string
+        achievedDate:
+          type: string
+          format: date
+        period:
+          type: string
+        periodIdentifier:
+          type: string
+        performancePercentage:
+          type: number
+        improvement:
+          type: string
+
+    WasteStreamRecordedPayload:
+      type: object
+      required:
+        - wasteRecordId
+        - warehouseId
+        - recordDate
+        - wasteStreams
+        - totalWasteTons
+      properties:
+        wasteRecordId:
+          type: string
+        warehouseId:
+          type: string
+        recordDate:
+          type: string
+          format: date
+        period:
+          type: string
+        wasteStreams:
+          type: array
+          items:
+            type: object
+            properties:
+              wasteType:
+                type: string
+              category:
+                type: string
+              weightTons:
+                type: number
+              disposalMethod:
+                type: string
+              vendorName:
+                type: string
+              co2eKg:
+                type: number
+        totalWasteTons:
+          type: number
+        totalRecycledTons:
+          type: number
+        diversionRate:
+          type: number
+
+    RenewableEnergyUsedPayload:
+      type: object
+      required:
+        - energyRecordId
+        - warehouseId
+        - recordDate
+        - renewableType
+        - energyGeneratedKwh
+      properties:
+        energyRecordId:
+          type: string
+        warehouseId:
+          type: string
+        recordDate:
+          type: string
+          format: date
+        renewableType:
+          type: string
+        energyGeneratedKwh:
+          type: number
+        energyConsumedKwh:
+          type: number
+        excessEnergyKwh:
+          type: number
+        gridOffset:
+          type: string
+        emissionsAvoidedKg:
+          type: number
+
+    GreenRouteOptimizedPayload:
+      type: object
+      required:
+        - routeId
+        - warehouseId
+        - routeDate
+        - optimizedDistanceKm
+        - optimizedCO2eKg
+      properties:
+        routeId:
+          type: string
+        warehouseId:
+          type: string
+        routeDate:
+          type: string
+          format: date
+        vehicleType:
+          type: string
+        optimizationAlgorithm:
+          type: string
+        originalDistanceKm:
+          type: number
+        optimizedDistanceKm:
+          type: number
+        distanceReductionPercentage:
+          type: number
+        originalCO2eKg:
+          type: number
+        optimizedCO2eKg:
+          type: number
+        emissionReductionKg:
+          type: number
+        stopsCount:
+          type: integer
+
+    CertificationAchievedPayload:
+      type: object
+      required:
+        - certificationId
+        - warehouseId
+        - certificationType
+        - issuedDate
+      properties:
+        certificationId:
+          type: string
+        warehouseId:
+          type: string
+        certificationType:
+          type: string
+        certificationLevel:
+          type: string
+        certificationBody:
+          type: string
+        issuedDate:
+          type: string
+          format: date
+        expirationDate:
+          type: string
+          format: date
+        validityYears:
+          type: integer
+
+    OffsetPurchasedPayload:
+      type: object
+      required:
+        - offsetId
+        - warehouseId
+        - purchaseDate
+        - offsetType
+        - offsetCO2eTons
+        - totalCostUSD
+      properties:
+        offsetId:
+          type: string
+        warehouseId:
+          type: string
+        purchaseDate:
+          type: string
+          format: date
+        offsetType:
+          type: string
+        projectName:
+          type: string
+        offsetProvider:
+          type: string
+        offsetCO2eTons:
+          type: number
+        pricePerTonUSD:
+          type: number
+        totalCostUSD:
+          type: number
+
+    ESGReportGeneratedPayload:
+      type: object
+      required:
+        - reportId
+        - warehouseId
+        - period
+        - reportMonth
+        - year
+        - generatedAt
+      properties:
+        reportId:
+          type: string
+        warehouseId:
+          type: string
+        period:
+          type: string
+        reportMonth:
+          type: string
+        year:
+          type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        environmental:
+          type: object
+        social:
+          type: object
+        governance:
+          type: object
+        performance:
+          type: object
+        reportUrl:
+          type: string
+
+    InitiativeCompletedPayload:
+      type: object
+      required:
+        - initiativeId
+        - name
+        - actualCompletionDate
+        - actualReductionCO2eKg
+        - actualCostUSD
+      properties:
+        initiativeId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        startDate:
+          type: string
+          format: date
+        targetCompletionDate:
+          type: string
+          format: date
+        actualCompletionDate:
+          type: string
+          format: date
+        targetReductionCO2eKg:
+          type: number
+        actualReductionCO2eKg:
+          type: number
+        estimatedCostUSD:
+          type: number
+        actualCostUSD:
+          type: number
+        roi:
+          type: number
+        owner:
+          type: string
+
+    ShipmentDispatchedPayload:
+      type: object
+      required:
+        - shipmentId
+        - warehouseId
+        - dispatchTime
+        - transportMode
+        - vehicleType
+        - distanceKm
+      properties:
+        shipmentId:
+          type: string
+        warehouseId:
+          type: string
+        dispatchTime:
+          type: string
+          format: date-time
+        origin:
+          type: object
+        destination:
+          type: object
+        transportMode:
+          type: string
+        vehicleType:
+          type: string
+        loadWeightTons:
+          type: number
+        distanceKm:
+          type: number
+        estimatedFuelConsumptionLiters:
+          type: number
+
+    EnergyConsumedPayload:
+      type: object
+      required:
+        - equipmentId
+        - warehouseId
+        - energyType
+        - quantityConsumed
+        - unit
+      properties:
+        equipmentId:
+          type: string
+        warehouseId:
+          type: string
+        equipmentType:
+          type: string
+        energyType:
+          type: string
+        consumptionDate:
+          type: string
+          format: date
+        quantityConsumed:
+          type: number
+        unit:
+          type: string
+        operatingHours:
+          type: number
+
+    PackagingUsedPayload:
+      type: object
+      required:
+        - warehouseId
+        - usageDate
+        - materials
+      properties:
+        warehouseId:
+          type: string
+        usageDate:
+          type: string
+          format: date
+        materials:
+          type: array
+          items:
+            type: object
+            properties:
+              materialType:
+                type: string
+              quantityKg:
+                type: number
+              recycledContentPercentage:
+                type: number
+
+    WasteGeneratedPayload:
+      type: object
+      required:
+        - warehouseId
+        - generationDate
+        - wasteStreams
+      properties:
+        warehouseId:
+          type: string
+        generationDate:
+          type: string
+          format: date
+        wasteStreams:
+          type: array
+          items:
+            type: object
+            properties:
+              wasteType:
+                type: string
+              category:
+                type: string
+              weightKg:
+                type: number
+
+    RouteCompletedPayload:
+      type: object
+      required:
+        - routeId
+        - warehouseId
+        - vehicleType
+        - completionTime
+        - actualDistanceKm
+      properties:
+        routeId:
+          type: string
+        warehouseId:
+          type: string
+        vehicleId:
+          type: string
+        vehicleType:
+          type: string
+        completionTime:
+          type: string
+          format: date-time
+        plannedDistanceKm:
+          type: number
+        actualDistanceKm:
+          type: number
+        energyConsumedKwh:
+          type: number
+        stopsCompleted:
+          type: integer
+
+  messageTraits:
+    cloudEventWrapper:
+      description: CloudEvents v1.0 standard wrapper
+      headers:
+        type: object
+        required:
+          - specversion
+          - id
+          - source
+          - type
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+            description: CloudEvents specification version
+          id:
+            type: string
+            description: Unique event identifier
+          source:
+            type: string
+            description: Source service URI
+          type:
+            type: string
+            description: Event type identifier
+          datacontenttype:
+            type: string
+            description: Content type of data
+            default: "application/json"
+          time:
+            type: string
+            format: date-time
+            description: Event timestamp
+          subject:
+            type: string
+            description: Subject of the event
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: SASL/SCRAM authentication for Kafka

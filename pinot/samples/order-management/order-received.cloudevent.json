@@ -1,0 +1,18 @@
+{
+  "specversion": "1.0",
+  "type": "com.example.fulfillment.order.received",
+  "source": "/fulfillment/order-management-service",
+  "subject": "7f47e9e7-2a17-4f70-9c0f-8d0ae6e2e1c4",
+  "id": "d9db1a45-2e15-4e52-9a4b-9c3f1796c5aa",
+  "time": "2024-11-01T10:30:00Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "order_id": "7f47e9e7-2a17-4f70-9c0f-8d0ae6e2e1c4",
+    "seller_fulfillment_order_id": "SFO-123456"
+  },
+  "extensions": {
+    "correlationId": "corr-abc-123",
+    "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+  }
+}
+

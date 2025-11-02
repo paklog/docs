@@ -1,0 +1,151 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a3b-8c7d-1e2f3a4b5c6d",
+    "name": "Last-Mile Delivery API",
+    "description": "API for managing final-stage delivery operations, including route optimization, driver management, and proof of delivery.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Routes",
+      "item": [
+        {
+          "name": "Optimize Routes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/routes/optimize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routes",
+                "optimize"
+              ]
+            },
+            "description": "**Summary**: Creates optimized delivery routes for a set of shipments and available drivers using a Vehicle Routing Problem (VRP) solver.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"shipmentIds\": [\"SHIP-001\", \"SHIP-002\", \"SHIP-003\"],\n  \"driverIds\": [\"DRIVER-A\", \"DRIVER-B\"],
+  \"optimizationGoal\": \"MINIMIZE_TIME\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Routes optimized successfully.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"routes\": [\n    {\n      \"routeId\": \"ROUTE-1\",\n      \"driverId\": \"DRIVER-A\",\n      \"stopCount\": 2,\n      \"estimatedDurationMinutes\": 120\n    },\n    {\n      \"routeId\": \"ROUTE-2\",\n      \"driverId\": \"DRIVER-B\",\n      \"stopCount\": 1,\n      \"estimatedDurationMinutes\": 45\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get Route Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/routes/{{routeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "routes",
+                "{{routeId}}"
+              ]
+            },
+            "description": "**Summary**: Retrieves the details of a specific delivery route, including the sequence of stops."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Successful operation.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"routeId\": \"ROUTE-1\",\n  \"driverId\": \"DRIVER-A\",\n  \"status\": \"IN_PROGRESS\",\n  \"stops\": [\n    {\n      \"stopNumber\": 1,\n      \"shipmentId\": \"SHIP-002\",\n      \"address\": \"123 Oak St\",\n      \"status\": \"PENDING\"\n    },\n    {\n      \"stopNumber\": 2,\n      \"shipmentId\": \"SHIP-001\",\n      \"address\": \"456 Pine St\",\n      \"status\": \"PENDING\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Deliveries",
+      "item": [
+        {
+          "name": "Update Delivery Status",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/deliveries/{{shipmentId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "deliveries",
+                "{{shipmentId}}",
+                "status"
+              ]
+            },
+            "description": "**Summary**: Updates the status of a delivery, used by drivers to provide proof of delivery or report an exception.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"DELIVERED\",\n  \"timestamp\": \"2025-10-26T14:30:00Z\",\n  \"proofOfDelivery\": {\n    \"type\": \"PHOTO\",\n    \"data\": \"base64-encoded-image-string\",\n    \"notes\": \"Left at front door.\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Delivery status updated.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"shipmentId\": \"SHIP-002\",\n  \"newStatus\": \"DELIVERED\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1/last-mile"
+    },
+    {
+      "key": "routeId",
+      "value": "ROUTE-1"
+    },
+    {
+      "key": "shipmentId",
+      "value": "SHIP-002"
+    }
+  ]
+}

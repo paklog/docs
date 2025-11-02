@@ -1,0 +1,190 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a3b-8c7d-1e2f3a4b5c6d",
+    "name": "Returns Management API",
+    "description": "API for managing the lifecycle of product returns, from RMA initiation to final disposition and refund.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Returns (RMAs)",
+      "item": [
+        {
+          "name": "Initiate a Return (RMA)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/returns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "returns"
+              ]
+            },
+            "description": "**Summary**: Initiate a product return and create a Return Merchandise Authorization (RMA).\n\nValidates the return request against business rules like the return window and order history.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ORD-67890\",\n  \"returnItems\": [\n    {\n      \"sku\": \"PROD-123\",\n      \"quantity\": 1,\n      \"reasonCode\": \"DEFECTIVE\"\n    }\n  ],\n  \"customerComments\": \"The item does not power on.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": null,
+              "status": "Return request accepted and RMA created.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"returnId\": \"RET-ABCDE123\",\n  \"rmaNumber\": \"RMA-987654\",\n  \"status\": \"APPROVED\",\n  \"shippingLabelUrl\": \"https://api.paklog.com/returns/RET-ABCDE123/label\"\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "400 Bad Request",
+              "originalRequest": null,
+              "status": "Invalid request, e.g., outside return window.",
+              "code": 400,
+              "header": [],
+              "body": "{\n  \"error\": \"VALIDATION_ERROR\",\n  \"message\": \"Return window has expired.\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get Return Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/returns/{{returnId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "returns",
+                "{{returnId}}"
+              ]
+            },
+            "description": "**Summary**: Retrieves the details and current status of a specific return."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Successful operation.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"returnId\": \"RET-ABCDE123\",\n  \"rmaNumber\": \"RMA-987654\",\n  \"status\": \"INSPECTED\",\n  \"items\": [\n    {\n      \"sku\": \"PROD-123\",\n      \"quantity\": 1,\n      \"condition\": \"DEFECTIVE\"\n    }\n  ],\n  \"fraudAssessment\": {\n    \"riskLevel\": \"LOW\",\n    \"score\": 0.15\n  },\n  \"disposition\": {\n    \"decision\": \"RETURN_TO_VENDOR\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Disposition",
+      "item": [
+        {
+          "name": "Set Disposition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/returns/{{returnId}}/disposition",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "returns",
+                "{{returnId}}",
+                "disposition"
+              ]
+            },
+            "description": "**Summary**: Manually set or override the disposition for a returned item.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dispositionType\": \"REFURBISH\",\n  \"notes\": \"Minor cosmetic damage. Can be refurbished and sold as open-box.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Disposition updated successfully.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"returnId\": \"RET-ABCDE123\",\n  \"status\": \"DISPOSITION_COMPLETE\",\n  \"disposition\": {\n    \"decision\": \"REFURBISH\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Refunds",
+      "item": [
+        {
+          "name": "Process Refund",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/returns/{{returnId}}/refund",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "returns",
+                "{{returnId}}",
+                "refund"
+              ]
+            },
+            "description": "**Summary**: Triggers the refund calculation and processing for a completed return."
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "originalRequest": null,
+              "status": "Refund processing initiated.",
+              "code": 202,
+              "header": [],
+              "body": "{\n  \"refundId\": \"REF-XYZ789\",\n  \"status\": \"PROCESSING\",\n  \"amount\": 49.99,\n  \"currency\": \"USD\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1",
+      "description": "Base URL for the Returns Management API."
+    },
+    {
+      "key": "returnId",
+      "value": "RET-ABCDE123"
+    }
+  ]
+}

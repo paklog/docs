@@ -1,0 +1,1110 @@
+openapi: 3.0.3
+info:
+  title: Location Master Service API
+  description: |
+    The Location Master Service manages warehouse location configuration and slotting optimization.
+    It defines location hierarchies (Warehouse → Zone → Aisle → Bay → Bin), manages location attributes,
+    capacity, and restrictions, implements slotting rules and optimization algorithms, and handles ABC velocity
+    classification and zone assignment rules. The service is the master data source for all warehouse locations.
+  version: 1.0.0
+  contact:
+    name: WMS Team
+    email: wms-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8081
+    description: Local development
+  - url: https://location-master.paklog.com
+    description: Production
+
+tags:
+  - name: Locations
+    description: Location management operations
+  - name: Hierarchy
+    description: Location hierarchy operations
+  - name: Capacity
+    description: Capacity management
+  - name: Slotting
+    description: Slotting optimization and rules
+  - name: Zones
+    description: Zone management
+  - name: Search
+    description: Location search operations
+
+paths:
+  /locations:
+    get:
+      tags:
+        - Locations
+      summary: List locations
+      description: Retrieve list of locations with filtering
+      operationId: listLocations
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: zone
+          in: query
+          schema:
+            type: string
+        - name: aisle
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/LocationType'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/LocationStatus'
+        - name: slottingClass
+          in: query
+          schema:
+            $ref: '#/components/schemas/SlottingClass'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: List of locations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  locations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Location'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags:
+        - Locations
+      summary: Create location
+      description: Create a new warehouse location
+      operationId: createLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLocationRequest'
+            examples:
+              binLocation:
+                summary: Create bin location
+                value:
+                  locationId: A-01-05-03
+                  warehouseId: WH-001
+                  type: BIN
+                  zone: PICKING
+                  aisle: "01"
+                  bay: "05"
+                  level: "03"
+                  capacity:
+                    maxPallets: 2
+                    maxWeight: 1000
+                    maxVolume: 2.5
+                  dimensions:
+                    length: 120
+                    width: 100
+                    height: 200
+              stageLocation:
+                summary: Create staging location
+                value:
+                  locationId: STAGE-PICK-01
+                  warehouseId: WH-001
+                  type: STAGING
+                  zone: PICKING
+                  capacity:
+                    maxPallets: 10
+                    maxWeight: 5000
+      responses:
+        '201':
+          description: Location created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /locations/{locationId}:
+    get:
+      tags:
+        - Locations
+      summary: Get location
+      description: Retrieve detailed information about a location
+      operationId: getLocation
+      parameters:
+        - $ref: '#/components/parameters/LocationId'
+      responses:
+        '200':
+          description: Location details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Locations
+      summary: Update location
+      description: Update location attributes
+      operationId: updateLocation
+      parameters:
+        - $ref: '#/components/parameters/LocationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLocationRequest'
+      responses:
+        '200':
+          description: Location updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Locations
+      summary: Deactivate location
+      description: Deactivate a location (soft delete)
+      operationId: deactivateLocation
+      parameters:
+        - $ref: '#/components/parameters/LocationId'
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location deactivated
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Location occupied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /locations/{locationId}/capacity:
+    put:
+      tags:
+        - Capacity
+      summary: Configure capacity
+      description: Configure location capacity parameters
+      operationId: configureCapacity
+      parameters:
+        - $ref: '#/components/parameters/LocationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapacityConfiguration'
+      responses:
+        '200':
+          description: Capacity configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /locations/{locationId}/slotting:
+    put:
+      tags:
+        - Slotting
+      summary: Update slotting classification
+      description: Update location slotting class and rules
+      operationId: updateSlotting
+      parameters:
+        - $ref: '#/components/parameters/LocationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlottingUpdate'
+      responses:
+        '200':
+          description: Slotting updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /locations/{locationId}/block:
+    post:
+      tags:
+        - Locations
+      summary: Block location
+      description: Block a location temporarily
+      operationId: blockLocation
+      parameters:
+        - $ref: '#/components/parameters/LocationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                blockUntil:
+                  type: string
+                  format: date-time
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Location blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationDetails'
+
+  /locations/{locationId}/unblock:
+    post:
+      tags:
+        - Locations
+      summary: Unblock location
+      description: Unblock a previously blocked location
+      operationId: unblockLocation
+      parameters:
+        - $ref: '#/components/parameters/LocationId'
+      responses:
+        '200':
+          description: Location unblocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationDetails'
+
+  /locations/{locationId}/reserve:
+    post:
+      tags:
+        - Locations
+      summary: Reserve location
+      description: Reserve location for specific use
+      operationId: reserveLocation
+      parameters:
+        - $ref: '#/components/parameters/LocationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - purpose
+              properties:
+                purpose:
+                  type: string
+                reservedFor:
+                  type: string
+                  description: Product ID or order ID
+                expiresAt:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Location reserved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationDetails'
+
+  /locations/bulk:
+    post:
+      tags:
+        - Locations
+      summary: Create locations in bulk
+      description: Create multiple locations at once
+      operationId: createLocationsBulk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - locations
+              properties:
+                locations:
+                  type: array
+                  minItems: 1
+                  maxItems: 500
+                  items:
+                    $ref: '#/components/schemas/CreateLocationRequest'
+      responses:
+        '201':
+          description: Locations created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Location'
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        locationId:
+                          type: string
+                        error:
+                          type: string
+
+  /hierarchy/{warehouseId}:
+    get:
+      tags:
+        - Hierarchy
+      summary: Get location hierarchy
+      description: Get complete location hierarchy for warehouse
+      operationId: getLocationHierarchy
+      parameters:
+        - name: warehouseId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location hierarchy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationHierarchy'
+
+  /zones:
+    get:
+      tags:
+        - Zones
+      summary: List zones
+      description: Get list of zones in warehouse
+      operationId: listZones
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+      responses:
+        '200':
+          description: List of zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Zone'
+
+    post:
+      tags:
+        - Zones
+      summary: Create zone
+      description: Create a new zone
+      operationId: createZone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateZoneRequest'
+      responses:
+        '201':
+          description: Zone created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Zone'
+
+  /zones/{zoneId}:
+    get:
+      tags:
+        - Zones
+      summary: Get zone
+      description: Get zone details
+      operationId: getZone
+      parameters:
+        - name: zoneId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Zone details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ZoneDetails'
+
+  /slotting/analyze:
+    post:
+      tags:
+        - Slotting
+      summary: Analyze slotting
+      description: Analyze current slotting efficiency
+      operationId: analyzeSlotting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                warehouseId:
+                  type: string
+                zone:
+                  type: string
+                includeSuggestions:
+                  type: boolean
+                  default: true
+      responses:
+        '200':
+          description: Slotting analysis
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlottingAnalysis'
+
+  /slotting/optimize:
+    post:
+      tags:
+        - Slotting
+      summary: Optimize slotting
+      description: Generate optimal slotting recommendations
+      operationId: optimizeSlotting
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - warehouseId
+              properties:
+                warehouseId:
+                  type: string
+                zone:
+                  type: string
+                strategy:
+                  type: string
+                  enum: [ABC_VELOCITY, PROXIMITY, AFFINITY, BALANCED]
+                  default: ABC_VELOCITY
+      responses:
+        '200':
+          description: Slotting optimization results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlottingOptimization'
+
+  /slotting/recommend:
+    post:
+      tags:
+        - Slotting
+      summary: Recommend location
+      description: Recommend best location for a product
+      operationId: recommendLocation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+                - warehouseId
+              properties:
+                productId:
+                  type: string
+                warehouseId:
+                  type: string
+                quantity:
+                  type: integer
+                velocity:
+                  type: string
+                  enum: [HIGH, MEDIUM, LOW]
+      responses:
+        '200':
+          description: Location recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LocationRecommendation'
+
+  /search/locations:
+    post:
+      tags:
+        - Search
+      summary: Search locations
+      description: Advanced location search
+      operationId: searchLocations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationSearchCriteria'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Location'
+                  totalResults:
+                    type: integer
+
+  /search/available:
+    post:
+      tags:
+        - Search
+      summary: Find available locations
+      description: Find available locations matching criteria
+      operationId: findAvailableLocations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - warehouseId
+              properties:
+                warehouseId:
+                  type: string
+                zone:
+                  type: string
+                minCapacity:
+                  type: integer
+                locationType:
+                  $ref: '#/components/schemas/LocationType'
+                slottingClass:
+                  $ref: '#/components/schemas/SlottingClass'
+      responses:
+        '200':
+          description: Available locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+
+components:
+  parameters:
+    LocationId:
+      name: locationId
+      in: path
+      required: true
+      schema:
+        type: string
+
+    WarehouseId:
+      name: warehouseId
+      in: query
+      required: true
+      schema:
+        type: string
+
+    PageNumber:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+
+    PageSize:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+
+  schemas:
+    Location:
+      type: object
+      required:
+        - locationId
+        - warehouseId
+        - type
+        - status
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        type:
+          $ref: '#/components/schemas/LocationType'
+        status:
+          $ref: '#/components/schemas/LocationStatus'
+        zone:
+          type: string
+        aisle:
+          type: string
+        bay:
+          type: string
+        level:
+          type: string
+        slottingClass:
+          $ref: '#/components/schemas/SlottingClass'
+        currentOccupancy:
+          type: integer
+        capacity:
+          $ref: '#/components/schemas/Capacity'
+
+    LocationDetails:
+      allOf:
+        - $ref: '#/components/schemas/Location'
+        - type: object
+          properties:
+            dimensions:
+              $ref: '#/components/schemas/Dimensions'
+            restrictions:
+              $ref: '#/components/schemas/Restrictions'
+            assignedProducts:
+              type: array
+              items:
+                type: string
+            blocked:
+              type: boolean
+            blockReason:
+              type: string
+            reserved:
+              type: boolean
+            reservedFor:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+
+    LocationType:
+      type: string
+      enum:
+        - BIN
+        - PALLET_RACK
+        - FLOOR
+        - STAGING
+        - RECEIVING
+        - SHIPPING
+        - RESERVE
+        - PICK_FACE
+        - QUARANTINE
+
+    LocationStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+        - BLOCKED
+        - RESERVED
+        - DEACTIVATED
+
+    SlottingClass:
+      type: string
+      enum:
+        - A_FAST
+        - B_MEDIUM
+        - C_SLOW
+        - D_INACTIVE
+      description: ABC velocity classification
+
+    Capacity:
+      type: object
+      properties:
+        maxPallets:
+          type: integer
+        maxCases:
+          type: integer
+        maxEaches:
+          type: integer
+        maxWeight:
+          type: number
+          description: Maximum weight in kg
+        maxVolume:
+          type: number
+          description: Maximum volume in cubic meters
+
+    Dimensions:
+      type: object
+      properties:
+        length:
+          type: number
+          description: Length in cm
+        width:
+          type: number
+          description: Width in cm
+        height:
+          type: number
+          description: Height in cm
+
+    Restrictions:
+      type: object
+      properties:
+        allowedProductTypes:
+          type: array
+          items:
+            type: string
+        prohibitedProductTypes:
+          type: array
+          items:
+            type: string
+        requiresHazmatCertification:
+          type: boolean
+        temperatureControlled:
+          type: boolean
+        minTemperature:
+          type: number
+        maxTemperature:
+          type: number
+
+    CreateLocationRequest:
+      type: object
+      required:
+        - locationId
+        - warehouseId
+        - type
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        type:
+          $ref: '#/components/schemas/LocationType'
+        zone:
+          type: string
+        aisle:
+          type: string
+        bay:
+          type: string
+        level:
+          type: string
+        capacity:
+          $ref: '#/components/schemas/Capacity'
+        dimensions:
+          $ref: '#/components/schemas/Dimensions'
+        restrictions:
+          $ref: '#/components/schemas/Restrictions'
+        slottingClass:
+          $ref: '#/components/schemas/SlottingClass'
+
+    UpdateLocationRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/LocationStatus'
+        capacity:
+          $ref: '#/components/schemas/Capacity'
+        restrictions:
+          $ref: '#/components/schemas/Restrictions'
+
+    CapacityConfiguration:
+      allOf:
+        - $ref: '#/components/schemas/Capacity'
+
+    SlottingUpdate:
+      type: object
+      properties:
+        slottingClass:
+          $ref: '#/components/schemas/SlottingClass'
+        assignedProducts:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+
+    Zone:
+      type: object
+      properties:
+        zoneId:
+          type: string
+        name:
+          type: string
+        warehouseId:
+          type: string
+        zoneType:
+          type: string
+          enum: [PICKING, RESERVE, STAGING, RECEIVING, SHIPPING]
+        totalLocations:
+          type: integer
+        availableLocations:
+          type: integer
+
+    ZoneDetails:
+      allOf:
+        - $ref: '#/components/schemas/Zone'
+        - type: object
+          properties:
+            locations:
+              type: array
+              items:
+                $ref: '#/components/schemas/Location'
+            utilization:
+              type: number
+              format: percentage
+
+    CreateZoneRequest:
+      type: object
+      required:
+        - zoneId
+        - name
+        - warehouseId
+        - zoneType
+      properties:
+        zoneId:
+          type: string
+        name:
+          type: string
+        warehouseId:
+          type: string
+        zoneType:
+          type: string
+          enum: [PICKING, RESERVE, STAGING, RECEIVING, SHIPPING]
+
+    LocationHierarchy:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+        zones:
+          type: array
+          items:
+            type: object
+            properties:
+              zoneId:
+                type: string
+              aisles:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    aisleId:
+                      type: string
+                    bays:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          bayId:
+                            type: string
+                          levels:
+                            type: array
+                            items:
+                              type: string
+
+    SlottingAnalysis:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        totalLocations:
+          type: integer
+        slottingEfficiency:
+          type: number
+          format: percentage
+        averagePickDistance:
+          type: number
+        distributionByClass:
+          type: object
+          additionalProperties:
+            type: integer
+        issues:
+          type: array
+          items:
+            type: object
+            properties:
+              issue:
+                type: string
+              severity:
+                type: string
+                enum: [LOW, MEDIUM, HIGH]
+              affectedLocations:
+                type: array
+                items:
+                  type: string
+
+    SlottingOptimization:
+      type: object
+      properties:
+        strategy:
+          type: string
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              currentLocation:
+                type: string
+              recommendedLocation:
+                type: string
+              reason:
+                type: string
+              expectedImprovement:
+                type: number
+                format: percentage
+        totalRecommendations:
+          type: integer
+        estimatedDistanceReduction:
+          type: number
+          format: percentage
+
+    LocationRecommendation:
+      type: object
+      properties:
+        locationId:
+          type: string
+        score:
+          type: number
+          description: Recommendation score (0-100)
+        reasons:
+          type: array
+          items:
+            type: string
+        distanceFromPicking:
+          type: number
+        currentUtilization:
+          type: number
+          format: percentage
+
+    LocationSearchCriteria:
+      type: object
+      properties:
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        aisle:
+          type: string
+        type:
+          $ref: '#/components/schemas/LocationType'
+        status:
+          $ref: '#/components/schemas/LocationStatus'
+        slottingClass:
+          $ref: '#/components/schemas/SlottingClass'
+        minCapacity:
+          type: integer
+        available:
+          type: boolean
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - bearerAuth: []
+  - apiKey: []

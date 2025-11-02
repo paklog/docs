@@ -1,0 +1,18 @@
+source:
+  type: kafka
+  config:
+    connection:
+      bootstrap: ${KAFKA_BOOTSTRAP_DEV}
+    schema_registry:
+      url: ${SCHEMA_REGISTRY_DEV}
+    topic_patterns:
+      allow:
+        - ".*"
+    platform_instance: dev
+
+sink:
+  type: datahub-rest
+  config:
+    server: ${DATAHUB_GMS_DEV}
+    token: ${DATAHUB_TOKEN_DEV}
+

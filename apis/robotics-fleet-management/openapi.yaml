@@ -1,0 +1,1713 @@
+openapi: 3.1.0
+info:
+  title: Robotics Fleet Management API
+  version: 1.0.0
+  description: |
+    # Robotics Fleet Management System API
+
+    A comprehensive REST API for managing autonomous robotic fleets in warehouse and logistics environments.
+
+    ## Features
+    - **Fleet Management**: Register and monitor autonomous robots
+    - **Task Assignment**: Intelligent task allocation based on robot capabilities, battery levels, and location
+    - **Path Planning**: A* algorithm-based optimal route calculation with collision avoidance
+    - **Battery Management**: Automated low-battery detection and charging station coordination
+    - **Real-time Monitoring**: Live fleet health metrics and robot status tracking
+    - **Event-Driven Architecture**: Kafka-based event publishing for system integration
+
+    ## Architecture
+    Built using Domain-Driven Design (DDD) and Hexagonal Architecture principles with:
+    - MongoDB for persistent storage
+    - Redis for real-time position caching
+    - Kafka for event streaming
+    - WebSocket for real-time updates
+
+    ## Business Logic
+    - **Battery Thresholds**: Critical (≤10%), Low (≤20%), Marginal (<30%)
+    - **Task Assignment**: Requires >30% battery level
+    - **Fleet Utilization**: Target 85% with automatic rebalancing
+    - **Safety Margin**: 30cm collision avoidance radius
+
+  contact:
+    name: Paklog Robotics Team
+    email: robotics@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: http://localhost:8092
+    description: Local Development Server
+  - url: https://api-dev.paklog.com
+    description: Development Environment
+  - url: https://api-staging.paklog.com
+    description: Staging Environment
+  - url: https://api.paklog.com
+    description: Production Environment
+
+tags:
+  - name: Robots
+    description: Robot registration, status management, and lifecycle operations
+  - name: Tasks
+    description: Task creation, assignment, and status tracking
+  - name: Path Planning
+    description: Route calculation and path validation services
+  - name: Fleet
+    description: Fleet-wide monitoring and health metrics
+  - name: Charging
+    description: Charging station management and battery operations
+
+paths:
+  /api/v1/robots:
+    post:
+      tags:
+        - Robots
+      summary: Register a new robot
+      description: |
+        Registers a new autonomous robot in the fleet management system.
+
+        **Business Rules:**
+        - Robot ID must be unique across the fleet
+        - Initial battery level defaults to 100%
+        - Robot starts in IDLE status
+        - Position must be within warehouse bounds (0-10000 for x and y coordinates)
+        - Heading must be between 0-360 degrees
+        - At least one capability must be specified
+
+        **Events Published:**
+        - `RobotRegisteredEvent` to topic `robot.registered`
+      operationId: registerRobot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRobotRequest'
+            examples:
+              picker_robot:
+                summary: Picker Robot Registration
+                description: A robot designed for picking items from shelves
+                value:
+                  robotId: "ROBOT-001"
+                  model: "PickerBot-3000"
+                  x: 100.5
+                  y: 250.8
+                  heading: 90.0
+                  capabilities:
+                    - PICKER
+                    - SCANNER
+              transporter_robot:
+                summary: Heavy Transporter Robot
+                description: A robot for transporting heavy pallets
+                value:
+                  robotId: "ROBOT-002"
+                  model: "TransportMax-5000"
+                  x: 500.0
+                  y: 750.0
+                  heading: 180.0
+                  capabilities:
+                    - TRANSPORTER
+                    - LIFTER
+              collaborative_robot:
+                summary: Collaborative Robot
+                description: A robot designed to work alongside humans
+                value:
+                  robotId: "ROBOT-003"
+                  model: "CoBot-2024"
+                  x: 1200.0
+                  y: 800.0
+                  heading: 45.0
+                  capabilities:
+                    - PICKER
+                    - TRANSPORTER
+                    - COLLABORATIVE
+      responses:
+        '201':
+          description: Robot successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RobotResponse'
+              examples:
+                success:
+                  value:
+                    robotId: "ROBOT-001"
+                    model: "PickerBot-3000"
+                    status: IDLE
+                    batteryLevel: 100
+                    position:
+                      x: 100.5
+                      y: 250.8
+                      heading: 90.0
+                    capabilities:
+                      - PICKER
+                      - SCANNER
+                    currentTaskId: null
+                    lastHeartbeat: "2025-11-01T10:30:00Z"
+                    createdAt: "2025-11-01T10:30:00Z"
+                    updatedAt: "2025-11-01T10:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+        - Robots
+      summary: List all robots
+      description: |
+        Retrieves a paginated list of all robots in the fleet.
+
+        **Filtering Options:**
+        - Filter by status (IDLE, BUSY, CHARGING, MAINTENANCE, OFFLINE)
+        - Filter by capability
+        - Filter by battery level range
+        - Sort by various fields
+      operationId: listRobots
+      parameters:
+        - name: status
+          in: query
+          description: Filter by robot status
+          schema:
+            $ref: '#/components/schemas/RobotStatus'
+          example: IDLE
+        - name: capability
+          in: query
+          description: Filter by robot capability
+          schema:
+            $ref: '#/components/schemas/RobotCapability'
+          example: PICKER
+        - name: minBattery
+          in: query
+          description: Minimum battery level percentage
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+          example: 30
+        - name: maxBattery
+          in: query
+          description: Maximum battery level percentage
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+          example: 100
+        - name: page
+          in: query
+          description: Page number (0-indexed)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          example: 0
+        - name: size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          example: 20
+        - name: sort
+          in: query
+          description: Sort field and direction
+          schema:
+            type: string
+            default: "createdAt,desc"
+          example: "batteryLevel,asc"
+      responses:
+        '200':
+          description: List of robots retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RobotListResponse'
+              examples:
+                mixed_fleet:
+                  value:
+                    content:
+                      - robotId: "ROBOT-001"
+                        model: "PickerBot-3000"
+                        status: IDLE
+                        batteryLevel: 85
+                        position:
+                          x: 100.5
+                          y: 250.8
+                          heading: 90.0
+                        capabilities:
+                          - PICKER
+                          - SCANNER
+                        currentTaskId: null
+                        lastHeartbeat: "2025-11-01T10:30:00Z"
+                        createdAt: "2025-11-01T09:00:00Z"
+                        updatedAt: "2025-11-01T10:30:00Z"
+                      - robotId: "ROBOT-002"
+                        model: "TransportMax-5000"
+                        status: BUSY
+                        batteryLevel: 45
+                        position:
+                          x: 500.0
+                          y: 750.0
+                          heading: 180.0
+                        capabilities:
+                          - TRANSPORTER
+                          - LIFTER
+                        currentTaskId: "TASK-123"
+                        lastHeartbeat: "2025-11-01T10:29:55Z"
+                        createdAt: "2025-11-01T08:30:00Z"
+                        updatedAt: "2025-11-01T10:15:00Z"
+                      - robotId: "ROBOT-003"
+                        model: "PickerBot-3000"
+                        status: CHARGING
+                        batteryLevel: 15
+                        position:
+                          x: 50.0
+                          y: 50.0
+                          heading: 0.0
+                        capabilities:
+                          - PICKER
+                        currentTaskId: null
+                        lastHeartbeat: "2025-11-01T10:29:50Z"
+                        createdAt: "2025-11-01T07:00:00Z"
+                        updatedAt: "2025-11-01T10:20:00Z"
+                    page:
+                      number: 0
+                      size: 20
+                      totalElements: 3
+                      totalPages: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/robots/{robotId}:
+    get:
+      tags:
+        - Robots
+      summary: Get robot by ID
+      description: Retrieves detailed information about a specific robot
+      operationId: getRobotById
+      parameters:
+        - name: robotId
+          in: path
+          required: true
+          description: Unique identifier of the robot
+          schema:
+            type: string
+          example: "ROBOT-001"
+      responses:
+        '200':
+          description: Robot found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RobotResponse'
+              examples:
+                idle_robot:
+                  value:
+                    robotId: "ROBOT-001"
+                    model: "PickerBot-3000"
+                    status: IDLE
+                    batteryLevel: 85
+                    position:
+                      x: 100.5
+                      y: 250.8
+                      heading: 90.0
+                    capabilities:
+                      - PICKER
+                      - SCANNER
+                    currentTaskId: null
+                    lastHeartbeat: "2025-11-01T10:30:00Z"
+                    createdAt: "2025-11-01T09:00:00Z"
+                    updatedAt: "2025-11-01T10:30:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - Robots
+      summary: Decommission a robot
+      description: |
+        Removes a robot from active service.
+
+        **Business Rules:**
+        - Robot must not have an active task
+        - Robot must be in IDLE or MAINTENANCE status
+
+        **Events Published:**
+        - `RobotDecommissionedEvent` to topic `robot.decommissioned`
+      operationId: decommissionRobot
+      parameters:
+        - name: robotId
+          in: path
+          required: true
+          description: Unique identifier of the robot
+          schema:
+            type: string
+          example: "ROBOT-001"
+      responses:
+        '204':
+          description: Robot successfully decommissioned
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/robots/{robotId}/assign-task:
+    put:
+      tags:
+        - Robots
+      summary: Assign a task to a robot
+      description: |
+        Assigns a specific task to a robot.
+
+        **Business Rules:**
+        - Robot must be in IDLE status
+        - Robot battery must be >30%
+        - Robot must have the required capability for the task
+        - Task must be in PENDING status
+
+        **Events Published:**
+        - `RobotTaskAssignedEvent` to topic `robot.task.assigned`
+      operationId: assignTask
+      parameters:
+        - name: robotId
+          in: path
+          required: true
+          description: Unique identifier of the robot
+          schema:
+            type: string
+          example: "ROBOT-001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskAssignmentRequest'
+            examples:
+              pick_task:
+                value:
+                  taskId: "TASK-123"
+      responses:
+        '200':
+          description: Task successfully assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RobotResponse'
+              examples:
+                assigned:
+                  value:
+                    robotId: "ROBOT-001"
+                    model: "PickerBot-3000"
+                    status: BUSY
+                    batteryLevel: 85
+                    position:
+                      x: 100.5
+                      y: 250.8
+                      heading: 90.0
+                    capabilities:
+                      - PICKER
+                      - SCANNER
+                    currentTaskId: "TASK-123"
+                    lastHeartbeat: "2025-11-01T10:30:00Z"
+                    createdAt: "2025-11-01T09:00:00Z"
+                    updatedAt: "2025-11-01T10:30:05Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/robots/{robotId}/battery:
+    put:
+      tags:
+        - Robots
+        - Charging
+      summary: Update robot battery level
+      description: |
+        Updates the battery level of a robot. This endpoint is typically called by the robot itself
+        or by monitoring systems.
+
+        **Business Rules:**
+        - Battery level must be between 0-100%
+
+        **Events Published:**
+        - `BatteryLowEvent` when battery drops below 20%
+        - `BatteryLowEvent` (emergency=true) when battery drops below 10%
+      operationId: updateBatteryLevel
+      parameters:
+        - name: robotId
+          in: path
+          required: true
+          description: Unique identifier of the robot
+          schema:
+            type: string
+          example: "ROBOT-001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatteryUpdateRequest'
+            examples:
+              normal_level:
+                value:
+                  batteryLevel: 75
+              low_level:
+                value:
+                  batteryLevel: 18
+              critical_level:
+                value:
+                  batteryLevel: 8
+      responses:
+        '200':
+          description: Battery level updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RobotResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/robots/{robotId}/position:
+    put:
+      tags:
+        - Robots
+      summary: Update robot position
+      description: |
+        Updates the current position of a robot. Called frequently during navigation.
+        Position is also cached in Redis for real-time tracking.
+      operationId: updatePosition
+      parameters:
+        - name: robotId
+          in: path
+          required: true
+          description: Unique identifier of the robot
+          schema:
+            type: string
+          example: "ROBOT-001"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PositionUpdateRequest'
+            examples:
+              moving:
+                value:
+                  x: 125.5
+                  y: 275.3
+                  heading: 95.0
+      responses:
+        '200':
+          description: Position updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RobotResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/tasks:
+    post:
+      tags:
+        - Tasks
+      summary: Create a new task
+      description: |
+        Creates a new task in the system. The task will be assigned to an optimal robot
+        based on capability matching, distance, and battery level.
+
+        **Task Assignment Algorithm:**
+        1. Filter robots by required capability
+        2. Filter robots with sufficient battery (>30%)
+        3. Calculate distance from each robot to task origin
+        4. Select closest available robot
+        5. Assign task and publish event
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskRequest'
+            examples:
+              pick_task:
+                summary: Item Picking Task
+                value:
+                  taskId: "TASK-123"
+                  taskType: PICK
+                  priority: HIGH
+                  origin:
+                    x: 100.0
+                    y: 200.0
+                    heading: 0.0
+                  destination:
+                    x: 500.0
+                    y: 600.0
+                    heading: 90.0
+                  requiredCapability: PICKER
+                  payload:
+                    itemId: "ITEM-5678"
+                    quantity: 10
+                    shelfLocation: "A-12-05"
+              transport_task:
+                summary: Pallet Transport Task
+                value:
+                  taskId: "TASK-124"
+                  taskType: TRANSPORT
+                  priority: MEDIUM
+                  origin:
+                    x: 1000.0
+                    y: 500.0
+                    heading: 180.0
+                  destination:
+                    x: 2000.0
+                    y: 1500.0
+                    heading: 270.0
+                  requiredCapability: TRANSPORTER
+                  payload:
+                    palletId: "PALLET-9876"
+                    weight: 500
+                    fragile: false
+              sort_task:
+                summary: Item Sorting Task
+                value:
+                  taskId: "TASK-125"
+                  taskType: SORT
+                  priority: LOW
+                  origin:
+                    x: 750.0
+                    y: 850.0
+                    heading: 45.0
+                  destination:
+                    x: 800.0
+                    y: 900.0
+                    heading: 45.0
+                  requiredCapability: SORTER
+                  payload:
+                    batchId: "BATCH-2024-001"
+                    itemCount: 50
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                created:
+                  value:
+                    taskId: "TASK-123"
+                    robotId: "ROBOT-001"
+                    status: ASSIGNED
+                    taskType: PICK
+                    priority: HIGH
+                    durationSeconds: 0
+                    waitTimeSeconds: 0
+                    failureReason: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: No suitable robot available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                no_robot:
+                  value:
+                    timestamp: "2025-11-01T10:30:00Z"
+                    status: 404
+                    error: "Not Found"
+                    message: "No available robot with capability PICKER and sufficient battery"
+                    path: "/api/v1/tasks"
+                    traceId: "abc123xyz"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+        - Tasks
+      summary: List all tasks
+      description: Retrieves a paginated list of all tasks with optional filtering
+      operationId: listTasks
+      parameters:
+        - name: status
+          in: query
+          description: Filter by task status
+          schema:
+            $ref: '#/components/schemas/TaskStatus'
+          example: IN_PROGRESS
+        - name: robotId
+          in: query
+          description: Filter by assigned robot
+          schema:
+            type: string
+          example: "ROBOT-001"
+        - name: taskType
+          in: query
+          description: Filter by task type
+          schema:
+            $ref: '#/components/schemas/TaskType'
+          example: PICK
+        - name: priority
+          in: query
+          description: Filter by priority
+          schema:
+            $ref: '#/components/schemas/TaskPriority'
+          example: HIGH
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: size
+          in: query
+          description: Page size
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Task list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/tasks/{taskId}:
+    get:
+      tags:
+        - Tasks
+      summary: Get task by ID
+      description: Retrieves detailed information about a specific task
+      operationId: getTaskById
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          description: Unique identifier of the task
+          schema:
+            type: string
+          example: "TASK-123"
+      responses:
+        '200':
+          description: Task found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskResponse'
+              examples:
+                in_progress:
+                  value:
+                    taskId: "TASK-123"
+                    robotId: "ROBOT-001"
+                    status: IN_PROGRESS
+                    taskType: PICK
+                    priority: HIGH
+                    durationSeconds: 45
+                    waitTimeSeconds: 5
+                    failureReason: null
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/paths/calculate:
+    post:
+      tags:
+        - Path Planning
+      summary: Calculate optimal path
+      description: |
+        Calculates an optimal path from start to goal using the A* pathfinding algorithm.
+
+        **Algorithm Features:**
+        - Grid-based navigation
+        - Obstacle avoidance
+        - Traffic zone awareness
+        - Waypoint generation
+        - Distance and time estimation
+
+        **Path Calculation:**
+        - Uses Manhattan distance heuristic
+        - Considers diagonal movement
+        - Generates waypoints every 10 grid units
+        - Estimates time based on robot speed (1.0 m/s)
+      operationId: calculatePath
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PathPlanRequest'
+            examples:
+              short_path:
+                summary: Short distance path
+                value:
+                  startX: 100.0
+                  startY: 100.0
+                  goalX: 200.0
+                  goalY: 200.0
+              long_path:
+                summary: Long distance path
+                value:
+                  startX: 50.0
+                  startY: 50.0
+                  goalX: 9950.0
+                  goalY: 9950.0
+              same_location:
+                summary: Same start and goal
+                value:
+                  startX: 500.0
+                  startY: 500.0
+                  goalX: 500.0
+                  goalY: 500.0
+      responses:
+        '200':
+          description: Path calculated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PathPlanResponse'
+              examples:
+                calculated_path:
+                  value:
+                    waypointCount: 15
+                    totalDistance: 141.42
+                    estimatedTimeSeconds: 141.42
+                no_movement:
+                  value:
+                    waypointCount: 0
+                    totalDistance: 0.0
+                    estimatedTimeSeconds: 0.0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/paths/validate:
+    post:
+      tags:
+        - Path Planning
+      summary: Validate path safety
+      description: |
+        Validates whether a planned path is safe and collision-free.
+
+        **Validation Checks:**
+        - Traffic zone collision detection
+        - Obstacle avoidance (30cm safety margin)
+        - Boundary checks
+        - Dynamic obstacle prediction
+      operationId: validatePath
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PathPlanRequest'
+            examples:
+              safe_path:
+                value:
+                  startX: 100.0
+                  startY: 100.0
+                  goalX: 200.0
+                  goalY: 200.0
+      responses:
+        '200':
+          description: Path validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PathValidationResponse'
+              examples:
+                valid:
+                  value:
+                    isValid: true
+                invalid:
+                  value:
+                    isValid: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/fleet/health:
+    get:
+      tags:
+        - Fleet
+      summary: Get fleet health metrics
+      description: |
+        Retrieves comprehensive health metrics for the entire robot fleet.
+
+        **Metrics Include:**
+        - Total robot count
+        - Idle robot count
+        - Active task count
+        - Fleet utilization rate
+        - Healthy robot count
+        - Average battery level
+        - Robots requiring maintenance
+      operationId: getFleetHealth
+      responses:
+        '200':
+          description: Fleet health metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FleetHealthResponse'
+              examples:
+                healthy_fleet:
+                  summary: Healthy fleet with good utilization
+                  value:
+                    totalRobots: 50
+                    idleRobots: 10
+                    activeTasks: 40
+                    utilizationRate: 0.80
+                    targetUtilization: 0.85
+                    healthyRobots: 48
+                    averageBatteryLevel: 72.5
+                    robotsRequiringMaintenance: 2
+                underutilized_fleet:
+                  summary: Underutilized fleet
+                  value:
+                    totalRobots: 50
+                    idleRobots: 35
+                    activeTasks: 15
+                    utilizationRate: 0.30
+                    targetUtilization: 0.85
+                    healthyRobots: 50
+                    averageBatteryLevel: 85.0
+                    robotsRequiringMaintenance: 0
+                overutilized_fleet:
+                  summary: Overutilized fleet requiring rebalancing
+                  value:
+                    totalRobots: 50
+                    idleRobots: 2
+                    activeTasks: 48
+                    utilizationRate: 0.96
+                    targetUtilization: 0.85
+                    healthyRobots: 45
+                    averageBatteryLevel: 35.5
+                    robotsRequiringMaintenance: 5
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/charging-stations:
+    post:
+      tags:
+        - Charging
+      summary: Register a new charging station
+      description: Registers a new charging station in the system
+      operationId: registerChargingStation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChargingStationRequest'
+            examples:
+              station:
+                value:
+                  stationId: "STATION-001"
+                  x: 50.0
+                  y: 50.0
+                  heading: 0.0
+                  capacity: 4
+      responses:
+        '201':
+          description: Charging station registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargingStationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/v1/charging-stations/{stationId}:
+    get:
+      tags:
+        - Charging
+      summary: Get charging station details
+      description: Retrieves information about a specific charging station
+      operationId: getChargingStation
+      parameters:
+        - name: stationId
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "STATION-001"
+      responses:
+        '200':
+          description: Charging station found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChargingStationResponse'
+              examples:
+                active_station:
+                  value:
+                    stationId: "STATION-001"
+                    location:
+                      x: 50.0
+                      y: 50.0
+                      heading: 0.0
+                    capacity: 4
+                    availableSlots: 1
+                    queuedRobots:
+                      - "ROBOT-005"
+                      - "ROBOT-007"
+                    chargingRobots:
+                      ROBOT-003: "2025-11-01T10:00:00Z"
+                      ROBOT-008: "2025-11-01T10:15:00Z"
+                      ROBOT-012: "2025-11-01T10:20:00Z"
+                    createdAt: "2025-11-01T08:00:00Z"
+                    updatedAt: "2025-11-01T10:20:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /actuator/health:
+    get:
+      tags:
+        - Monitoring
+      summary: Health check endpoint
+      description: Spring Boot Actuator health check endpoint
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [UP, DOWN]
+              examples:
+                healthy:
+                  value:
+                    status: "UP"
+
+  /actuator/metrics:
+    get:
+      tags:
+        - Monitoring
+      summary: Get available metrics
+      description: Lists all available Prometheus metrics
+      operationId: getMetrics
+      responses:
+        '200':
+          description: List of available metrics
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  schemas:
+    RegisterRobotRequest:
+      type: object
+      required:
+        - robotId
+        - model
+        - x
+        - y
+        - heading
+        - capabilities
+      properties:
+        robotId:
+          type: string
+          description: Unique identifier for the robot
+          example: "ROBOT-001"
+          minLength: 1
+          maxLength: 50
+        model:
+          type: string
+          description: Robot model name
+          example: "PickerBot-3000"
+          minLength: 1
+          maxLength: 100
+        x:
+          type: number
+          format: double
+          description: X coordinate in meters
+          minimum: 0
+          maximum: 10000
+          example: 100.5
+        y:
+          type: number
+          format: double
+          description: Y coordinate in meters
+          minimum: 0
+          maximum: 10000
+          example: 250.8
+        heading:
+          type: number
+          format: double
+          description: Direction in degrees (0-360)
+          minimum: 0
+          maximum: 360
+          example: 90.0
+        capabilities:
+          type: array
+          description: Set of robot capabilities
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/RobotCapability'
+          example: ["PICKER", "SCANNER"]
+
+    RobotResponse:
+      type: object
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-001"
+        model:
+          type: string
+          example: "PickerBot-3000"
+        status:
+          $ref: '#/components/schemas/RobotStatus'
+        batteryLevel:
+          type: integer
+          description: Battery percentage (0-100)
+          minimum: 0
+          maximum: 100
+          example: 85
+        position:
+          $ref: '#/components/schemas/RobotPosition'
+        capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/RobotCapability'
+          example: ["PICKER", "SCANNER"]
+        currentTaskId:
+          type: string
+          nullable: true
+          description: ID of currently assigned task, null if idle
+          example: "TASK-123"
+        lastHeartbeat:
+          type: string
+          format: date-time
+          description: Timestamp of last communication
+          example: "2025-11-01T10:30:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T09:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:30:00Z"
+
+    RobotListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/RobotResponse'
+        page:
+          $ref: '#/components/schemas/PageInfo'
+
+    TaskRequest:
+      type: object
+      required:
+        - taskId
+        - taskType
+        - priority
+        - origin
+        - destination
+        - requiredCapability
+      properties:
+        taskId:
+          type: string
+          description: Unique task identifier
+          example: "TASK-123"
+        taskType:
+          $ref: '#/components/schemas/TaskType'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        origin:
+          $ref: '#/components/schemas/RobotPosition'
+        destination:
+          $ref: '#/components/schemas/RobotPosition'
+        requiredCapability:
+          $ref: '#/components/schemas/RobotCapability'
+        payload:
+          type: object
+          additionalProperties: true
+          description: Task-specific payload data
+          example:
+            itemId: "ITEM-5678"
+            quantity: 10
+            shelfLocation: "A-12-05"
+
+    TaskResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+          example: "TASK-123"
+        robotId:
+          type: string
+          nullable: true
+          description: ID of assigned robot, null if unassigned
+          example: "ROBOT-001"
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        taskType:
+          $ref: '#/components/schemas/TaskType'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        durationSeconds:
+          type: integer
+          format: int64
+          description: Task duration in seconds
+          example: 120
+        waitTimeSeconds:
+          type: integer
+          format: int64
+          description: Time waited before starting in seconds
+          example: 15
+        failureReason:
+          type: string
+          nullable: true
+          description: Reason for failure if status is FAILED
+          example: "Battery depleted during execution"
+
+    TaskListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskResponse'
+        page:
+          $ref: '#/components/schemas/PageInfo'
+
+    PathPlanRequest:
+      type: object
+      required:
+        - startX
+        - startY
+        - goalX
+        - goalY
+      properties:
+        startX:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          example: 100.0
+        startY:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          example: 100.0
+        goalX:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          example: 500.0
+        goalY:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          example: 600.0
+
+    PathPlanResponse:
+      type: object
+      properties:
+        waypointCount:
+          type: integer
+          description: Number of waypoints in the calculated path
+          example: 15
+        totalDistance:
+          type: number
+          format: double
+          description: Total path distance in meters
+          example: 141.42
+        estimatedTimeSeconds:
+          type: number
+          format: double
+          description: Estimated time to complete path at 1.0 m/s
+          example: 141.42
+
+    PathValidationResponse:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+          description: Whether the path is safe and collision-free
+          example: true
+
+    FleetHealthResponse:
+      type: object
+      properties:
+        totalRobots:
+          type: integer
+          description: Total number of robots in fleet
+          example: 50
+        idleRobots:
+          type: integer
+          description: Number of robots in IDLE status
+          example: 10
+        activeTasks:
+          type: integer
+          description: Number of tasks currently being executed
+          example: 40
+        utilizationRate:
+          type: number
+          format: double
+          description: Current fleet utilization (0.0-1.0)
+          minimum: 0
+          maximum: 1
+          example: 0.80
+        targetUtilization:
+          type: number
+          format: double
+          description: Target fleet utilization rate
+          example: 0.85
+        healthyRobots:
+          type: integer
+          description: Number of robots not requiring maintenance
+          example: 48
+        averageBatteryLevel:
+          type: number
+          format: double
+          description: Average battery level across all robots
+          minimum: 0
+          maximum: 100
+          example: 72.5
+        robotsRequiringMaintenance:
+          type: integer
+          description: Number of robots needing maintenance
+          example: 2
+
+    ChargingStationRequest:
+      type: object
+      required:
+        - stationId
+        - x
+        - y
+        - heading
+        - capacity
+      properties:
+        stationId:
+          type: string
+          example: "STATION-001"
+        x:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          example: 50.0
+        y:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          example: 50.0
+        heading:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 360
+          example: 0.0
+        capacity:
+          type: integer
+          minimum: 1
+          maximum: 10
+          description: Maximum number of robots that can charge simultaneously
+          example: 4
+
+    ChargingStationResponse:
+      type: object
+      properties:
+        stationId:
+          type: string
+          example: "STATION-001"
+        location:
+          $ref: '#/components/schemas/RobotPosition'
+        capacity:
+          type: integer
+          example: 4
+        availableSlots:
+          type: integer
+          description: Number of available charging slots
+          example: 1
+        queuedRobots:
+          type: array
+          description: List of robot IDs waiting in queue
+          items:
+            type: string
+          example: ["ROBOT-005", "ROBOT-007"]
+        chargingRobots:
+          type: object
+          additionalProperties:
+            type: string
+            format: date-time
+          description: Map of robot IDs to charging start times
+          example:
+            ROBOT-003: "2025-11-01T10:00:00Z"
+            ROBOT-008: "2025-11-01T10:15:00Z"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T08:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:20:00Z"
+
+    TaskAssignmentRequest:
+      type: object
+      required:
+        - taskId
+      properties:
+        taskId:
+          type: string
+          description: ID of the task to assign
+          example: "TASK-123"
+
+    BatteryUpdateRequest:
+      type: object
+      required:
+        - batteryLevel
+      properties:
+        batteryLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Battery percentage
+          example: 75
+
+    PositionUpdateRequest:
+      type: object
+      required:
+        - x
+        - y
+        - heading
+      properties:
+        x:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          example: 125.5
+        y:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          example: 275.3
+        heading:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 360
+          example: 95.0
+
+    RobotPosition:
+      type: object
+      required:
+        - x
+        - y
+        - heading
+      properties:
+        x:
+          type: number
+          format: double
+          description: X coordinate in meters
+          minimum: 0
+          maximum: 10000
+          example: 100.5
+        y:
+          type: number
+          format: double
+          description: Y coordinate in meters
+          minimum: 0
+          maximum: 10000
+          example: 250.8
+        heading:
+          type: number
+          format: double
+          description: Direction in degrees (0-360)
+          minimum: 0
+          maximum: 360
+          example: 90.0
+
+    RobotStatus:
+      type: string
+      enum:
+        - IDLE
+        - BUSY
+        - CHARGING
+        - MAINTENANCE
+        - OFFLINE
+      description: |
+        Current operational status of the robot:
+        - IDLE: Ready for task assignment
+        - BUSY: Currently executing a task
+        - CHARGING: At charging station
+        - MAINTENANCE: Requires maintenance
+        - OFFLINE: Not responding to communications
+      example: IDLE
+
+    RobotCapability:
+      type: string
+      enum:
+        - PICKER
+        - TRANSPORTER
+        - SORTER
+        - LIFTER
+        - SCANNER
+        - COLLABORATIVE
+      description: |
+        Robot capabilities:
+        - PICKER: Can pick items from shelves
+        - TRANSPORTER: Can transport pallets/containers
+        - SORTER: Can sort items
+        - LIFTER: Can lift heavy loads
+        - SCANNER: Has barcode/RFID scanning capability
+        - COLLABORATIVE: Can work safely alongside humans
+      example: PICKER
+
+    TaskType:
+      type: string
+      enum:
+        - PICK
+        - TRANSPORT
+        - SORT
+        - DELIVER
+        - CHARGE
+        - MAINTENANCE
+      description: |
+        Type of task:
+        - PICK: Pick items from location
+        - TRANSPORT: Move items between locations
+        - SORT: Sort items into categories
+        - DELIVER: Deliver items to destination
+        - CHARGE: Return to charging station
+        - MAINTENANCE: Perform maintenance activities
+      example: PICK
+
+    TaskPriority:
+      type: string
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+      description: |
+        Task priority level:
+        - LOW: Non-urgent tasks
+        - MEDIUM: Standard priority
+        - HIGH: Important tasks
+        - CRITICAL: Emergency tasks requiring immediate attention
+      example: HIGH
+
+    TaskStatus:
+      type: string
+      enum:
+        - PENDING
+        - ASSIGNED
+        - IN_PROGRESS
+        - COMPLETED
+        - FAILED
+        - CANCELLED
+      description: |
+        Current status of the task:
+        - PENDING: Created but not yet assigned
+        - ASSIGNED: Assigned to robot but not started
+        - IN_PROGRESS: Currently being executed
+        - COMPLETED: Successfully finished
+        - FAILED: Execution failed
+        - CANCELLED: Manually cancelled
+      example: IN_PROGRESS
+
+    PageInfo:
+      type: object
+      properties:
+        number:
+          type: integer
+          description: Current page number (0-indexed)
+          example: 0
+        size:
+          type: integer
+          description: Number of items per page
+          example: 20
+        totalElements:
+          type: integer
+          description: Total number of items
+          example: 150
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 8
+
+    ErrorResponse:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2025-11-01T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP error message
+          example: "Bad Request"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Robot is not idle, current status: BUSY"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/robots/ROBOT-001/assign-task"
+        traceId:
+          type: string
+          description: Distributed trace ID for debugging
+          example: "abc123xyz"
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid_battery:
+              summary: Invalid battery level
+              value:
+                timestamp: "2025-11-01T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Insufficient battery level (25%) for task assignment. Minimum required: 30%"
+                path: "/api/v1/robots/ROBOT-001/assign-task"
+                traceId: "abc123"
+            robot_busy:
+              summary: Robot not available
+              value:
+                timestamp: "2025-11-01T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Robot is not idle, current status: BUSY"
+                path: "/api/v1/robots/ROBOT-001/assign-task"
+                traceId: "def456"
+            missing_capability:
+              summary: Missing required capability
+              value:
+                timestamp: "2025-11-01T10:30:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Robot lacks required capability: LIFTER"
+                path: "/api/v1/robots/ROBOT-001/assign-task"
+                traceId: "ghi789"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            robot_not_found:
+              value:
+                timestamp: "2025-11-01T10:30:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Robot not found with ID: ROBOT-999"
+                path: "/api/v1/robots/ROBOT-999"
+                traceId: "jkl012"
+
+    Conflict:
+      description: Resource already exists or conflict with current state
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            duplicate_robot:
+              value:
+                timestamp: "2025-11-01T10:30:00Z"
+                status: 409
+                error: "Conflict"
+                message: "Robot with ID ROBOT-001 already exists"
+                path: "/api/v1/robots"
+                traceId: "mno345"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            server_error:
+              value:
+                timestamp: "2025-11-01T10:30:00Z"
+                status: 500
+                error: "Internal Server Error"
+                message: "An unexpected error occurred"
+                path: "/api/v1/robots"
+                traceId: "pqr678"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication (to be implemented)
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key authentication (to be implemented)
+
+security:
+  - bearerAuth: []
+  - apiKey: []

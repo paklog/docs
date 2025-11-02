@@ -1,0 +1,717 @@
+asyncapi: 2.6.0
+info:
+  title: Physical Tracking Service Events
+  version: 1.0.0
+  description: |
+    Event-driven API for Physical Tracking Service using Apache Kafka.
+    This service publishes and subscribes to events related to license plate lifecycle,
+    physical movements, location state changes, and RTLS position updates.
+  contact:
+    name: WES Team
+    email: wes-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  development:
+    url: localhost:9092
+    protocol: kafka
+    description: Local Kafka broker
+  production:
+    url: kafka-cluster.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+
+defaultContentType: application/json
+
+channels:
+  licenseplate.created:
+    description: Published when a license plate is created
+    publish:
+      operationId: publishLicensePlateCreated
+      summary: License plate created event
+      message:
+        $ref: '#/components/messages/LicensePlateCreated'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: LPN
+
+  licenseplate.moved:
+    description: Published when a license plate is moved
+    publish:
+      operationId: publishLicensePlateMoved
+      summary: License plate moved event
+      message:
+        $ref: '#/components/messages/LicensePlateMoved'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: LPN
+
+  licenseplate.item.added:
+    description: Published when item is added to license plate
+    publish:
+      operationId: publishItemAdded
+      summary: Item added to LP event
+      message:
+        $ref: '#/components/messages/ItemAdded'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: LPN
+
+  licenseplate.item.removed:
+    description: Published when item is removed from license plate
+    publish:
+      operationId: publishItemRemoved
+      summary: Item removed from LP event
+      message:
+        $ref: '#/components/messages/ItemRemoved'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: LPN
+
+  licenseplate.consumed:
+    description: Published when a license plate is consumed/deleted
+    publish:
+      operationId: publishLicensePlateConsumed
+      summary: License plate consumed event
+      message:
+        $ref: '#/components/messages/LicensePlateConsumed'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: LPN
+
+  location.state.changed:
+    description: Published when location occupancy state changes
+    publish:
+      operationId: publishLocationStateChanged
+      summary: Location state changed event
+      message:
+        $ref: '#/components/messages/LocationStateChanged'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  location.blocked:
+    description: Published when a location is blocked
+    publish:
+      operationId: publishLocationBlocked
+      summary: Location blocked event
+      message:
+        $ref: '#/components/messages/LocationBlocked'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  location.unblocked:
+    description: Published when a location is unblocked
+    publish:
+      operationId: publishLocationUnblocked
+      summary: Location unblocked event
+      message:
+        $ref: '#/components/messages/LocationUnblocked'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  physical.movement:
+    description: Published for every physical movement
+    publish:
+      operationId: publishPhysicalMovement
+      summary: Physical movement event
+      message:
+        $ref: '#/components/messages/PhysicalMovement'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Movement ID
+
+  rtls.position.update:
+    description: Published when RTLS position is updated
+    publish:
+      operationId: publishRTLSPositionUpdate
+      summary: RTLS position update event
+      message:
+        $ref: '#/components/messages/RTLSPositionUpdate'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Asset ID
+
+  location.created:
+    description: Subscribe to location creation from Location Master Service
+    subscribe:
+      operationId: onLocationCreated
+      summary: Handle new location creation
+      message:
+        $ref: '#/components/messages/LocationCreated'
+
+  location.capacity.changed:
+    description: Subscribe to location capacity changes
+    subscribe:
+      operationId: onLocationCapacityChanged
+      summary: Handle location capacity changes
+      message:
+        $ref: '#/components/messages/LocationCapacityChanged'
+
+  inventory.received:
+    description: Subscribe to inventory receiving events
+    subscribe:
+      operationId: onInventoryReceived
+      summary: Create license plates for received inventory
+      message:
+        $ref: '#/components/messages/InventoryReceived'
+
+  task.completed:
+    description: Subscribe to task completion to track movements
+    subscribe:
+      operationId: onTaskCompleted
+      summary: Record movements from completed tasks
+      message:
+        $ref: '#/components/messages/TaskCompleted'
+
+components:
+  messages:
+    LicensePlateCreated:
+      name: LicensePlateCreated
+      title: License Plate Created Event
+      summary: Emitted when a new license plate is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LicensePlateCreatedPayload'
+
+    LicensePlateMoved:
+      name: LicensePlateMoved
+      title: License Plate Moved Event
+      summary: Emitted when a license plate is moved
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LicensePlateMovedPayload'
+
+    ItemAdded:
+      name: ItemAdded
+      title: Item Added Event
+      summary: Emitted when item is added to license plate
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ItemAddedPayload'
+
+    ItemRemoved:
+      name: ItemRemoved
+      title: Item Removed Event
+      summary: Emitted when item is removed from license plate
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ItemRemovedPayload'
+
+    LicensePlateConsumed:
+      name: LicensePlateConsumed
+      title: License Plate Consumed Event
+      summary: Emitted when license plate is consumed/deleted
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LicensePlateConsumedPayload'
+
+    LocationStateChanged:
+      name: LocationStateChanged
+      title: Location State Changed Event
+      summary: Emitted when location occupancy state changes
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationStateChangedPayload'
+
+    LocationBlocked:
+      name: LocationBlocked
+      title: Location Blocked Event
+      summary: Emitted when a location is blocked
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationBlockedPayload'
+
+    LocationUnblocked:
+      name: LocationUnblocked
+      title: Location Unblocked Event
+      summary: Emitted when a location is unblocked
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationUnblockedPayload'
+
+    PhysicalMovement:
+      name: PhysicalMovement
+      title: Physical Movement Event
+      summary: Emitted for every physical movement
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PhysicalMovementPayload'
+
+    RTLSPositionUpdate:
+      name: RTLSPositionUpdate
+      title: RTLS Position Update Event
+      summary: Emitted when RTLS position updates
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/RTLSPositionUpdatePayload'
+
+    LocationCreated:
+      name: LocationCreated
+      title: Location Created Event
+      summary: Received when new location is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationCreatedPayload'
+
+    LocationCapacityChanged:
+      name: LocationCapacityChanged
+      title: Location Capacity Changed Event
+      summary: Received when location capacity changes
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationCapacityChangedPayload'
+
+    InventoryReceived:
+      name: InventoryReceived
+      title: Inventory Received Event
+      summary: Received when inventory is received
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InventoryReceivedPayload'
+
+    TaskCompleted:
+      name: TaskCompleted
+      title: Task Completed Event
+      summary: Received when a task is completed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskCompletedPayload'
+
+  schemas:
+    LicensePlateCreatedPayload:
+      type: object
+      required:
+        - lpn
+        - type
+        - warehouseId
+        - currentLocation
+        - createdAt
+      properties:
+        lpn:
+          type: string
+        type:
+          type: string
+          enum: [PALLET, TOTE, CART, CASE, CONTAINER]
+        warehouseId:
+          type: string
+        currentLocation:
+          type: string
+        zone:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              sku:
+                type: string
+              quantity:
+                type: integer
+              lotNumber:
+                type: string
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    LicensePlateMovedPayload:
+      type: object
+      required:
+        - lpn
+        - fromLocation
+        - toLocation
+        - movementType
+        - movedAt
+      properties:
+        movementId:
+          type: string
+        lpn:
+          type: string
+        fromLocation:
+          type: string
+        fromZone:
+          type: string
+        toLocation:
+          type: string
+        toZone:
+          type: string
+        movementType:
+          type: string
+          enum: [PUTAWAY, PICK, REPLENISHMENT, TRANSFER, CYCLE_COUNT, RETURN]
+        movedBy:
+          type: string
+        movedAt:
+          type: string
+          format: date-time
+        taskId:
+          type: string
+        distance:
+          type: number
+          description: Distance traveled in meters
+        duration:
+          type: integer
+          description: Movement duration in seconds
+
+    ItemAddedPayload:
+      type: object
+      required:
+        - lpn
+        - productId
+        - quantity
+        - addedAt
+      properties:
+        lpn:
+          type: string
+        itemId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        lotNumber:
+          type: string
+        serialNumber:
+          type: string
+        expirationDate:
+          type: string
+          format: date-time
+        addedAt:
+          type: string
+          format: date-time
+        addedBy:
+          type: string
+
+    ItemRemovedPayload:
+      type: object
+      required:
+        - lpn
+        - productId
+        - quantity
+        - removedAt
+      properties:
+        lpn:
+          type: string
+        itemId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        lotNumber:
+          type: string
+        removedAt:
+          type: string
+          format: date-time
+        removedBy:
+          type: string
+        reason:
+          type: string
+
+    LicensePlateConsumedPayload:
+      type: object
+      required:
+        - lpn
+        - reason
+        - consumedAt
+      properties:
+        lpn:
+          type: string
+        warehouseId:
+          type: string
+        lastLocation:
+          type: string
+        reason:
+          type: string
+        consumedAt:
+          type: string
+          format: date-time
+        consumedBy:
+          type: string
+        finalItemCount:
+          type: integer
+
+    LocationStateChangedPayload:
+      type: object
+      required:
+        - locationId
+        - previousStatus
+        - newStatus
+        - changedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        previousStatus:
+          type: string
+          enum: [EMPTY, PARTIALLY_OCCUPIED, FULL, BLOCKED]
+        newStatus:
+          type: string
+          enum: [EMPTY, PARTIALLY_OCCUPIED, FULL, BLOCKED]
+        licensePlateCount:
+          type: integer
+        capacity:
+          type: integer
+        utilization:
+          type: number
+          format: percentage
+        changedAt:
+          type: string
+          format: date-time
+        trigger:
+          type: string
+          description: What triggered the state change
+
+    LocationBlockedPayload:
+      type: object
+      required:
+        - locationId
+        - reason
+        - blockedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        reason:
+          type: string
+        reasonCode:
+          type: string
+          enum: [MAINTENANCE, DAMAGE, SAFETY, CAPACITY_EXCEEDED, OTHER]
+        blockedAt:
+          type: string
+          format: date-time
+        blockedBy:
+          type: string
+        affectedLicensePlates:
+          type: array
+          items:
+            type: string
+
+    LocationUnblockedPayload:
+      type: object
+      required:
+        - locationId
+        - unblockedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        unblockedAt:
+          type: string
+          format: date-time
+        unblockedBy:
+          type: string
+        wasBlockedFor:
+          type: integer
+          description: Duration blocked in minutes
+
+    PhysicalMovementPayload:
+      type: object
+      required:
+        - movementId
+        - movementType
+        - movedAt
+      properties:
+        movementId:
+          type: string
+        lpn:
+          type: string
+        fromLocation:
+          type: string
+        toLocation:
+          type: string
+        movementType:
+          type: string
+          enum: [PUTAWAY, PICK, REPLENISHMENT, TRANSFER, CYCLE_COUNT, RETURN]
+        movedBy:
+          type: string
+        movedAt:
+          type: string
+          format: date-time
+        productId:
+          type: string
+        quantity:
+          type: integer
+        taskId:
+          type: string
+        orderId:
+          type: string
+        warehouseId:
+          type: string
+
+    RTLSPositionUpdatePayload:
+      type: object
+      required:
+        - assetId
+        - x
+        - y
+        - timestamp
+      properties:
+        assetId:
+          type: string
+        assetType:
+          type: string
+          enum: [LICENSE_PLATE, FORKLIFT, CART, WORKER]
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+        zone:
+          type: string
+        estimatedLocation:
+          type: string
+        accuracy:
+          type: number
+        velocity:
+          type: number
+        timestamp:
+          type: string
+          format: date-time
+
+    LocationCreatedPayload:
+      type: object
+      required:
+        - locationId
+        - warehouseId
+        - createdAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        aisle:
+          type: string
+        bay:
+          type: string
+        level:
+          type: string
+        capacity:
+          type: integer
+        locationType:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    LocationCapacityChangedPayload:
+      type: object
+      required:
+        - locationId
+        - oldCapacity
+        - newCapacity
+        - changedAt
+      properties:
+        locationId:
+          type: string
+        oldCapacity:
+          type: integer
+        newCapacity:
+          type: integer
+        reason:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        changedBy:
+          type: string
+
+    InventoryReceivedPayload:
+      type: object
+      required:
+        - receiptId
+        - warehouseId
+        - receivedAt
+      properties:
+        receiptId:
+          type: string
+        warehouseId:
+          type: string
+        receivingLocation:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              sku:
+                type: string
+              quantity:
+                type: integer
+              lotNumber:
+                type: string
+              suggestedLPN:
+                type: string
+        receivedAt:
+          type: string
+          format: date-time
+
+    TaskCompletedPayload:
+      type: object
+      required:
+        - taskId
+        - taskType
+        - completedAt
+      properties:
+        taskId:
+          type: string
+        taskType:
+          type: string
+        lpn:
+          type: string
+        productId:
+          type: string
+        quantity:
+          type: integer
+        sourceLocation:
+          type: string
+        destinationLocation:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        completedBy:
+          type: string

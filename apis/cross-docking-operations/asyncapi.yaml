@@ -1,0 +1,872 @@
+asyncapi: 3.0.0
+info:
+  title: Cross-Docking Operations Event API
+  version: 1.0.0
+  description: |
+    # Cross-Docking Operations Event-Driven Architecture
+
+    This service publishes domain events related to cross-docking operations in the Paklog WMS/WES platform.
+    All events follow the CloudEvents specification (v1.0) for standardized event metadata and are published to Apache Kafka.
+
+    ## Business Context
+
+    Cross-docking is a logistics practice where products from inbound shipments are directly transferred to outbound
+    shipments with minimal or no storage in between. This microservice orchestrates these operations and publishes
+    events that other services can consume to:
+
+    - Track transfer order lifecycle
+    - Monitor operational progress and performance
+    - Trigger downstream processes (warehouse automation, notifications, billing)
+    - Generate analytics and reporting
+    - Maintain audit trails
+
+    ## Event Flow Examples
+
+    ### Direct Transfer Flow
+    1. `TransferOrderCreatedEvent` - Transfer order is created
+    2. `DirectTransferInitiatedEvent` - Direct transfer from source to destination dock begins
+    3. `CrossDockCompletedEvent` - Operation completes
+
+    ### Consolidated Transfer Flow
+    1. `TransferOrderCreatedEvent` - Multiple transfer orders created
+    2. `ConsolidationCompletedEvent` - Items consolidated at staging area
+    3. `CrossDockCompletedEvent` - Consolidated operation completes
+
+    ## Integration Guidelines
+
+    ### Consumer Implementation
+    - Use consumer groups for scalability
+    - Implement idempotent message handling (events may be delivered more than once)
+    - Process events in order using the CloudEvents `time` field
+    - Use `eventId` for deduplication
+
+    ### Error Handling
+    - Events are published with at-least-once delivery semantics
+    - Failed publishes are logged but do not block business operations
+    - Consumers should implement retry logic with exponential backoff
+
+    ### Schema Evolution
+    - All events maintain backward compatibility
+    - New optional fields may be added without version changes
+    - Breaking changes will result in new event types
+  contact:
+    name: Paklog Platform Team
+    email: platform@paklog.com
+  license:
+    name: Proprietary
+    url: https://paklog.com/license
+
+servers:
+  production:
+    host: kafka-prod.paklog.internal:9092
+    protocol: kafka
+    description: |
+      Production Kafka cluster for cross-docking events.
+
+      **Connection Details:**
+      - Bootstrap servers: kafka-prod.paklog.internal:9092
+      - Security: SASL_SSL with SCRAM-SHA-512
+      - Retention: 7 days
+      - Replication factor: 3
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: env:production
+        description: Production environment
+
+  staging:
+    host: kafka-staging.paklog.internal:9092
+    protocol: kafka
+    description: |
+      Staging Kafka cluster for testing.
+
+      **Connection Details:**
+      - Bootstrap servers: kafka-staging.paklog.internal:9092
+      - Security: SASL_PLAIN
+      - Retention: 3 days
+      - Replication factor: 2
+    tags:
+      - name: env:staging
+        description: Staging environment
+
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: |
+      Local development Kafka instance.
+
+      **Quick Start:**
+      ```bash
+      docker-compose up -d kafka
+      ```
+    tags:
+      - name: env:development
+        description: Local development
+
+channels:
+  transportationLogisticsCrossDockingEvents:
+    address: transportation-logistics.cross-docking.events
+    messages:
+      transferOrderCreated:
+        $ref: '#/components/messages/TransferOrderCreatedEvent'
+      directTransferInitiated:
+        $ref: '#/components/messages/DirectTransferInitiatedEvent'
+      consolidationCompleted:
+        $ref: '#/components/messages/ConsolidationCompletedEvent'
+      crossDockCompleted:
+        $ref: '#/components/messages/CrossDockCompletedEvent'
+    description: |
+      Main event stream for all cross-docking domain events.
+
+      ## Topic Configuration
+      - **Topic Name:** `transportation-logistics.cross-docking.events`
+      - **Partitions:** 6 (partitioned by transfer order ID or operation ID)
+      - **Retention:** 168 hours (7 days)
+      - **Cleanup Policy:** delete
+      - **Min In-Sync Replicas:** 2
+
+      ## Message Ordering
+      Events related to the same transfer order or operation maintain order via Kafka partitioning.
+      The event key is set to the relevant entity ID (transferOrderId or operationId).
+
+      ## Monitoring
+      - Monitor consumer lag via Prometheus metrics
+      - Alert on lag > 1000 messages
+      - Track processing errors via dead letter queue
+    tags:
+      - name: domain:cross-docking
+        description: Cross-docking domain events
+      - name: format:cloudevents
+        description: CloudEvents v1.0 specification
+
+operations:
+  publishTransferOrderCreated:
+    action: send
+    channel:
+      $ref: '#/channels/transportationLogisticsCrossDockingEvents'
+    summary: Publish TransferOrderCreatedEvent
+    description: |
+      Published when a new transfer order is created in the system.
+
+      ## Business Triggers
+      - REST API call to create transfer order
+      - Inbound shipment notification received
+      - WMS integration creates transfer order
+
+      ## Downstream Consumers
+      - **Warehouse Automation Service**: Allocates resources and equipment
+      - **Notification Service**: Alerts warehouse staff
+      - **Analytics Service**: Updates operational dashboards
+      - **Billing Service**: Initiates cost tracking
+    messages:
+      - $ref: '#/components/messages/TransferOrderCreatedEvent'
+    tags:
+      - name: lifecycle:creation
+        description: Entity creation event
+
+  publishDirectTransferInitiated:
+    action: send
+    channel:
+      $ref: '#/channels/transportationLogisticsCrossDockingEvents'
+    summary: Publish DirectTransferInitiatedEvent
+    description: |
+      Published when a direct transfer operation begins (no consolidation or sorting).
+
+      ## Business Triggers
+      - Transfer order status changes to IN_PROGRESS
+      - Direct transfer type selected
+      - Source and destination docks assigned
+
+      ## Downstream Consumers
+      - **Dock Management Service**: Reserves dock doors and equipment
+      - **Labor Management Service**: Assigns workers to docks
+      - **Tracking Service**: Begins real-time location tracking
+      - **Performance Monitoring**: Starts SLA timer
+    messages:
+      - $ref: '#/components/messages/DirectTransferInitiatedEvent'
+    tags:
+      - name: lifecycle:progression
+        description: Operation progression event
+
+  publishConsolidationCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/transportationLogisticsCrossDockingEvents'
+    summary: Publish ConsolidationCompletedEvent
+    description: |
+      Published when multiple transfer orders are consolidated into a single shipment.
+
+      ## Business Triggers
+      - All items for consolidated shipment are staged
+      - Consolidation rules satisfied (volume, weight, destination)
+      - Manual consolidation approval received
+
+      ## Downstream Consumers
+      - **Shipping Service**: Prepares consolidated shipment documentation
+      - **Inventory Service**: Updates item locations to consolidated staging area
+      - **Label Printing Service**: Generates consolidated shipment labels
+      - **Carrier Integration**: Creates pickup request
+    messages:
+      - $ref: '#/components/messages/ConsolidationCompletedEvent'
+    tags:
+      - name: lifecycle:progression
+        description: Operation progression event
+
+  publishCrossDockCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/transportationLogisticsCrossDockingEvents'
+    summary: Publish CrossDockCompletedEvent
+    description: |
+      Published when a complete cross-docking operation finishes successfully.
+
+      ## Business Triggers
+      - All items transferred to destination
+      - Operation status set to COMPLETED
+      - Quality checks passed
+      - Documentation finalized
+
+      ## Downstream Consumers
+      - **Analytics Service**: Records performance metrics and KPIs
+      - **Billing Service**: Finalizes charges based on actual duration
+      - **Reporting Service**: Updates operational reports
+      - **Dock Management**: Releases dock resources
+      - **SLA Monitor**: Validates operation completed within timing window
+    messages:
+      - $ref: '#/components/messages/CrossDockCompletedEvent'
+    tags:
+      - name: lifecycle:completion
+        description: Operation completion event
+
+components:
+  messages:
+    TransferOrderCreatedEvent:
+      name: TransferOrderCreatedEvent
+      title: Transfer Order Created
+      summary: Emitted when a new transfer order is created
+      contentType: application/cloudevents+json
+      tags:
+        - name: entity:transfer-order
+          description: Transfer order entity
+      payload:
+        $ref: '#/components/schemas/CloudEventTransferOrderCreated'
+      examples:
+        - name: DirectTransferOrder
+          summary: Direct transfer from dock A to dock B
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.TransferOrderCreatedEvent
+            source: //cross-docking
+            id: 550e8400-e29b-41d4-a716-446655440001
+            time: "2025-11-01T14:30:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: 550e8400-e29b-41d4-a716-446655440001
+              occurredAt: "2025-11-01T14:30:00Z"
+              eventType: TransferOrderCreatedEvent
+              transferOrderId: TO-2025-001234
+              transferType: DIRECT
+              sourceDock: DOCK-A-01
+              destinationDock: DOCK-B-03
+
+        - name: ConsolidatedTransferOrder
+          summary: Consolidated transfer with multiple items for same destination
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.TransferOrderCreatedEvent
+            source: //cross-docking
+            id: 660e8400-e29b-41d4-a716-446655440002
+            time: "2025-11-01T15:45:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: 660e8400-e29b-41d4-a716-446655440002
+              occurredAt: "2025-11-01T15:45:00Z"
+              eventType: TransferOrderCreatedEvent
+              transferOrderId: TO-2025-001235
+              transferType: CONSOLIDATED
+              sourceDock: DOCK-A-02
+              destinationDock: DOCK-B-05
+
+        - name: BulkTransferOrder
+          summary: Bulk transfer of palletized goods
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.TransferOrderCreatedEvent
+            source: //cross-docking
+            id: 770e8400-e29b-41d4-a716-446655440003
+            time: "2025-11-01T09:15:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: 770e8400-e29b-41d4-a716-446655440003
+              occurredAt: "2025-11-01T09:15:00Z"
+              eventType: TransferOrderCreatedEvent
+              transferOrderId: TO-2025-001236
+              transferType: BULK
+              sourceDock: DOCK-RECV-01
+              destinationDock: DOCK-SHIP-08
+
+    DirectTransferInitiatedEvent:
+      name: DirectTransferInitiatedEvent
+      title: Direct Transfer Initiated
+      summary: Emitted when a direct transfer operation begins
+      contentType: application/cloudevents+json
+      tags:
+        - name: entity:transfer-order
+          description: Transfer order entity
+      payload:
+        $ref: '#/components/schemas/CloudEventDirectTransferInitiated'
+      examples:
+        - name: StandardDirectTransfer
+          summary: Standard direct transfer initiated during business hours
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.DirectTransferInitiatedEvent
+            source: //cross-docking
+            id: 880e8400-e29b-41d4-a716-446655440004
+            time: "2025-11-01T14:35:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: 880e8400-e29b-41d4-a716-446655440004
+              occurredAt: "2025-11-01T14:35:00Z"
+              eventType: DirectTransferInitiatedEvent
+              transferOrderId: TO-2025-001234
+              sourceDock: DOCK-A-01
+              destinationDock: DOCK-B-03
+              initiatedAt: "2025-11-01T14:35:00Z"
+
+        - name: UrgentTransfer
+          summary: Urgent priority transfer for time-sensitive goods
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.DirectTransferInitiatedEvent
+            source: //cross-docking
+            id: 990e8400-e29b-41d4-a716-446655440005
+            time: "2025-11-01T18:20:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: 990e8400-e29b-41d4-a716-446655440005
+              occurredAt: "2025-11-01T18:20:00Z"
+              eventType: DirectTransferInitiatedEvent
+              transferOrderId: TO-2025-001237
+              sourceDock: DOCK-EXPRESS-01
+              destinationDock: DOCK-EXPRESS-02
+              initiatedAt: "2025-11-01T18:20:00Z"
+
+    ConsolidationCompletedEvent:
+      name: ConsolidationCompletedEvent
+      title: Consolidation Completed
+      summary: Emitted when multiple items/orders are consolidated for shipping
+      contentType: application/cloudevents+json
+      tags:
+        - name: entity:consolidation
+          description: Consolidation entity
+      payload:
+        $ref: '#/components/schemas/CloudEventConsolidationCompleted'
+      examples:
+        - name: SmallConsolidation
+          summary: Small consolidation with 15 items to same destination
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.ConsolidationCompletedEvent
+            source: //cross-docking
+            id: aa0e8400-e29b-41d4-a716-446655440006
+            time: "2025-11-01T16:00:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: aa0e8400-e29b-41d4-a716-446655440006
+              occurredAt: "2025-11-01T16:00:00Z"
+              eventType: ConsolidationCompletedEvent
+              consolidationId: CONSOL-2025-000567
+              itemsConsolidated: 15
+              destinationDock: DOCK-B-05
+
+        - name: LargeConsolidation
+          summary: Large consolidation with 250+ items from multiple sources
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.ConsolidationCompletedEvent
+            source: //cross-docking
+            id: bb0e8400-e29b-41d4-a716-446655440007
+            time: "2025-11-01T16:30:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: bb0e8400-e29b-41d4-a716-446655440007
+              occurredAt: "2025-11-01T16:30:00Z"
+              eventType: ConsolidationCompletedEvent
+              consolidationId: CONSOL-2025-000568
+              itemsConsolidated: 287
+              destinationDock: DOCK-B-12
+
+    CrossDockCompletedEvent:
+      name: CrossDockCompletedEvent
+      title: Cross-Dock Operation Completed
+      summary: Emitted when a cross-docking operation completes successfully
+      contentType: application/cloudevents+json
+      tags:
+        - name: entity:operation
+          description: Cross-dock operation entity
+      payload:
+        $ref: '#/components/schemas/CloudEventCrossDockCompleted'
+      examples:
+        - name: FastCompletion
+          summary: Quick operation completed in 25 minutes (under 2-hour SLA)
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.CrossDockCompletedEvent
+            source: //cross-docking
+            id: cc0e8400-e29b-41d4-a716-446655440008
+            time: "2025-11-01T15:00:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: cc0e8400-e29b-41d4-a716-446655440008
+              occurredAt: "2025-11-01T15:00:00Z"
+              eventType: CrossDockCompletedEvent
+              operationId: XDOCK-2025-004321
+              totalItems: 45
+              durationMinutes: 25
+              completedAt: "2025-11-01T15:00:00Z"
+
+        - name: LargeOperationCompletion
+          summary: Large operation with 500 items completed in 90 minutes
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.CrossDockCompletedEvent
+            source: //cross-docking
+            id: dd0e8400-e29b-41d4-a716-446655440009
+            time: "2025-11-01T17:30:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: dd0e8400-e29b-41d4-a716-446655440009
+              occurredAt: "2025-11-01T17:30:00Z"
+              eventType: CrossDockCompletedEvent
+              operationId: XDOCK-2025-004322
+              totalItems: 523
+              durationMinutes: 92
+              completedAt: "2025-11-01T17:30:00Z"
+
+        - name: NearSLABreach
+          summary: Operation completed just before 2-hour SLA deadline
+          payload:
+            specversion: "1.0"
+            type: com.paklog.crossdocking.CrossDockCompletedEvent
+            source: //cross-docking
+            id: ee0e8400-e29b-41d4-a716-446655440010
+            time: "2025-11-01T19:55:00Z"
+            datacontenttype: application/json
+            data:
+              eventId: ee0e8400-e29b-41d4-a716-446655440010
+              occurredAt: "2025-11-01T19:55:00Z"
+              eventType: CrossDockCompletedEvent
+              operationId: XDOCK-2025-004323
+              totalItems: 178
+              durationMinutes: 117
+              completedAt: "2025-11-01T19:55:00Z"
+
+  schemas:
+    CloudEventTransferOrderCreated:
+      type: object
+      description: CloudEvents envelope for TransferOrderCreatedEvent
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+          description: CloudEvents specification version
+        type:
+          type: string
+          const: com.paklog.crossdocking.TransferOrderCreatedEvent
+          description: Event type following reverse DNS notation
+        source:
+          type: string
+          const: "//cross-docking"
+          format: uri-reference
+          description: Service identifier that produced the event
+        id:
+          type: string
+          format: uuid
+          description: Unique event identifier for deduplication
+        time:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred (ISO 8601)
+        datacontenttype:
+          type: string
+          const: application/json
+          description: Content type of the data payload
+        data:
+          $ref: '#/components/schemas/TransferOrderCreatedEventData'
+
+    TransferOrderCreatedEventData:
+      type: object
+      description: |
+        Transfer order created event data.
+
+        Represents a new transfer order in the cross-docking workflow. This is the entry point
+        for tracking a shipment through the warehouse.
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - transferOrderId
+        - transferType
+        - sourceDock
+        - destinationDock
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier (same as CloudEvents id)
+          example: 550e8400-e29b-41d4-a716-446655440001
+        occurredAt:
+          type: string
+          format: date-time
+          description: Precise timestamp when the event occurred
+          example: "2025-11-01T14:30:00Z"
+        eventType:
+          type: string
+          const: TransferOrderCreatedEvent
+          description: Event type name
+        transferOrderId:
+          type: string
+          description: |
+            Unique business identifier for the transfer order.
+            Format: TO-{YEAR}-{SEQUENCE}
+          pattern: ^TO-\d{4}-\d{6}$
+          example: TO-2025-001234
+        transferType:
+          type: string
+          enum:
+            - DIRECT
+            - CONSOLIDATED
+            - DECONSOLIDATED
+            - SORTED
+            - BULK
+          description: |
+            Type of cross-docking transfer:
+            - **DIRECT**: Items move directly from receiving to shipping dock
+            - **CONSOLIDATED**: Multiple small shipments combined into one
+            - **DECONSOLIDATED**: Large shipment broken into smaller ones
+            - **SORTED**: Items sorted by destination before shipping
+            - **BULK**: Large palletized shipments moved as-is
+          example: DIRECT
+        sourceDock:
+          type: string
+          description: |
+            Identifier of the source dock where items arrive.
+            Format: DOCK-{AREA}-{NUMBER}
+          pattern: ^DOCK-[A-Z0-9]+-\d{2}$
+          example: DOCK-A-01
+        destinationDock:
+          type: string
+          description: |
+            Identifier of the destination dock where items depart.
+            Format: DOCK-{AREA}-{NUMBER}
+          pattern: ^DOCK-[A-Z0-9]+-\d{2}$
+          example: DOCK-B-03
+
+    CloudEventDirectTransferInitiated:
+      type: object
+      description: CloudEvents envelope for DirectTransferInitiatedEvent
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.crossdocking.DirectTransferInitiatedEvent
+        source:
+          type: string
+          const: "//cross-docking"
+          format: uri-reference
+        id:
+          type: string
+          format: uuid
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        data:
+          $ref: '#/components/schemas/DirectTransferInitiatedEventData'
+
+    DirectTransferInitiatedEventData:
+      type: object
+      description: |
+        Direct transfer initiated event data.
+
+        Published when a direct transfer operation starts. This indicates physical movement
+        has begun and dock resources are now allocated.
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - transferOrderId
+        - sourceDock
+        - destinationDock
+        - initiatedAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: 880e8400-e29b-41d4-a716-446655440004
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T14:35:00Z"
+        eventType:
+          type: string
+          const: DirectTransferInitiatedEvent
+        transferOrderId:
+          type: string
+          pattern: ^TO-\d{4}-\d{6}$
+          description: Reference to the transfer order being executed
+          example: TO-2025-001234
+        sourceDock:
+          type: string
+          pattern: ^DOCK-[A-Z0-9]+-\d{2}$
+          description: Source dock where transfer begins
+          example: DOCK-A-01
+        destinationDock:
+          type: string
+          pattern: ^DOCK-[A-Z0-9]+-\d{2}$
+          description: Destination dock where transfer ends
+          example: DOCK-B-03
+        initiatedAt:
+          type: string
+          format: date-time
+          description: |
+            Precise timestamp when physical transfer started.
+            Used to calculate operation duration and SLA compliance.
+          example: "2025-11-01T14:35:00Z"
+
+    CloudEventConsolidationCompleted:
+      type: object
+      description: CloudEvents envelope for ConsolidationCompletedEvent
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.crossdocking.ConsolidationCompletedEvent
+        source:
+          type: string
+          const: "//cross-docking"
+          format: uri-reference
+        id:
+          type: string
+          format: uuid
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        data:
+          $ref: '#/components/schemas/ConsolidationCompletedEventData'
+
+    ConsolidationCompletedEventData:
+      type: object
+      description: |
+        Consolidation completed event data.
+
+        Published when items from multiple sources are successfully consolidated into a single
+        shipment. Indicates readiness for outbound processing.
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - consolidationId
+        - itemsConsolidated
+        - destinationDock
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: aa0e8400-e29b-41d4-a716-446655440006
+        occurredAt:
+          type: string
+          format: date-time
+          description: When consolidation was completed
+          example: "2025-11-01T16:00:00Z"
+        eventType:
+          type: string
+          const: ConsolidationCompletedEvent
+        consolidationId:
+          type: string
+          description: |
+            Unique identifier for this consolidation operation.
+            Format: CONSOL-{YEAR}-{SEQUENCE}
+          pattern: ^CONSOL-\d{4}-\d{6}$
+          example: CONSOL-2025-000567
+        itemsConsolidated:
+          type: integer
+          minimum: 1
+          description: |
+            Total number of individual items consolidated.
+            Used for capacity planning and performance metrics.
+          example: 15
+        destinationDock:
+          type: string
+          pattern: ^DOCK-[A-Z0-9]+-\d{2}$
+          description: Dock where consolidated shipment will depart
+          example: DOCK-B-05
+
+    CloudEventCrossDockCompleted:
+      type: object
+      description: CloudEvents envelope for CrossDockCompletedEvent
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.crossdocking.CrossDockCompletedEvent
+        source:
+          type: string
+          const: "//cross-docking"
+          format: uri-reference
+        id:
+          type: string
+          format: uuid
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        data:
+          $ref: '#/components/schemas/CrossDockCompletedEventData'
+
+    CrossDockCompletedEventData:
+      type: object
+      description: |
+        Cross-dock operation completed event data.
+
+        Published when an entire cross-docking operation successfully completes. Contains
+        performance metrics used for SLA tracking, billing, and operational analytics.
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - operationId
+        - totalItems
+        - durationMinutes
+        - completedAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: cc0e8400-e29b-41d4-a716-446655440008
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the completion event occurred
+          example: "2025-11-01T15:00:00Z"
+        eventType:
+          type: string
+          const: CrossDockCompletedEvent
+        operationId:
+          type: string
+          description: |
+            Unique identifier for the cross-dock operation.
+            Format: XDOCK-{YEAR}-{SEQUENCE}
+          pattern: ^XDOCK-\d{4}-\d{6}$
+          example: XDOCK-2025-004321
+        totalItems:
+          type: integer
+          minimum: 1
+          description: |
+            Total number of items processed in this operation.
+            Used for throughput calculation and capacity planning.
+          example: 45
+        durationMinutes:
+          type: integer
+          minimum: 0
+          description: |
+            Total duration of the operation in minutes from start to completion.
+
+            **SLA Thresholds:**
+            - Urgent priority: 60 minutes
+            - High priority: 90 minutes
+            - Normal priority: 120 minutes
+            - Low priority: 180 minutes
+          example: 25
+        completedAt:
+          type: string
+          format: date-time
+          description: |
+            Precise timestamp when operation completed.
+            Used for SLA verification and performance reporting.
+          example: "2025-11-01T15:00:00Z"
+
+  securitySchemes:
+    saslScram:
+      type: scramSha512
+      description: |
+        SASL/SCRAM-SHA-512 authentication for production Kafka.
+
+        **Configuration:**
+        ```properties
+        sasl.mechanism=SCRAM-SHA-512
+        sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required \
+          username="your-username" \
+          password="your-password";
+        security.protocol=SASL_SSL
+        ```
+
+        **Credentials:** Contact platform team for service account credentials.
+
+tags:
+  - name: domain:cross-docking
+    description: Cross-docking operations domain
+  - name: format:cloudevents
+    description: Events following CloudEvents v1.0 specification
+  - name: entity:transfer-order
+    description: Transfer order lifecycle events
+  - name: entity:operation
+    description: Cross-dock operation events
+  - name: entity:consolidation
+    description: Consolidation events
+  - name: lifecycle:creation
+    description: Entity creation events
+  - name: lifecycle:progression
+    description: Operation progression events
+  - name: lifecycle:completion
+    description: Operation completion events

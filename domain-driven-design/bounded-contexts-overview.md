@@ -12,7 +12,6 @@ graph TB
     end
 
     subgraph "Warehouse Execution"
-        WO[Warehouse Operations<br/>Context]
         WP[Wave Planning<br/>Context]
         TE[Task Execution<br/>Context]
         PE[Pick Execution<br/>Context]
@@ -44,8 +43,7 @@ graph TB
     %% Context Relationships
     OM -.->|Shared Kernel| I
     OM -->|Downstream| C
-    OM -->|Downstream| WO
-    WO -->|Downstream| WP
+    OM -->|Downstream| WP
     WP -->|Downstream| TE
     TE -->|Downstream| PE
     PE -->|Downstream| PS
@@ -149,25 +147,7 @@ graph TB
 
 ---
 
-### 5. Warehouse Operations Context
-**Responsibility**: Core warehouse management and coordination
-
-**Core Aggregates**:
-- `WarehouseOrder` - Warehouse-specific order representation
-- `WorkAssignment` - Work allocation to resources
-- `OperationalZone` - Warehouse zone management
-
-**Key Domain Events**:
-- WorkAssigned
-- ZoneCreated
-- OrderReleasedToWarehouse
-- OperationCompleted
-
-**Integration Pattern**: Central coordinator for warehouse activities
-
----
-
-### 6. Wave Planning Context
+### 5. Wave Planning Context
 **Responsibility**: Intelligent grouping of orders into executable waves
 
 **Core Aggregates**:
@@ -186,7 +166,7 @@ graph TB
 
 ---
 
-### 7. Task Execution Context
+### 6. Task Execution Context
 **Responsibility**: Task queue management and worker assignment
 
 **Core Aggregates**:

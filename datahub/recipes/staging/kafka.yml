@@ -1,0 +1,18 @@
+source:
+  type: kafka
+  config:
+    connection:
+      bootstrap: ${KAFKA_BOOTSTRAP_STAGING}
+    schema_registry:
+      url: ${SCHEMA_REGISTRY_STAGING}
+    topic_patterns:
+      allow:
+        - ".*"
+    platform_instance: staging
+
+sink:
+  type: datahub-rest
+  config:
+    server: ${DATAHUB_GMS_STAGING}
+    token: ${DATAHUB_TOKEN_STAGING}
+

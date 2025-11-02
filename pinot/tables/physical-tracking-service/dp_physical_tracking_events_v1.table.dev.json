@@ -1,0 +1,40 @@
+{
+  "tableName": "dp_physical_tracking_events_v1",
+  "tableType": "REALTIME",
+  "tenants": {"server": "domain-wes", "broker": "domain-wes"},
+  "segmentsConfig": {
+    "timeColumnName": "event_time",
+    "replication": "2",
+    "retentionTimeUnit": "DAYS",
+    "retentionTimeValue": "30"
+  },
+  "tableIndexConfig": {
+    "invertedIndexColumns": ["lpn", "warehouse_id"],
+    "bloomFilterColumns": ["movement_id"],
+    "rangeIndexColumns": ["event_time"]
+  },
+  "ingestionConfig": {
+    "transformConfigs": [
+      {"columnName": "event_id", "transformFunction": "jsonPathString($, '$.movementId')"},
+      {"columnName": "lpn", "transformFunction": "jsonPathString($, '$.lpn')"},
+      {"columnName": "movement_id", "transformFunction": "jsonPathString($, '$.movementId')"},
+      {"columnName": "from_location", "transformFunction": "jsonPathString($, '$.fromLocation')"},
+      {"columnName": "to_location", "transformFunction": "jsonPathString($, '$.toLocation')"},
+      {"columnName": "location_id", "transformFunction": "jsonPathString($, '$.locationId')"},
+      {"columnName": "warehouse_id", "transformFunction": "jsonPathString($, '$.warehouseId')"},
+      {"columnName": "movement_type", "transformFunction": "jsonPathString($, '$.movementType')"},
+      {"columnName": "event_time", "transformFunction": "fromDateTime(coalesce(jsonPathString($, '$.movedAt'),jsonPathString($, '$.createdAt'),jsonPathString($, '$.changedAt'),jsonPathString($, '$.blockedAt'),jsonPathString($, '$.unblockedAt'),jsonPathString($, '$.addedAt'),jsonPathString($, '$.removedAt')), 'yyyy-MM-dd''T''HH:mm:ss[.SSS]XXX')"}
+    ]
+  },
+  "metadata": {"customConfigs": {"product.owner": "wes-platform@paklog.com", "product.sla": "p95<2s", "product.kind": "source-aligned"}},
+  "streamConfigs": {
+    "streamType": "kafka",
+    "stream.kafka.topic.name": "licenseplate.moved,licenseplate.created,licenseplate.item.added,licenseplate.item.removed,licenseplate.consumed,location.state.changed,location.blocked,location.unblocked,physical.movement,rtls.position.update",
+    "stream.kafka.consumer.type": "lowlevel",
+    "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
+    "stream.kafka.broker.list": "localhost:9092",
+    "realtime.segment.flush.threshold.time": "1h",
+    "realtime.segment.flush.threshold.rows": "500000"
+  }
+}
+

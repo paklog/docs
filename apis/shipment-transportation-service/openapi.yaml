@@ -1,0 +1,1689 @@
+openapi: 3.0.3
+info:
+  title: Shipment & Transportation API
+  description: REST endpoints exposed by the shipment transportation service.
+  version: 1.1.0
+servers:
+  - url: http://localhost:8080
+tags:
+  - name: Shipments
+    description: Shipment lifecycle and tracking operations.
+  - name: Loads
+    description: Create, update, and manage transportation loads.
+  - name: Load Shipments
+    description: Manage the shipment assignments that compose a load.
+  - name: Load Carrier
+    description: Assign and manage carriers responsible for hauling loads.
+  - name: Load Rating
+    description: Retrieve cost calculations for executing a load.
+  - name: Tender
+    description: Manage the tender offer lifecycle and carrier decisions.
+  - name: Pickup
+    description: Coordinate pickup appointments and dock instructions.
+  - name: Documents
+    description: Retrieve operational documents generated for loads.
+paths:
+  /shipments:
+    get:
+      summary: List shipments filtered by status and carrier
+      tags:
+        - Shipments
+      description: |
+        Returns a paginated collection of shipments filtered by shipment status and
+        carrier assignment. Use this endpoint to monitor available freight and
+        understand current delivery progress across the network.
+      operationId: listShipments
+      parameters:
+        - $ref: '#/components/parameters/ShipmentStatusQueryParam'
+        - $ref: '#/components/parameters/CarrierNameQueryParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Page of shipments matching the requested filters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentCollection'
+              example:
+                items:
+                  - id:
+                      value: 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                    orderId:
+                      value: ORD-100045
+                    status: UNASSIGNED
+                    carrierName: null
+                    trackingNumber:
+                      value: TRK123456789
+                    trackingEvents:
+                      - status: CREATED
+                        statusDescription: Shipment registered in transportation platform
+                        location: Portland, OR
+                        timestamp: 2024-05-01T09:30:00Z
+                        eventCode: CREATED
+                        detailedDescription: Shipment created and awaiting load assignment
+                    assignedLoadId: null
+                    lastUpdatedAt: 2024-05-01T09:30:00Z
+                page: 0
+                size: 20
+                totalItems: 1
+                totalPages: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /shipments/{shipmentId}:
+    get:
+      summary: Retrieve a shipment by identifier
+      tags:
+        - Shipments
+      description: |
+        Retrieves the latest state of a specific shipment, including the
+        associated order metadata, assigned load, and detailed tracking history.
+      operationId: getShipment
+      parameters:
+        - $ref: '#/components/parameters/ShipmentIdPathParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: Shipment found.
+          headers:
+            ETag:
+              description: Version identifier for the shipment representation.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+              example:
+                id:
+                  value: 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                orderId:
+                  value: ORD-100045
+                status: IN_TRANSIT
+                carrierName: FEDEX
+                trackingNumber:
+                  value: TRK123456789
+                trackingEvents:
+                  - status: CREATED
+                    statusDescription: Shipment registered in transportation platform
+                    location: Portland, OR
+                    timestamp: 2024-05-01T09:30:00Z
+                    eventCode: CREATED
+                    detailedDescription: Shipment created and awaiting load assignment
+                  - status: IN_TRANSIT
+                    statusDescription: Package departed origin facility
+                    location: Portland, OR
+                    timestamp: 2024-05-02T15:10:12Z
+                    eventCode: DEPARTED_ORIGIN
+                    detailedDescription: Carrier has picked up the freight and departed origin terminal
+                assignedLoadId: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                lastUpdatedAt: 2024-05-02T15:10:12Z
+        '304':
+          description: Shipment representation not changed since the provided ETag.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads:
+    get:
+      summary: List loads in the transportation network
+      tags:
+        - Loads
+      description: |
+        Provides a paginated view of transportation loads, allowing operations
+        teams to monitor lifecycle status, carrier coverage, and shipment
+        assignments across origins and destinations.
+      operationId: listLoads
+      parameters:
+        - $ref: '#/components/parameters/LoadStatusQueryParam'
+        - $ref: '#/components/parameters/CarrierNameQueryParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Page of loads matching the requested filters.
+          headers:
+            ETag:
+              description: Version identifier for the collection response.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadCollection'
+              example:
+                items:
+                  - id: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                    reference: PKG-2024-0001
+                    status: PLANNED
+                    carrierName: null
+                    shipments:
+                      - 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                      - df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+                    origin:
+                      name: Portland Distribution Center
+                      addressLine1: 123 Warehouse Way
+                      addressLine2: null
+                      city: Portland
+                      stateOrProvince: OR
+                      postalCode: 97201
+                      country: US
+                    destination:
+                      name: Denver Retail Hub
+                      addressLine1: 456 Market Street
+                      addressLine2: Suite 12
+                      city: Denver
+                      stateOrProvince: CO
+                      postalCode: 80202
+                      country: US
+                    requestedPickupDate: 2024-05-15
+                    requestedDeliveryDate: 2024-05-20
+                    pickup: null
+                    tender:
+                      status: NOT_TENDERED
+                    notes: Handle with care
+                    createdAt: 2024-05-01T08:00:00Z
+                    updatedAt: 2024-05-01T08:00:00Z
+                page: 0
+                size: 20
+                totalItems: 1
+                totalPages: 1
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create a new load
+      tags:
+        - Loads
+      description: |
+        Creates a transportation load that orchestrates shipments between an
+        origin and destination location. Supply the shipments to be grouped and
+        the planned pickup and delivery dates to initiate planning activities.
+      operationId: createLoad
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLoadRequest'
+            example:
+              reference: PKG-2024-0001
+              shipments:
+                - 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                - df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+              origin:
+                name: Portland Distribution Center
+                addressLine1: 123 Warehouse Way
+                addressLine2: null
+                city: Portland
+                stateOrProvince: OR
+                postalCode: 97201
+                country: US
+              destination:
+                name: Denver Retail Hub
+                addressLine1: 456 Market Street
+                addressLine2: Suite 12
+                city: Denver
+                stateOrProvince: CO
+                postalCode: 80202
+                country: US
+              requestedPickupDate: 2024-05-15
+              requestedDeliveryDate: 2024-05-20
+              notes: Handle with care
+      responses:
+        '201':
+          description: Load created successfully.
+          headers:
+            Location:
+              description: URI of the newly created load resource.
+              schema:
+                type: string
+            ETag:
+              description: Version identifier for the created load.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+              example:
+                id: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                reference: PKG-2024-0001
+                status: PLANNED
+                carrierName: null
+                shipments:
+                  - 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                  - df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+                origin:
+                  name: Portland Distribution Center
+                  addressLine1: 123 Warehouse Way
+                  addressLine2: null
+                  city: Portland
+                  stateOrProvince: OR
+                  postalCode: 97201
+                  country: US
+                destination:
+                  name: Denver Retail Hub
+                  addressLine1: 456 Market Street
+                  addressLine2: Suite 12
+                  city: Denver
+                  stateOrProvince: CO
+                  postalCode: 80202
+                  country: US
+                requestedPickupDate: 2024-05-15
+                requestedDeliveryDate: 2024-05-20
+                pickup: null
+                tender:
+                  status: NOT_TENDERED
+                notes: Handle with care
+                createdAt: 2024-05-01T08:00:00Z
+                updatedAt: 2024-05-01T08:00:00Z
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}:
+    get:
+      summary: Retrieve load details
+      tags:
+        - Loads
+      description: |
+        Returns the authoritative representation of a load, including shipment
+        assignments, carrier commitments, pickup arrangements, and tender
+        history for downstream logistics coordination.
+      operationId: getLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfNoneMatchHeader'
+      responses:
+        '200':
+          description: Load found.
+          headers:
+            ETag:
+              description: Version identifier for the load representation.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+              example:
+                id: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                reference: PKG-2024-0001
+                status: BOOKED
+                carrierName: FEDEX
+                shipments:
+                  - 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                  - df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+                origin:
+                  name: Portland Distribution Center
+                  addressLine1: 123 Warehouse Way
+                  addressLine2: null
+                  city: Portland
+                  stateOrProvince: OR
+                  postalCode: 97201
+                  country: US
+                destination:
+                  name: Denver Retail Hub
+                  addressLine1: 456 Market Street
+                  addressLine2: Suite 12
+                  city: Denver
+                  stateOrProvince: CO
+                  postalCode: 80202
+                  country: US
+                requestedPickupDate: 2024-05-15
+                requestedDeliveryDate: 2024-05-20
+                pickup:
+                  confirmationNumber: PU-556677
+                  scheduledFor: 2024-05-15T14:00:00Z
+                  location:
+                    name: Portland Distribution Center
+                    addressLine1: 123 Warehouse Way
+                    addressLine2: null
+                    city: Portland
+                    stateOrProvince: OR
+                    postalCode: 97201
+                    country: US
+                  contactName: Dana Warehouse
+                  contactPhone: "+1-503-555-0199"
+                  instructions: Load at dock 4 and secure pallets with straps
+                tender:
+                  status: ACCEPTED
+                  expiresAt: 2024-05-10T17:00:00Z
+                  respondedAt: 2024-05-09T09:45:00Z
+                  respondedBy: dispatch@fedex.com
+                  decision: ACCEPTED
+                  notes: Acceptance confirmed via EDI
+                notes: Handle with care
+                createdAt: 2024-05-01T08:00:00Z
+                updatedAt: 2024-05-09T09:45:00Z
+        '304':
+          description: Load representation not changed since the provided ETag.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Update load metadata or status
+      tags:
+        - Loads
+      description: |
+        Applies partial updates to an existing load. Typical use cases include
+        revising requested pickup or delivery dates, updating notes, or moving a
+        load forward in its lifecycle once downstream milestones are reached.
+      operationId: updateLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateLoadRequest'
+            example:
+              status: BOOKED
+              requestedPickupDate: 2024-05-15
+              requestedDeliveryDate: 2024-05-21
+              notes: Delivery extended due to inventory constraints
+      responses:
+        '200':
+          description: Load updated successfully.
+          headers:
+            ETag:
+              description: Version identifier for the updated load.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+              example:
+                id: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                reference: PKG-2024-0001
+                status: BOOKED
+                carrierName: FEDEX
+                shipments:
+                  - 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                  - df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+                origin:
+                  name: Portland Distribution Center
+                  addressLine1: 123 Warehouse Way
+                  addressLine2: null
+                  city: Portland
+                  stateOrProvince: OR
+                  postalCode: 97201
+                  country: US
+                destination:
+                  name: Denver Retail Hub
+                  addressLine1: 456 Market Street
+                  addressLine2: Suite 12
+                  city: Denver
+                  stateOrProvince: CO
+                  postalCode: 80202
+                  country: US
+                requestedPickupDate: 2024-05-15
+                requestedDeliveryDate: 2024-05-21
+                pickup:
+                  confirmationNumber: PU-556677
+                  scheduledFor: 2024-05-15T14:00:00Z
+                  location:
+                    name: Portland Distribution Center
+                    addressLine1: 123 Warehouse Way
+                    addressLine2: null
+                    city: Portland
+                    stateOrProvince: OR
+                    postalCode: 97201
+                    country: US
+                  contactName: Dana Warehouse
+                  contactPhone: "+1-503-555-0199"
+                  instructions: Load at dock 4 and secure pallets with straps
+                tender:
+                  status: ACCEPTED
+                  expiresAt: 2024-05-10T17:00:00Z
+                  respondedAt: 2024-05-09T09:45:00Z
+                  respondedBy: dispatch@fedex.com
+                  decision: ACCEPTED
+                  notes: Acceptance confirmed via EDI
+                notes: Delivery extended due to inventory constraints
+                createdAt: 2024-05-01T08:00:00Z
+                updatedAt: 2024-05-09T10:15:00Z
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Cancel a load
+      tags:
+        - Loads
+      description: |
+        Cancels a planned or in-progress load when it can no longer be
+        executed. Downstream integrations should treat the load as closed and
+        release any allocated transportation capacity.
+      operationId: deleteLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      responses:
+        '204':
+          description: Load cancelled successfully.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}/shipments:
+    get:
+      summary: List shipments assigned to a load
+      tags:
+        - Load Shipments
+      description: |
+        Retrieves the shipments currently grouped under the specified load so
+        dispatchers can verify freight composition before execution.
+      operationId: listShipmentsForLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: Page of shipments currently assigned to the load.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentCollection'
+              example:
+                items:
+                  - id:
+                      value: 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                    orderId:
+                      value: ORD-100045
+                    status: IN_TRANSIT
+                    carrierName: FEDEX
+                    trackingNumber:
+                      value: TRK123456789
+                    trackingEvents:
+                      - status: IN_TRANSIT
+                        statusDescription: Package departed origin facility
+                        location: Portland, OR
+                        timestamp: 2024-05-02T15:10:12Z
+                        eventCode: DEPARTED_ORIGIN
+                        detailedDescription: Carrier has picked up the freight and departed origin terminal
+                    assignedLoadId: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                    lastUpdatedAt: 2024-05-02T15:10:12Z
+                  - id:
+                      value: df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+                    orderId:
+                      value: ORD-100046
+                    status: CREATED
+                    carrierName: FEDEX
+                    trackingNumber:
+                      value: TRK987654321
+                    trackingEvents:
+                      - status: CREATED
+                        statusDescription: Shipment registered in transportation platform
+                        location: Salem, OR
+                        timestamp: 2024-05-01T10:15:00Z
+                        eventCode: CREATED
+                        detailedDescription: Shipment ready for pickup
+                    assignedLoadId: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                    lastUpdatedAt: 2024-05-02T09:05:00Z
+                page: 0
+                size: 20
+                totalItems: 2
+                totalPages: 1
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Assign shipments to a load
+      tags:
+        - Load Shipments
+      description: |
+        Adds one or more shipments to the specified load. Use this endpoint to
+        consolidate freight prior to carrier tendering and execution.
+      operationId: assignShipmentsToLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoadShipmentAssignmentRequest'
+            example:
+              shipmentIds:
+                - 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                - df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+      responses:
+        '201':
+          description: Shipments assigned to the load.
+          headers:
+            Location:
+              description: URI where the load shipments can be retrieved.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+              example:
+                id: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                reference: PKG-2024-0001
+                status: PLANNED
+                carrierName: null
+                shipments:
+                  - 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                  - df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+                origin:
+                  name: Portland Distribution Center
+                  addressLine1: 123 Warehouse Way
+                  addressLine2: null
+                  city: Portland
+                  stateOrProvince: OR
+                  postalCode: 97201
+                  country: US
+                destination:
+                  name: Denver Retail Hub
+                  addressLine1: 456 Market Street
+                  addressLine2: Suite 12
+                  city: Denver
+                  stateOrProvince: CO
+                  postalCode: 80202
+                  country: US
+                requestedPickupDate: 2024-05-15
+                requestedDeliveryDate: 2024-05-20
+                pickup: null
+                tender:
+                  status: NOT_TENDERED
+                notes: Handle with care
+                createdAt: 2024-05-01T08:00:00Z
+                updatedAt: 2024-05-01T08:10:00Z
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}/shipments/{shipmentId}:
+    delete:
+      summary: Remove a shipment from a load
+      tags:
+        - Load Shipments
+      description: |
+        Detaches a shipment from the load when freight needs to be rerouted or
+        when capacity limits are exceeded.
+      operationId: removeShipmentFromLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/ShipmentIdPathParam'
+      responses:
+        '204':
+          description: Shipment removed from the load.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}/carrier:
+    put:
+      summary: Assign a carrier to a load
+      tags:
+        - Load Carrier
+      description: |
+        Associates a carrier with the load once capacity is secured. This
+        endpoint captures dispatch contact details and prepares the load for
+        tendering.
+      operationId: assignCarrier
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignCarrierRequest'
+            example:
+              carrierName: FEDEX
+              scac: FDXA
+              contactName: Jamie Coordinator
+              contactPhone: "+1-901-555-0102"
+      responses:
+        '200':
+          description: Carrier assigned successfully.
+          headers:
+            ETag:
+              description: Version identifier for the updated load.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Load'
+              example:
+                id: 8c9a5c1e-2f5b-4ad3-9ade-5e6fbe9e2e3f
+                reference: PKG-2024-0001
+                status: TENDERED
+                carrierName: FEDEX
+                shipments:
+                  - 1f243a5d-e2b4-4a27-8ec6-9bb3c3e2f4c1
+                  - df86c0bb-3a70-4a6a-9b26-ec9f99c0f77b
+                origin:
+                  name: Portland Distribution Center
+                  addressLine1: 123 Warehouse Way
+                  addressLine2: null
+                  city: Portland
+                  stateOrProvince: OR
+                  postalCode: 97201
+                  country: US
+                destination:
+                  name: Denver Retail Hub
+                  addressLine1: 456 Market Street
+                  addressLine2: Suite 12
+                  city: Denver
+                  stateOrProvince: CO
+                  postalCode: 80202
+                  country: US
+                requestedPickupDate: 2024-05-15
+                requestedDeliveryDate: 2024-05-20
+                pickup: null
+                tender:
+                  status: PENDING
+                  expiresAt: 2024-05-10T17:00:00Z
+                  respondedAt: null
+                  respondedBy: null
+                  decision: null
+                  notes: null
+                notes: Handle with care
+                createdAt: 2024-05-01T08:00:00Z
+                updatedAt: 2024-05-08T16:30:00Z
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Unassign the carrier from a load
+      tags:
+        - Load Carrier
+      description: |
+        Removes the carrier commitment from the load when capacity falls
+        through or needs to be reallocated.
+      operationId: unassignCarrier
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      responses:
+        '204':
+          description: Carrier unassigned successfully.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}/rate:
+    get:
+      summary: Retrieve the calculated rate for a load
+      tags:
+        - Load Rating
+      description: |
+        Calculates the latest transportation cost for the load based on the
+        assigned carrier, distance, and contractual pricing.
+      operationId: rateLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+      responses:
+        '200':
+          description: Calculated rate returned.
+          headers:
+            Cache-Control:
+              description: Indicates that rate evaluations are not cached by intermediaries.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingCost'
+              example:
+                amount: 1250.75
+                currency: USD
+                estimatedDeliveryDays: 3
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}/tender:
+    get:
+      summary: Retrieve tender details for a load
+      tags:
+        - Tender
+      description: |
+        Returns the tender record for the load, including expiration, decision,
+        and audit metadata used to coordinate carrier commitments.
+      operationId: getTender
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+      responses:
+        '200':
+          description: Current tender details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tender'
+              example:
+                status: PENDING
+                expiresAt: 2024-05-10T17:00:00Z
+                respondedAt: null
+                respondedBy: null
+                decision: null
+                notes: Awaiting response from FEDEX primary contact
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Tender a load to its assigned carrier
+      tags:
+        - Tender
+      description: |
+        Creates or refreshes a tender offer to the assigned carrier. Use this
+        endpoint to manage offer expirations and share special handling notes.
+      operationId: tenderLoad
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenderRequest'
+            example:
+              expiresAt: 2024-05-10T17:00:00Z
+              notes: Tendered via EDI transmission 12345
+      responses:
+        '200':
+          description: Tender refreshed successfully.
+          headers:
+            ETag:
+              description: Version identifier for the tender state.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tender'
+              example:
+                status: PENDING
+                expiresAt: 2024-05-10T17:00:00Z
+                respondedAt: null
+                respondedBy: null
+                decision: null
+                notes: Tender expiration extended after updating pickup window
+        '201':
+          description: Tender created successfully.
+          headers:
+            Location:
+              description: URI of the tender resource.
+              schema:
+                type: string
+            ETag:
+              description: Version identifier for the tender state.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tender'
+              example:
+                status: PENDING
+                expiresAt: 2024-05-10T17:00:00Z
+                respondedAt: null
+                respondedBy: null
+                decision: null
+                notes: Tender created and dispatched to FEDEX carrier portal
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Withdraw an active tender
+      tags:
+        - Tender
+      description: |
+        Cancels the active tender offer, notifying downstream systems that the
+        carrier response is no longer valid.
+      operationId: cancelTender
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      responses:
+        '204':
+          description: Tender cancelled successfully.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}/tender/decision:
+    put:
+      summary: Record the carrier response to a tender
+      tags:
+        - Tender
+      description: |
+        Captures a carrier's accept or decline response for the tender,
+        updating downstream planning and execution workflows.
+      operationId: recordTenderDecision
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenderDecisionRequest'
+            example:
+              decision: ACCEPTED
+              respondedBy: dispatch@fedex.com
+              reason: Capacity confirmed for 5/15 pickup
+      responses:
+        '200':
+          description: Tender decision processed.
+          headers:
+            ETag:
+              description: Version identifier for the tender state.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tender'
+              example:
+                status: ACCEPTED
+                expiresAt: 2024-05-10T17:00:00Z
+                respondedAt: 2024-05-09T09:45:00Z
+                respondedBy: dispatch@fedex.com
+                decision: ACCEPTED
+                notes: Carrier confirmed capacity for requested pickup window
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}/pickup:
+    get:
+      summary: Retrieve pickup scheduling details for a load
+      tags:
+        - Pickup
+      description: |
+        Provides the confirmed pickup appointment and contact information for
+        the load, enabling dock scheduling and driver coordination.
+      operationId: getPickup
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+      responses:
+        '200':
+          description: Pickup details for the load.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupDetails'
+              example:
+                confirmationNumber: PU-556677
+                scheduledFor: 2024-05-15T14:00:00Z
+                location:
+                  name: Portland Distribution Center
+                  addressLine1: 123 Warehouse Way
+                  addressLine2: null
+                  city: Portland
+                  stateOrProvince: OR
+                  postalCode: 97201
+                  country: US
+                contactName: Dana Warehouse
+                contactPhone: "+1-503-555-0199"
+                instructions: Load at dock 4 and secure pallets with straps
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Schedule or update the pickup for a load
+      tags:
+        - Pickup
+      description: |
+        Creates or amends the pickup appointment for the load, including dock
+        instructions and onsite contacts.
+      operationId: schedulePickup
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SchedulePickupRequest'
+            example:
+              scheduledFor: 2024-05-15T14:00:00Z
+              location:
+                name: Portland Distribution Center
+                addressLine1: 123 Warehouse Way
+                addressLine2: null
+                city: Portland
+                stateOrProvince: OR
+                postalCode: 97201
+                country: US
+              contactName: Dana Warehouse
+              contactPhone: "+1-503-555-0199"
+              instructions: Load at dock 4 and secure pallets with straps
+      responses:
+        '200':
+          description: Pickup scheduled successfully.
+          headers:
+            ETag:
+              description: Version identifier for the pickup details.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupDetails'
+              example:
+                confirmationNumber: PU-556677
+                scheduledFor: 2024-05-15T14:00:00Z
+                location:
+                  name: Portland Distribution Center
+                  addressLine1: 123 Warehouse Way
+                  addressLine2: null
+                  city: Portland
+                  stateOrProvince: OR
+                  postalCode: 97201
+                  country: US
+                contactName: Dana Warehouse
+                contactPhone: "+1-503-555-0199"
+                instructions: Load at dock 4 and secure pallets with straps
+        '201':
+          description: Pickup created successfully.
+          headers:
+            Location:
+              description: URI of the pickup resource.
+              schema:
+                type: string
+            ETag:
+              description: Version identifier for the pickup details.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupDetails'
+              example:
+                confirmationNumber: PU-556677
+                scheduledFor: 2024-05-15T14:00:00Z
+                location:
+                  name: Portland Distribution Center
+                  addressLine1: 123 Warehouse Way
+                  addressLine2: null
+                  city: Portland
+                  stateOrProvince: OR
+                  postalCode: 97201
+                  country: US
+                contactName: Dana Warehouse
+                contactPhone: "+1-503-555-0199"
+                instructions: Load at dock 4 and secure pallets with straps
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Cancel the scheduled pickup for a load
+      tags:
+        - Pickup
+      description: |
+        Removes the scheduled pickup appointment, freeing dock capacity and
+        notifying the carrier of the cancellation.
+      operationId: cancelPickup
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+        - $ref: '#/components/parameters/IfMatchHeader'
+      responses:
+        '204':
+          description: Pickup cancelled successfully.
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /loads/{loadId}/bol:
+    get:
+      summary: Retrieve a Bill of Lading document for a load
+      tags:
+        - Documents
+      description: |
+        Returns the carrier-approved Bill of Lading (BOL) document, enabling
+        downstream systems to share legally required shipment documentation.
+      operationId: getBillOfLading
+      parameters:
+        - $ref: '#/components/parameters/LoadIdPathParam'
+      responses:
+        '200':
+          description: Bill of Lading content in plain text.
+          content:
+            text/plain:
+              schema:
+                type: string
+              example: |
+                Bill of Lading
+                Load: PKG-2024-0001
+                Carrier: FEDEX (SCAC: FDXA)
+                Pickup: 2024-05-15T14:00:00Z at Portland Distribution Center, 123 Warehouse Way, Portland OR 97201
+                Delivery: Denver Retail Hub, 456 Market Street, Denver CO 80202
+                Items:
+                  - Shipment ORD-100045, Tracking TRK123456789
+                  - Shipment ORD-100046, Tracking TRK987654321
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  parameters:
+    LoadIdPathParam:
+      name: loadId
+      in: path
+      required: true
+      description: Identifier of the load.
+      schema:
+        type: string
+        format: uuid
+    ShipmentIdPathParam:
+      name: shipmentId
+      in: path
+      required: true
+      description: Identifier of the shipment.
+      schema:
+        type: string
+        format: uuid
+    ShipmentStatusQueryParam:
+      name: status
+      in: query
+      description: Shipment status filter. If omitted, all statuses are returned.
+      required: false
+      schema:
+        $ref: '#/components/schemas/ShipmentStatus'
+    LoadStatusQueryParam:
+      name: status
+      in: query
+      description: Load status filter. If omitted, all statuses are returned.
+      required: false
+      schema:
+        $ref: '#/components/schemas/LoadStatus'
+    CarrierNameQueryParam:
+      name: carrierName
+      in: query
+      description: Carrier filter applied to shipments or loads.
+      required: false
+      schema:
+        $ref: '#/components/schemas/CarrierName'
+    PageParam:
+      name: page
+      in: query
+      description: Zero-based index of the page to retrieve.
+      required: false
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+    PageSizeParam:
+      name: size
+      in: query
+      description: Number of records to include in a page.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    IfMatchHeader:
+      name: If-Match
+      in: header
+      description: Optional concurrency control header containing an ETag value.
+      required: false
+      schema:
+        type: string
+    IfNoneMatchHeader:
+      name: If-None-Match
+      in: header
+      description: Optional caching header allowing conditional GET semantics via ETags.
+      required: false
+      schema:
+        type: string
+  responses:
+    BadRequest:
+      description: Invalid request payload or parameters.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: Requested resource was not found.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Conflict:
+      description: Request could not be processed due to a conflict with the current state of the resource.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    PreconditionFailed:
+      description: Precondition header requirements were not met for the request.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    InternalServerError:
+      description: Unexpected error occurred while processing the request.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Shipment:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/ShipmentId'
+        orderId:
+          $ref: '#/components/schemas/OrderId'
+        status:
+          $ref: '#/components/schemas/ShipmentStatus'
+        carrierName:
+          allOf:
+            - $ref: '#/components/schemas/CarrierName'
+          nullable: true
+        trackingNumber:
+          $ref: '#/components/schemas/TrackingNumber'
+        trackingEvents:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingEvent'
+        assignedLoadId:
+          description: Load currently responsible for transporting the shipment.
+          type: string
+          format: uuid
+          nullable: true
+        lastUpdatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - orderId
+        - status
+        - trackingEvents
+    ShipmentCollection:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Shipment'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalItems:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+      required:
+        - items
+        - page
+        - size
+        - totalItems
+        - totalPages
+    ShipmentId:
+      type: object
+      properties:
+        value:
+          type: string
+          format: uuid
+      required:
+        - value
+    OrderId:
+      type: object
+      properties:
+        value:
+          type: string
+      required:
+        - value
+    TrackingNumber:
+      type: object
+      properties:
+        value:
+          type: string
+      required:
+        - value
+    ShipmentStatus:
+      type: string
+      enum:
+        - CREATED
+        - IN_TRANSIT
+        - DELIVERED
+        - FAILED_DELIVERY
+        - UNASSIGNED
+    CarrierName:
+      type: string
+      enum:
+        - FEDEX
+        - UPS
+        - DHL
+        - USPS
+    TrackingEvent:
+      type: object
+      properties:
+        status:
+          type: string
+        statusDescription:
+          type: string
+        location:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        eventCode:
+          type: string
+        detailedDescription:
+          type: string
+      required:
+        - status
+        - timestamp
+    CreateLoadRequest:
+      type: object
+      properties:
+        reference:
+          type: string
+        shipments:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        origin:
+          $ref: '#/components/schemas/Location'
+        destination:
+          $ref: '#/components/schemas/Location'
+        requestedPickupDate:
+          type: string
+          format: date
+        requestedDeliveryDate:
+          type: string
+          format: date
+        notes:
+          type: string
+          nullable: true
+      required:
+        - reference
+        - shipments
+        - origin
+        - destination
+        - requestedPickupDate
+        - requestedDeliveryDate
+    UpdateLoadRequest:
+      type: object
+      properties:
+        reference:
+          type: string
+        requestedPickupDate:
+          type: string
+          format: date
+        requestedDeliveryDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/LoadStatus'
+        notes:
+          type: string
+          nullable: true
+      additionalProperties: false
+    Load:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        reference:
+          type: string
+        status:
+          $ref: '#/components/schemas/LoadStatus'
+        carrierName:
+          allOf:
+            - $ref: '#/components/schemas/CarrierName'
+          nullable: true
+        shipments:
+          type: array
+          minItems: 0
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+        origin:
+          $ref: '#/components/schemas/Location'
+        destination:
+          $ref: '#/components/schemas/Location'
+        requestedPickupDate:
+          type: string
+          format: date
+        requestedDeliveryDate:
+          type: string
+          format: date
+        pickup:
+          $ref: '#/components/schemas/PickupDetails'
+          nullable: true
+        tender:
+          $ref: '#/components/schemas/Tender'
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - reference
+        - status
+        - shipments
+        - origin
+        - destination
+        - requestedPickupDate
+        - requestedDeliveryDate
+        - createdAt
+        - updatedAt
+    LoadCollection:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Load'
+        page:
+          type: integer
+          minimum: 0
+        size:
+          type: integer
+          minimum: 1
+        totalItems:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+      required:
+        - items
+        - page
+        - size
+        - totalItems
+        - totalPages
+    LoadStatus:
+      type: string
+      enum:
+        - PLANNED
+        - TENDERED
+        - TENDER_ACCEPTED
+        - BOOKED
+        - IN_TRANSIT
+        - DELIVERED
+        - CANCELLED
+    Location:
+      type: object
+      properties:
+        name:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+          nullable: true
+        city:
+          type: string
+        stateOrProvince:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+      required:
+        - name
+        - addressLine1
+        - city
+        - stateOrProvince
+        - postalCode
+        - country
+    LoadShipmentAssignmentRequest:
+      type: object
+      properties:
+        shipmentIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            format: uuid
+      required:
+        - shipmentIds
+    AssignCarrierRequest:
+      type: object
+      properties:
+        carrierName:
+          $ref: '#/components/schemas/CarrierName'
+        scac:
+          description: Standard Carrier Alpha Code identifying the carrier.
+          type: string
+          nullable: true
+        contactName:
+          type: string
+          nullable: true
+        contactPhone:
+          type: string
+          nullable: true
+      required:
+        - carrierName
+    SchedulePickupRequest:
+      type: object
+      properties:
+        scheduledFor:
+          type: string
+          format: date-time
+        location:
+          $ref: '#/components/schemas/Location'
+        contactName:
+          type: string
+          nullable: true
+        contactPhone:
+          type: string
+          nullable: true
+        instructions:
+          type: string
+          nullable: true
+      required:
+        - scheduledFor
+        - location
+    PickupDetails:
+      type: object
+      properties:
+        confirmationNumber:
+          type: string
+        scheduledFor:
+          type: string
+          format: date-time
+        location:
+          $ref: '#/components/schemas/Location'
+        contactName:
+          type: string
+          nullable: true
+        contactPhone:
+          type: string
+          nullable: true
+        instructions:
+          type: string
+          nullable: true
+      required:
+        - confirmationNumber
+        - scheduledFor
+        - location
+    TenderRequest:
+      type: object
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+      required:
+        - expiresAt
+    TenderDecisionRequest:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+            - ACCEPTED
+            - DECLINED
+        respondedBy:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+      required:
+        - decision
+    Tender:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/TenderStatus'
+        expiresAt:
+          type: string
+          format: date-time
+        respondedAt:
+          type: string
+          format: date-time
+          nullable: true
+        respondedBy:
+          type: string
+          nullable: true
+        decision:
+          type: string
+          enum:
+            - ACCEPTED
+            - DECLINED
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required:
+        - status
+    TenderStatus:
+      type: string
+      enum:
+        - NOT_TENDERED
+        - PENDING
+        - ACCEPTED
+        - DECLINED
+        - EXPIRED
+    ShippingCost:
+      type: object
+      properties:
+        amount:
+          type: number
+          format: double
+        currency:
+          type: string
+        estimatedDeliveryDays:
+          type: integer
+          minimum: 1
+      required:
+        - amount
+        - currency
+        - estimatedDeliveryDays
+    Problem:
+      type: object
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+      required:
+        - type
+        - title
+        - status

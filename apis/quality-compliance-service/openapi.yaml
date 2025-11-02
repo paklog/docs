@@ -1,0 +1,979 @@
+openapi: 3.1.0
+info:
+  title: Quality Control & Compliance API
+  version: 1.0.0
+  description: |
+    # Quality Control & Compliance Microservice
+
+    This API provides comprehensive quality control and compliance management capabilities for warehouse and logistics operations.
+
+    ## Features
+
+    - **Inspection Management**: Perform quality inspections at various stages (receiving, picking, packing, shipping)
+    - **Defect Tracking**: Record and track defects with severity levels and photographic evidence
+    - **Compliance Monitoring**: Ensure products meet regulatory and quality standards
+    - **Statistical Process Control**: Monitor quality metrics and trends
+    - **Event-Driven Architecture**: Real-time notifications of quality issues via Kafka events
+
+    ## Inspection Types
+
+    The system supports multiple inspection types:
+    - **RECEIVING**: Quality checks when goods arrive at the warehouse
+    - **PICKING**: Verification during order picking operations
+    - **PACKING**: Quality assurance before packaging
+    - **SHIPPING**: Final checks before shipment
+    - **PERIODIC**: Scheduled quality audits
+    - **AUDIT**: Compliance and process audits
+
+    ## Sampling Strategies
+
+    - **FULL_INSPECTION**: 100% inspection of all items
+    - **AQL_2_5**: Acceptable Quality Level 2.5% sampling
+    - **AQL_4_0**: Acceptable Quality Level 4.0% sampling
+    - **RANDOM_10**: Random 10% sample
+    - **RANDOM_25**: Random 25% sample
+
+    ## Defect Severity Levels
+
+    - **CRITICAL**: Immediate action required, product quarantine
+    - **HIGH**: Significant quality issue, product fails inspection
+    - **MAJOR**: Notable defect, conditional acceptance
+    - **MEDIUM**: Minor quality concern
+    - **LOW**: Cosmetic or documentation issue
+
+  contact:
+    name: PakLog Quality Team
+    email: quality@paklog.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8098
+    description: Local Development
+  - url: https://api-dev.paklog.com/quality
+    description: Development Environment
+  - url: https://api-staging.paklog.com/quality
+    description: Staging Environment
+  - url: https://api.paklog.com/quality
+    description: Production Environment
+
+tags:
+  - name: Inspections
+    description: Quality inspection operations
+  - name: Defects
+    description: Defect management and tracking
+  - name: Health
+    description: Service health and monitoring
+
+paths:
+  /api/v1/quality/inspections:
+    post:
+      summary: Create and perform a quality inspection
+      description: |
+        Initiates a new quality inspection for an item or shipment. This operation creates an inspection record
+        and begins the quality control process.
+
+        ## Workflow
+        1. Create inspection with this endpoint
+        2. Add defects if any are found using `/inspections/{id}/defects`
+        3. Complete the inspection using `/inspections/{id}/complete`
+
+        ## Business Rules
+        - Inspector must be a valid user in the system
+        - Sample size must be appropriate for the selected sampling strategy
+        - Inspections for temperature-sensitive items must include temperature readings
+
+        ## Events Published
+        - None (events are published when inspection is completed)
+
+      operationId: performInspection
+      tags:
+        - Inspections
+      requestBody:
+        required: true
+        description: Inspection details and parameters
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PerformInspectionCommand'
+            examples:
+              receiving_inspection:
+                summary: Receiving Inspection Example
+                description: Quality check when goods arrive from supplier
+                value:
+                  type: RECEIVING
+                  itemId: ITEM-12345
+                  inspectorId: INS-001
+                  samplingStrategy: AQL_2_5
+                  sampleSize: 50
+                  orderId: ORD-98765
+                  shipmentId: SHIP-54321
+              full_inspection:
+                summary: Full Inspection Example
+                description: 100% inspection of critical pharmaceutical items
+                value:
+                  type: PERIODIC
+                  itemId: PHARMA-789
+                  inspectorId: INS-002
+                  samplingStrategy: FULL_INSPECTION
+                  sampleSize: 1000
+                  orderId: null
+                  shipmentId: null
+              shipping_audit:
+                summary: Shipping Audit Example
+                description: Final quality check before shipment
+                value:
+                  type: SHIPPING
+                  itemId: PROD-456
+                  inspectorId: INS-003
+                  samplingStrategy: RANDOM_10
+                  sampleSize: 25
+                  orderId: ORD-11111
+                  shipmentId: SHIP-22222
+      responses:
+        '201':
+          description: Inspection created successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                format: uuid
+                description: Unique inspection ID
+              examples:
+                success:
+                  value: "67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+        '400':
+          description: Invalid request parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_sampling:
+                  value:
+                    timestamp: "2025-11-01T10:30:00Z"
+                    status: 400
+                    error: Bad Request
+                    message: "Sample size must be greater than 0 for the selected sampling strategy"
+                    path: "/api/v1/quality/inspections"
+                missing_inspector:
+                  value:
+                    timestamp: "2025-11-01T10:30:00Z"
+                    status: 400
+                    error: Bad Request
+                    message: "inspectorId must not be blank"
+                    path: "/api/v1/quality/inspections"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/quality/inspections/{id}:
+    get:
+      summary: Retrieve inspection details
+      description: |
+        Fetches complete details of a specific inspection including all defects found,
+        measurement data, photos, and current status.
+
+        ## Use Cases
+        - Review inspection results
+        - Generate quality reports
+        - Audit trail verification
+        - Historical data analysis
+
+      operationId: getInspection
+      tags:
+        - Inspections
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Unique inspection identifier
+          schema:
+            type: string
+            format: uuid
+          example: "67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+      responses:
+        '200':
+          description: Inspection details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionRecord'
+              examples:
+                passed_inspection:
+                  summary: Passed Inspection
+                  description: Example of a successful inspection with no defects
+                  value:
+                    id: "67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+                    inspectionNumber: "INS-2025-001234"
+                    type: RECEIVING
+                    result: PASSED
+                    orderId: "ORD-98765"
+                    shipmentId: "SHIP-54321"
+                    itemId: "ITEM-12345"
+                    inspectorId: "INS-001"
+                    inspectedAt: "2025-11-01T09:15:00Z"
+                    defects: []
+                    photoUrls: []
+                    samplingStrategy: AQL_2_5
+                    sampleSize: 50
+                    itemsInspected: 50
+                    defectsFound: 0
+                    temperatureCelsius: 22.5
+                    weightKg: 145.8
+                    expectedWeightKg: 145.0
+                    weightTolerancePercent: 2.0
+                    barcode: "7891234567890"
+                    barcodeVerified: true
+                    notes: "All items in excellent condition"
+                    correctionAction: null
+                    correctionCompletedAt: null
+                    version: 1
+                    createdAt: "2025-11-01T09:10:00Z"
+                    updatedAt: "2025-11-01T09:15:00Z"
+                failed_with_defects:
+                  summary: Failed Inspection with Defects
+                  description: Inspection that failed due to multiple defects
+                  value:
+                    id: "8a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p"
+                    inspectionNumber: "INS-2025-001235"
+                    type: SHIPPING
+                    result: FAILED
+                    orderId: "ORD-11111"
+                    shipmentId: "SHIP-22222"
+                    itemId: "PROD-456"
+                    inspectorId: "INS-002"
+                    inspectedAt: "2025-11-01T14:30:00Z"
+                    defects:
+                      - defectId: "DEF-001"
+                        type: DAMAGED
+                        severity: HIGH
+                        description: "Boxes show signs of water damage"
+                        location: "Pallet 3, Row 2"
+                        quantity: 12
+                        photoUrl: "https://storage.paklog.com/defects/def-001.jpg"
+                        reportedBy: "INS-002"
+                        reportedAt: "2025-11-01T14:25:00Z"
+                        rootCause: "Improper storage conditions"
+                        correctionAction: "Isolate damaged units, repackage undamaged items"
+                      - defectId: "DEF-002"
+                        type: PACKAGING_DEFECT
+                        severity: MEDIUM
+                        description: "Torn outer packaging on several units"
+                        location: "Pallet 3, Row 1"
+                        quantity: 5
+                        photoUrl: "https://storage.paklog.com/defects/def-002.jpg"
+                        reportedBy: "INS-002"
+                        reportedAt: "2025-11-01T14:28:00Z"
+                        rootCause: null
+                        correctionAction: "Repackage affected items"
+                    photoUrls:
+                      - "https://storage.paklog.com/inspections/ins-2025-001235-overview.jpg"
+                      - "https://storage.paklog.com/inspections/ins-2025-001235-pallet3.jpg"
+                    samplingStrategy: RANDOM_10
+                    sampleSize: 25
+                    itemsInspected: 25
+                    defectsFound: 17
+                    temperatureCelsius: 23.1
+                    weightKg: 0.0
+                    expectedWeightKg: 0.0
+                    weightTolerancePercent: 2.0
+                    barcode: "7891234567890"
+                    barcodeVerified: true
+                    notes: "Multiple quality issues detected - shipment should not proceed"
+                    correctionAction: "Repackage all affected items and perform re-inspection"
+                    correctionCompletedAt: null
+                    version: 3
+                    createdAt: "2025-11-01T14:20:00Z"
+                    updatedAt: "2025-11-01T14:30:00Z"
+                quarantine_inspection:
+                  summary: Critical Defect - Quarantine
+                  description: Inspection with critical defect requiring immediate quarantine
+                  value:
+                    id: "9b8c7d6e-5f4a-3b2c-1d0e-f9a8b7c6d5e4"
+                    inspectionNumber: "INS-2025-001236"
+                    type: RECEIVING
+                    result: QUARANTINE
+                    orderId: "ORD-22222"
+                    shipmentId: "SHIP-33333"
+                    itemId: "FOOD-789"
+                    inspectorId: "INS-003"
+                    inspectedAt: "2025-11-01T16:45:00Z"
+                    defects:
+                      - defectId: "DEF-003"
+                        type: TEMPERATURE_VIOLATION
+                        severity: CRITICAL
+                        description: "Temperature out of range: 12.5°C (allowed: -18.0-0.0)"
+                        location: "Cold storage unit C-12"
+                        quantity: 500
+                        photoUrl: "https://storage.paklog.com/defects/def-003.jpg"
+                        reportedBy: "INS-003"
+                        reportedAt: "2025-11-01T16:42:00Z"
+                        rootCause: "Refrigeration unit malfunction"
+                        correctionAction: "Immediate quarantine - contact food safety team"
+                      - defectId: "DEF-004"
+                        type: EXPIRED
+                        severity: CRITICAL
+                        description: "Products past expiration date"
+                        location: "Cold storage unit C-12, Shelf 5"
+                        quantity: 50
+                        photoUrl: "https://storage.paklog.com/defects/def-004.jpg"
+                        reportedBy: "INS-003"
+                        reportedAt: "2025-11-01T16:44:00Z"
+                        rootCause: "Inventory rotation failure"
+                        correctionAction: "Destroy expired products per food safety protocols"
+                    photoUrls:
+                      - "https://storage.paklog.com/inspections/ins-2025-001236-temp.jpg"
+                      - "https://storage.paklog.com/inspections/ins-2025-001236-labels.jpg"
+                    samplingStrategy: FULL_INSPECTION
+                    sampleSize: 500
+                    itemsInspected: 500
+                    defectsFound: 550
+                    temperatureCelsius: 12.5
+                    weightKg: 0.0
+                    expectedWeightKg: 0.0
+                    weightTolerancePercent: 2.0
+                    barcode: "7891234500001"
+                    barcodeVerified: true
+                    notes: "CRITICAL: Temperature violation detected - entire lot quarantined"
+                    correctionAction: "Quarantine all items, initiate food safety investigation"
+                    correctionCompletedAt: null
+                    version: 5
+                    createdAt: "2025-11-01T16:40:00Z"
+                    updatedAt: "2025-11-01T16:45:00Z"
+        '404':
+          description: Inspection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    timestamp: "2025-11-01T10:30:00Z"
+                    status: 404
+                    error: Not Found
+                    message: "Inspection with id '67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d' not found"
+                    path: "/api/v1/quality/inspections/67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/quality/inspections/{id}/defects:
+    post:
+      summary: Add defect to an inspection
+      description: |
+        Records a defect found during quality inspection. Defects are categorized by type and severity,
+        which automatically affects the inspection result.
+
+        ## Business Rules
+        - **CRITICAL** severity defects → Inspection result = QUARANTINE
+        - **HIGH** severity defects → Inspection result = FAILED
+        - Other severities → Inspection result = CONDITIONAL (if previously PASSED)
+
+        ## Photo Requirements
+        - Photos are mandatory for CRITICAL and HIGH severity defects
+        - Recommended for all defects for audit trail purposes
+
+        ## Defect Types
+        - **DAMAGED**: Physical damage to product or packaging
+        - **INCORRECT_QUANTITY**: Count mismatch
+        - **WRONG_ITEM**: Item doesn't match order
+        - **MISSING_LABEL**: Required labels absent
+        - **EXPIRED**: Past expiration or best-by date
+        - **CONTAMINATED**: Foreign matter or contamination
+        - **PACKAGING_DEFECT**: Packaging issues
+        - **TEMPERATURE_VIOLATION**: Outside acceptable temperature range
+        - **WEIGHT_DISCREPANCY**: Weight doesn't match specifications
+        - **BARCODE_UNREADABLE**: Barcode scanning issues
+
+      operationId: addDefect
+      tags:
+        - Defects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Inspection ID to add defect to
+          schema:
+            type: string
+            format: uuid
+          example: "67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Defect'
+            examples:
+              critical_temperature:
+                summary: Critical Temperature Violation
+                description: Temperature-sensitive product outside safe range
+                value:
+                  defectId: "DEF-001"
+                  type: TEMPERATURE_VIOLATION
+                  severity: CRITICAL
+                  description: "Temperature out of range: 8.5°C (allowed: 2.0-4.0°C)"
+                  location: "Cold storage zone A, pallet 12"
+                  quantity: 200
+                  photoUrl: "https://storage.paklog.com/defects/temp-violation-001.jpg"
+                  reportedBy: "INS-001"
+                  reportedAt: "2025-11-01T10:15:30Z"
+                  rootCause: "Refrigeration unit malfunction"
+                  correctionAction: "Quarantine all items, test product integrity"
+              damaged_packaging:
+                summary: High Severity Damage
+                description: Significant packaging damage affecting product integrity
+                value:
+                  defectId: "DEF-002"
+                  type: DAMAGED
+                  severity: HIGH
+                  description: "Multiple boxes crushed during transit"
+                  location: "Receiving dock B, shipment #SHIP-54321"
+                  quantity: 15
+                  photoUrl: "https://storage.paklog.com/defects/damage-002.jpg"
+                  reportedBy: "INS-002"
+                  reportedAt: "2025-11-01T11:22:45Z"
+                  rootCause: "Improper stacking by carrier"
+                  correctionAction: "File carrier claim, inspect contents"
+              barcode_issue:
+                summary: Major Barcode Problem
+                description: Unreadable barcodes affecting inventory tracking
+                value:
+                  defectId: "DEF-003"
+                  type: BARCODE_UNREADABLE
+                  severity: MAJOR
+                  description: "Barcode labels smudged and unreadable"
+                  location: "Item batch B-789, units 50-75"
+                  quantity: 25
+                  photoUrl: "https://storage.paklog.com/defects/barcode-003.jpg"
+                  reportedBy: "INS-003"
+                  reportedAt: "2025-11-01T13:45:12Z"
+                  rootCause: "Poor label quality from supplier"
+                  correctionAction: "Re-label affected items"
+              minor_cosmetic:
+                summary: Low Severity Cosmetic Issue
+                description: Minor cosmetic defect not affecting functionality
+                value:
+                  defectId: "DEF-004"
+                  type: PACKAGING_DEFECT
+                  severity: LOW
+                  description: "Minor scuff marks on outer box"
+                  location: "Pallet 5, layer 3"
+                  quantity: 3
+                  photoUrl: null
+                  reportedBy: "INS-001"
+                  reportedAt: "2025-11-01T15:10:00Z"
+                  rootCause: null
+                  correctionAction: "Document for supplier feedback"
+      responses:
+        '200':
+          description: Defect added successfully
+        '404':
+          description: Inspection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Invalid defect data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/quality/inspections/{id}/complete:
+    post:
+      summary: Complete an inspection
+      description: |
+        Finalizes an inspection and publishes domain events for downstream systems.
+        Once completed, the inspection status is locked and cannot be modified.
+
+        ## Events Published
+        - **InspectionCompletedEvent**: Always published with inspection summary
+        - **ComplianceViolationEvent**: Published if result is QUARANTINE
+        - **DefectDetectedEvent**: Published for each CRITICAL severity defect
+
+        ## Post-Completion Actions
+        - Inventory systems receive inspection results
+        - Warehouse management may block/release inventory
+        - Compliance systems log violations
+        - Analytics systems update quality metrics
+
+        ## Business Rules
+        - Inspection must have at least one item inspected
+        - Photos required if defects were found (configurable)
+        - Cannot complete already completed inspection
+
+      operationId: completeInspection
+      tags:
+        - Inspections
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Inspection ID to complete
+          schema:
+            type: string
+            format: uuid
+          example: "67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+      responses:
+        '200':
+          description: Inspection completed successfully
+        '404':
+          description: Inspection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '400':
+          description: Cannot complete inspection (e.g., already completed, missing required data)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                already_completed:
+                  value:
+                    timestamp: "2025-11-01T10:30:00Z"
+                    status: 400
+                    error: Bad Request
+                    message: "Inspection has already been completed"
+                    path: "/api/v1/quality/inspections/67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d/complete"
+                photos_required:
+                  value:
+                    timestamp: "2025-11-01T10:30:00Z"
+                    status: 400
+                    error: Bad Request
+                    message: "Photos are required when defects are found"
+                    path: "/api/v1/quality/inspections/67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d/complete"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /actuator/health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the service and its dependencies
+      operationId: healthCheck
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                healthy:
+                  value:
+                    status: UP
+                    components:
+                      mongo:
+                        status: UP
+                        details:
+                          version: "6.0.5"
+                      kafka:
+                        status: UP
+                      diskSpace:
+                        status: UP
+                        details:
+                          total: 500000000000
+                          free: 250000000000
+                          threshold: 10485760
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                unhealthy:
+                  value:
+                    status: DOWN
+                    components:
+                      mongo:
+                        status: DOWN
+                        details:
+                          error: "Connection refused"
+                      kafka:
+                        status: UP
+
+  /actuator/metrics:
+    get:
+      summary: Available metrics
+      description: Lists all available Prometheus metrics
+      operationId: listMetrics
+      tags:
+        - Health
+      responses:
+        '200':
+          description: List of available metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  names:
+                    type: array
+                    items:
+                      type: string
+
+components:
+  schemas:
+    PerformInspectionCommand:
+      type: object
+      required:
+        - type
+        - itemId
+        - inspectorId
+        - samplingStrategy
+      properties:
+        type:
+          type: string
+          enum: [RECEIVING, PICKING, PACKING, SHIPPING, PERIODIC, AUDIT]
+          description: |
+            Type of inspection being performed:
+            - RECEIVING: Quality check when goods arrive
+            - PICKING: Verification during picking
+            - PACKING: Quality check before packing
+            - SHIPPING: Final check before shipment
+            - PERIODIC: Scheduled quality audit
+            - AUDIT: Compliance audit
+          example: RECEIVING
+        itemId:
+          type: string
+          description: Unique identifier of the item being inspected
+          example: "ITEM-12345"
+          minLength: 1
+        inspectorId:
+          type: string
+          description: Unique identifier of the inspector performing the inspection
+          example: "INS-001"
+          minLength: 1
+        samplingStrategy:
+          type: string
+          enum: [FULL_INSPECTION, AQL_2_5, AQL_4_0, RANDOM_10, RANDOM_25]
+          description: |
+            Sampling methodology:
+            - FULL_INSPECTION: 100% of items inspected
+            - AQL_2_5: Acceptable Quality Level 2.5%
+            - AQL_4_0: Acceptable Quality Level 4.0%
+            - RANDOM_10: Random 10% sample
+            - RANDOM_25: Random 25% sample
+          example: AQL_2_5
+        sampleSize:
+          type: integer
+          description: Number of items to inspect based on sampling strategy
+          minimum: 1
+          example: 50
+        orderId:
+          type: string
+          nullable: true
+          description: Associated order ID (if applicable)
+          example: "ORD-98765"
+        shipmentId:
+          type: string
+          nullable: true
+          description: Associated shipment ID (if applicable)
+          example: "SHIP-54321"
+
+    InspectionRecord:
+      type: object
+      description: Complete inspection record with all details, defects, and measurements
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique inspection identifier
+          example: "67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+        inspectionNumber:
+          type: string
+          description: Human-readable inspection number
+          example: "INS-2025-001234"
+        type:
+          type: string
+          enum: [RECEIVING, PICKING, PACKING, SHIPPING, PERIODIC, AUDIT]
+          description: Type of inspection performed
+          example: RECEIVING
+        result:
+          type: string
+          enum: [PASSED, FAILED, CONDITIONAL, QUARANTINE]
+          description: |
+            Final inspection result:
+            - PASSED: All quality checks passed
+            - FAILED: Quality checks failed (HIGH severity defects)
+            - CONDITIONAL: Minor issues found (MEDIUM/LOW severity)
+            - QUARANTINE: Critical defects found, immediate action required
+          example: PASSED
+        orderId:
+          type: string
+          nullable: true
+          description: Associated order ID
+          example: "ORD-98765"
+        shipmentId:
+          type: string
+          nullable: true
+          description: Associated shipment ID
+          example: "SHIP-54321"
+        itemId:
+          type: string
+          description: Item being inspected
+          example: "ITEM-12345"
+        inspectorId:
+          type: string
+          description: Inspector who performed the inspection
+          example: "INS-001"
+        inspectedAt:
+          type: string
+          format: date-time
+          description: Timestamp when inspection was performed
+          example: "2025-11-01T09:15:00Z"
+        defects:
+          type: array
+          description: List of all defects found during inspection
+          items:
+            $ref: '#/components/schemas/Defect'
+        photoUrls:
+          type: array
+          description: URLs to inspection photos
+          items:
+            type: string
+            format: uri
+          example:
+            - "https://storage.paklog.com/inspections/ins-2025-001234-1.jpg"
+            - "https://storage.paklog.com/inspections/ins-2025-001234-2.jpg"
+        samplingStrategy:
+          type: string
+          enum: [FULL_INSPECTION, AQL_2_5, AQL_4_0, RANDOM_10, RANDOM_25]
+          description: Sampling method used
+          example: AQL_2_5
+        sampleSize:
+          type: integer
+          description: Planned sample size
+          example: 50
+        itemsInspected:
+          type: integer
+          description: Actual number of items inspected
+          example: 50
+        defectsFound:
+          type: integer
+          description: Total number of defects detected
+          example: 0
+        temperatureCelsius:
+          type: number
+          format: double
+          description: Measured temperature (for temperature-sensitive items)
+          example: 22.5
+        weightKg:
+          type: number
+          format: double
+          description: Actual measured weight in kilograms
+          example: 145.8
+        expectedWeightKg:
+          type: number
+          format: double
+          description: Expected weight in kilograms
+          example: 145.0
+        weightTolerancePercent:
+          type: number
+          format: double
+          description: Acceptable weight variance percentage
+          example: 2.0
+        barcode:
+          type: string
+          description: Scanned barcode value
+          example: "7891234567890"
+        barcodeVerified:
+          type: boolean
+          description: Whether barcode matches expected value
+          example: true
+        notes:
+          type: string
+          nullable: true
+          description: Inspector notes and observations
+          example: "All items in excellent condition"
+        correctionAction:
+          type: string
+          nullable: true
+          description: Corrective actions taken or required
+          example: null
+        correctionCompletedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When corrective action was completed
+          example: null
+        version:
+          type: integer
+          format: int64
+          description: Optimistic locking version
+          example: 1
+        createdAt:
+          type: string
+          format: date-time
+          description: Record creation timestamp
+          example: "2025-11-01T09:10:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-11-01T09:15:00Z"
+
+    Defect:
+      type: object
+      description: Quality defect found during inspection
+      required:
+        - defectId
+        - type
+        - severity
+        - description
+        - quantity
+        - reportedAt
+      properties:
+        defectId:
+          type: string
+          description: Unique defect identifier
+          example: "DEF-001"
+        type:
+          type: string
+          enum:
+            - DAMAGED
+            - INCORRECT_QUANTITY
+            - WRONG_ITEM
+            - MISSING_LABEL
+            - EXPIRED
+            - CONTAMINATED
+            - PACKAGING_DEFECT
+            - TEMPERATURE_VIOLATION
+            - WEIGHT_DISCREPANCY
+            - BARCODE_UNREADABLE
+            - OTHER
+          description: Category of defect
+          example: DAMAGED
+        severity:
+          type: string
+          enum: [LOW, MEDIUM, MAJOR, HIGH, CRITICAL]
+          description: |
+            Defect severity level:
+            - CRITICAL: Immediate quarantine required
+            - HIGH: Product fails inspection
+            - MAJOR: Significant issue, conditional pass
+            - MEDIUM: Minor quality concern
+            - LOW: Cosmetic or documentation issue
+          example: HIGH
+        description:
+          type: string
+          description: Detailed description of the defect
+          example: "Boxes show signs of water damage"
+          minLength: 1
+        location:
+          type: string
+          nullable: true
+          description: Physical location where defect was found
+          example: "Pallet 3, Row 2"
+        quantity:
+          type: integer
+          description: Number of affected items
+          minimum: 1
+          example: 12
+        photoUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: URL to photo evidence of the defect
+          example: "https://storage.paklog.com/defects/def-001.jpg"
+        reportedBy:
+          type: string
+          nullable: true
+          description: Inspector who reported the defect
+          example: "INS-002"
+        reportedAt:
+          type: string
+          format: date-time
+          description: When the defect was reported
+          example: "2025-11-01T14:25:00Z"
+        rootCause:
+          type: string
+          nullable: true
+          description: Identified root cause of the defect
+          example: "Improper storage conditions"
+        correctionAction:
+          type: string
+          nullable: true
+          description: Action taken or planned to correct the issue
+          example: "Isolate damaged units, repackage undamaged items"
+
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2025-11-01T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP status text
+          example: "Bad Request"
+        message:
+          type: string
+          description: Error message description
+          example: "Sample size must be greater than 0"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/quality/inspections"
+
+    HealthResponse:
+      type: object
+      description: Service health status
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN, OUT_OF_SERVICE, UNKNOWN]
+          description: Overall health status
+          example: UP
+        components:
+          type: object
+          description: Health status of individual components
+          additionalProperties:
+            type: object
+            properties:
+              status:
+                type: string
+                enum: [UP, DOWN, OUT_OF_SERVICE, UNKNOWN]
+              details:
+                type: object
+                additionalProperties: true
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT authentication token
+
+security:
+  - bearerAuth: []

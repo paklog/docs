@@ -1,0 +1,1488 @@
+asyncapi: 3.0.0
+
+info:
+  title: Equipment & Asset Management Events API
+  version: 1.0.0
+  description: |
+    # Equipment & Asset Management Events API
+
+    This AsyncAPI specification defines all asynchronous, event-driven communication
+    patterns for the Equipment & Asset Management system. The system uses Apache Kafka
+    as the message broker for reliable, scalable event streaming.
+
+    ## Event-Driven Architecture Benefits
+    - **Decoupling**: Services communicate through events without direct dependencies
+    - **Scalability**: Events can be processed by multiple consumers in parallel
+    - **Reliability**: Kafka ensures message persistence and delivery guarantees
+    - **Auditability**: Complete event history for compliance and debugging
+    - **Real-time Processing**: Immediate propagation of state changes across systems
+
+    ## Event Categories
+
+    ### Asset Lifecycle Events
+    Events tracking the complete lifecycle of equipment assets from registration to retirement.
+    - AssetRegistered: New asset added to inventory
+    - AssetStatusChanged: Asset operational status updated
+    - AssetLocationChanged: Asset moved to new location
+    - AssetRetired: Asset permanently removed from service
+
+    ### Maintenance Events
+    Events related to maintenance activities, scheduling, and completion.
+    - MaintenanceScheduled: New maintenance scheduled
+    - MaintenanceStarted: Maintenance work begins
+    - MaintenanceCompleted: Maintenance work finished
+    - MaintenanceOverdue: Scheduled maintenance missed
+
+    ### Work Order Events
+    Events tracking work order lifecycle from creation to completion.
+    - WorkOrderCreated: New work order issued
+    - WorkOrderAssigned: Work order assigned to technician
+    - WorkOrderStarted: Work begins on work order
+    - WorkOrderCompleted: Work order finished
+    - WorkOrderCancelled: Work order cancelled
+
+    ### Predictive Analytics Events
+    Events from the AI/ML predictive maintenance system.
+    - FailurePredicted: Potential failure detected by ML model
+    - HighRiskAlertTriggered: Critical failure risk requires immediate action
+    - PredictiveMaintenanceScheduled: Auto-scheduled maintenance from prediction
+
+    ### Utilization Events
+    Real-time events tracking equipment usage and performance.
+    - AssetUtilizationUpdated: Usage metrics updated
+    - OperatingHoursRecorded: Operating hours logged
+    - PerformanceMetricsCollected: Performance data captured
+
+    ## Message Ordering & Delivery
+    - **Partitioning**: Events for the same asset are routed to the same partition (by assetId)
+    - **Ordering**: Events for a single asset are guaranteed to be processed in order
+    - **At-least-once delivery**: Events may be delivered more than once; consumers must be idempotent
+    - **Retention**: Events retained for 30 days by default (configurable per topic)
+
+    ## Consumer Groups
+    Different services subscribe to events using consumer groups:
+    - `notification-service`: Sends alerts and notifications
+    - `analytics-service`: Aggregates metrics and generates reports
+    - `billing-service`: Tracks costs and generates invoices
+    - `inventory-service`: Manages parts inventory based on predictions
+    - `audit-service`: Records all events for compliance
+
+  contact:
+    name: Paklog Equipment Team
+    email: equipment@paklog.com
+    url: https://paklog.com/support
+  license:
+    name: Proprietary
+    url: https://paklog.com/license
+
+servers:
+  production:
+    host: kafka.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    tags:
+      - name: env:production
+        description: Production environment
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+
+  staging:
+    host: kafka-staging.paklog.com:9092
+    protocol: kafka
+    description: Staging Kafka cluster
+    tags:
+      - name: env:staging
+        description: Staging environment
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka instance
+    tags:
+      - name: env:development
+        description: Local development environment
+
+defaultContentType: application/json
+
+channels:
+  assetLifecycle:
+    address: equipment.asset.lifecycle
+    description: |
+      Channel for all asset lifecycle events including registration, status changes,
+      location updates, and retirement. This is a high-volume channel with events
+      occurring whenever asset state changes.
+
+      **Partitioning Strategy**: Partitioned by assetId to maintain ordering
+      **Retention**: 30 days
+      **Expected Volume**: ~5,000 events/day
+    messages:
+      assetRegistered:
+        $ref: '#/components/messages/AssetRegistered'
+      assetStatusChanged:
+        $ref: '#/components/messages/AssetStatusChanged'
+      assetLocationChanged:
+        $ref: '#/components/messages/AssetLocationChanged'
+      assetRetired:
+        $ref: '#/components/messages/AssetRetired'
+
+  maintenanceOperations:
+    address: equipment.maintenance.operations
+    description: |
+      Channel for maintenance scheduling, execution, and completion events.
+      Used by maintenance teams, scheduling systems, and reporting services.
+
+      **Partitioning Strategy**: Partitioned by assetId
+      **Retention**: 90 days (compliance requirement)
+      **Expected Volume**: ~2,000 events/day
+    messages:
+      maintenanceScheduled:
+        $ref: '#/components/messages/MaintenanceScheduled'
+      maintenanceStarted:
+        $ref: '#/components/messages/MaintenanceStarted'
+      maintenanceCompleted:
+        $ref: '#/components/messages/MaintenanceCompleted'
+      maintenanceOverdue:
+        $ref: '#/components/messages/MaintenanceOverdue'
+
+  workOrders:
+    address: equipment.workorders
+    description: |
+      Channel for work order lifecycle events from creation through completion.
+      Consumed by technician mobile apps, dispatch systems, and cost tracking.
+
+      **Partitioning Strategy**: Partitioned by workOrderId
+      **Retention**: 90 days
+      **Expected Volume**: ~1,500 events/day
+    messages:
+      workOrderCreated:
+        $ref: '#/components/messages/WorkOrderCreated'
+      workOrderAssigned:
+        $ref: '#/components/messages/WorkOrderAssigned'
+      workOrderCompleted:
+        $ref: '#/components/messages/WorkOrderCompleted'
+
+  predictiveAnalytics:
+    address: equipment.predictions
+    description: |
+      Channel for AI/ML prediction events including failure forecasts and risk alerts.
+      Low volume but high priority events that trigger automated maintenance scheduling.
+
+      **Partitioning Strategy**: Partitioned by assetId
+      **Retention**: 180 days (ML model training)
+      **Expected Volume**: ~200 events/day
+    messages:
+      failurePredicted:
+        $ref: '#/components/messages/FailurePredicted'
+      highRiskAlert:
+        $ref: '#/components/messages/HighRiskAlert'
+      predictiveMaintenanceScheduled:
+        $ref: '#/components/messages/PredictiveMaintenanceScheduled'
+
+  utilizationMetrics:
+    address: equipment.utilization
+    description: |
+      High-volume channel for real-time utilization and performance metrics.
+      Events published every hour for active assets.
+
+      **Partitioning Strategy**: Partitioned by assetId
+      **Retention**: 7 days (summarized to database)
+      **Expected Volume**: ~50,000 events/day
+    messages:
+      utilizationUpdated:
+        $ref: '#/components/messages/UtilizationUpdated'
+      operatingHoursRecorded:
+        $ref: '#/components/messages/OperatingHoursRecorded'
+
+operations:
+  publishAssetRegistered:
+    action: send
+    channel:
+      $ref: '#/channels/assetLifecycle'
+    summary: Publish asset registration event
+    description: |
+      Published when a new asset is registered in the system. This event triggers
+      multiple downstream processes including maintenance schedule creation,
+      depreciation tracking setup, and inventory updates.
+
+      **Triggered By**: POST /api/v1/equipment/assets endpoint
+      **Downstream Consumers**:
+      - Maintenance Service: Creates initial maintenance schedule
+      - Finance Service: Initiates depreciation tracking
+      - Notification Service: Alerts warehouse managers
+      - Audit Service: Records registration for compliance
+    messages:
+      - $ref: '#/components/messages/AssetRegistered'
+
+  publishAssetStatusChanged:
+    action: send
+    channel:
+      $ref: '#/channels/assetLifecycle'
+    summary: Publish asset status change event
+    description: |
+      Published whenever asset operational status changes (ACTIVE → MAINTENANCE,
+      UNDER_REPAIR → ACTIVE, etc.). Critical for resource planning and operations.
+
+      **Triggered By**:
+      - Work order creation (critical/high priority)
+      - Maintenance completion
+      - Manual status updates
+      - Predictive alerts
+
+      **Downstream Consumers**:
+      - Operations Service: Updates available equipment count
+      - Dispatch Service: Reassigns tasks if asset becomes unavailable
+      - Dashboard Service: Updates real-time status displays
+    messages:
+      - $ref: '#/components/messages/AssetStatusChanged'
+
+  publishWorkOrderCreated:
+    action: send
+    channel:
+      $ref: '#/channels/workOrders'
+    summary: Publish work order creation event
+    description: |
+      Published when a new work order is created. Triggers notifications and
+      updates multiple systems.
+
+      **Triggered By**: POST /api/v1/equipment/work-orders endpoint
+      **Downstream Consumers**:
+      - Notification Service: Sends alert to assigned technician
+      - Mobile App Service: Updates technician's work queue
+      - Inventory Service: Reserves parts if needed
+      - Analytics Service: Updates work order metrics
+    messages:
+      - $ref: '#/components/messages/WorkOrderCreated'
+
+  publishMaintenanceCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/maintenanceOperations'
+    summary: Publish maintenance completion event
+    description: |
+      Published when maintenance work is completed. Updates asset records and
+      triggers next maintenance scheduling.
+
+      **Triggered By**: Technician completing maintenance via mobile app or web UI
+      **Downstream Consumers**:
+      - Asset Service: Updates lastMaintenanceDate and nextMaintenanceDate
+      - Finance Service: Records labor and parts costs
+      - Scheduling Service: Creates next recurring maintenance schedule
+      - ML Service: Updates predictive models with maintenance data
+    messages:
+      - $ref: '#/components/messages/MaintenanceCompleted'
+
+  publishFailurePredicted:
+    action: send
+    channel:
+      $ref: '#/channels/predictiveAnalytics'
+    summary: Publish failure prediction event
+    description: |
+      Published by ML service when prediction model detects potential failure.
+      Triggers automated maintenance scheduling for high-risk predictions.
+
+      **Triggered By**:
+      - Daily ML model execution
+      - Real-time analysis of sensor data
+      - Utilization threshold exceeded
+
+      **Downstream Consumers**:
+      - Maintenance Service: Auto-creates maintenance schedule if probability > 0.5
+      - Notification Service: Alerts maintenance managers for high-risk predictions
+      - Inventory Service: Pre-orders parts for likely repairs
+      - Dashboard Service: Displays predictions in management view
+    messages:
+      - $ref: '#/components/messages/FailurePredicted'
+
+  subscribeToAssetEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/assetLifecycle'
+    summary: Subscribe to asset lifecycle events
+    description: |
+      Subscribe to receive all asset lifecycle events. Consumers should implement
+      idempotent processing as events may be delivered more than once.
+
+      **Consumer Groups**:
+      - notification-service: Sends notifications
+      - analytics-service: Updates dashboards and reports
+      - audit-service: Maintains audit log
+    messages:
+      - $ref: '#/components/messages/AssetRegistered'
+      - $ref: '#/components/messages/AssetStatusChanged'
+      - $ref: '#/components/messages/AssetLocationChanged'
+      - $ref: '#/components/messages/AssetRetired'
+
+  subscribeToMaintenanceEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/maintenanceOperations'
+    summary: Subscribe to maintenance operation events
+    description: |
+      Subscribe to maintenance scheduling and completion events.
+
+      **Consumer Groups**:
+      - mobile-app-service: Updates technician apps
+      - billing-service: Tracks maintenance costs
+      - compliance-service: Ensures regulatory compliance
+    messages:
+      - $ref: '#/components/messages/MaintenanceScheduled'
+      - $ref: '#/components/messages/MaintenanceStarted'
+      - $ref: '#/components/messages/MaintenanceCompleted'
+      - $ref: '#/components/messages/MaintenanceOverdue'
+
+  subscribeToWorkOrderEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/workOrders'
+    summary: Subscribe to work order events
+    description: |
+      Subscribe to work order lifecycle events for task management and tracking.
+
+      **Consumer Groups**:
+      - dispatch-service: Manages work assignments
+      - reporting-service: Generates work order reports
+      - inventory-service: Manages parts allocation
+    messages:
+      - $ref: '#/components/messages/WorkOrderCreated'
+      - $ref: '#/components/messages/WorkOrderAssigned'
+      - $ref: '#/components/messages/WorkOrderCompleted'
+
+  subscribeToPredictionEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/predictiveAnalytics'
+    summary: Subscribe to predictive analytics events
+    description: |
+      Subscribe to AI-generated prediction events for proactive maintenance.
+
+      **Consumer Groups**:
+      - maintenance-automation-service: Auto-schedules maintenance
+      - procurement-service: Pre-orders parts
+      - notification-service: Sends alerts to managers
+    messages:
+      - $ref: '#/components/messages/FailurePredicted'
+      - $ref: '#/components/messages/HighRiskAlert'
+      - $ref: '#/components/messages/PredictiveMaintenanceScheduled'
+
+  subscribeToUtilizationEvents:
+    action: receive
+    channel:
+      $ref: '#/channels/utilizationMetrics'
+    summary: Subscribe to utilization metric events
+    description: |
+      Subscribe to real-time equipment utilization and performance metrics.
+      High volume stream - use appropriate filtering and batching.
+
+      **Consumer Groups**:
+      - analytics-service: Aggregates metrics for reporting
+      - ml-service: Feeds prediction models
+      - operations-service: Monitors real-time performance
+    messages:
+      - $ref: '#/components/messages/UtilizationUpdated'
+      - $ref: '#/components/messages/OperatingHoursRecorded'
+
+components:
+  messages:
+    AssetRegistered:
+      name: AssetRegistered
+      title: Asset Registered Event
+      summary: Published when a new asset is registered
+      description: |
+        Event indicating a new equipment asset has been registered in the system.
+        This is the first event in an asset's lifecycle and triggers initial setup
+        of maintenance schedules, tracking systems, and monitoring.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/AssetRegisteredPayload'
+      examples:
+        - name: forkliftRegistered
+          summary: Forklift asset registered
+          payload:
+            eventId: "evt_1a2b3c4d5e6f7g8h"
+            eventType: "AssetRegistered"
+            timestamp: "2024-11-01T10:30:00Z"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            serialNumber: "FKL-2024-001"
+            name: "Main Warehouse Forklift #1"
+            type: "FORKLIFT"
+            manufacturer: "Toyota Material Handling"
+            model: "8FGU25"
+            purchaseDate: "2024-01-15"
+            purchaseCost: 45000.00
+            location: "Warehouse A - Zone 1"
+            registeredBy: "admin@paklog.com"
+
+    AssetStatusChanged:
+      name: AssetStatusChanged
+      title: Asset Status Changed Event
+      summary: Published when asset operational status changes
+      description: |
+        Event indicating an asset's operational status has changed. This affects
+        resource availability and may trigger automatic actions like task reassignment.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/AssetStatusChangedPayload'
+      examples:
+        - name: assetUnderRepair
+          summary: Asset moved to under repair status
+          payload:
+            eventId: "evt_9h8g7f6e5d4c3b2a"
+            eventType: "AssetStatusChanged"
+            timestamp: "2024-11-01T14:45:00Z"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            previousStatus: "ACTIVE"
+            newStatus: "UNDER_REPAIR"
+            reason: "Critical hydraulic system failure"
+            changedBy: "system@paklog.com"
+            relatedWorkOrderId: "wo_x1y2z3a4b5c6"
+
+    AssetLocationChanged:
+      name: AssetLocationChanged
+      title: Asset Location Changed Event
+      summary: Published when asset is moved to a new location
+      description: |
+        Event indicating an asset has been physically moved to a different location.
+        Used for tracking, resource planning, and operational dashboards.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/AssetLocationChangedPayload'
+      examples:
+        - name: assetRelocated
+          summary: Asset moved between warehouses
+          payload:
+            eventId: "evt_p9o8i7u6y5t4r3e2"
+            eventType: "AssetLocationChanged"
+            timestamp: "2024-11-01T09:15:00Z"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            previousLocation: "Warehouse A - Zone 1"
+            newLocation: "Warehouse B - Zone 3"
+            movedBy: "john.smith@paklog.com"
+            reason: "Resource reallocation"
+
+    AssetRetired:
+      name: AssetRetired
+      title: Asset Retired Event
+      summary: Published when asset is permanently retired
+      description: |
+        Event indicating an asset has been permanently removed from service.
+        This is typically the final event in an asset's lifecycle.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/AssetRetiredPayload'
+      examples:
+        - name: assetRetired
+          summary: Asset retired after reaching end of life
+          payload:
+            eventId: "evt_q1w2e3r4t5y6u7i8"
+            eventType: "AssetRetired"
+            timestamp: "2024-11-01T16:00:00Z"
+            assetId: "ast_old123456789"
+            retirementReason: "End of useful life - excessive repair costs"
+            finalOperatingHours: 15847
+            finalValue: 2500.00
+            disposalMethod: "Sold to third party"
+            retiredBy: "fleet.manager@paklog.com"
+
+    MaintenanceScheduled:
+      name: MaintenanceScheduled
+      title: Maintenance Scheduled Event
+      summary: Published when maintenance is scheduled
+      description: |
+        Event indicating new maintenance has been scheduled for an asset.
+        Can be created manually or automatically from predictive analytics.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/MaintenanceScheduledPayload'
+      examples:
+        - name: preventiveMaintenance
+          summary: Preventive maintenance scheduled
+          payload:
+            eventId: "evt_a1s2d3f4g5h6j7k8"
+            eventType: "MaintenanceScheduled"
+            timestamp: "2024-11-01T08:00:00Z"
+            scheduleId: "mnt_p1q2r3s4t5u6"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            maintenanceType: "PREVENTIVE"
+            scheduledDate: "2024-11-15T08:00:00Z"
+            description: "Quarterly preventive maintenance: fluid checks, filter replacement, inspection"
+            estimatedDurationHours: 3.5
+            assignedTo: "maintenance-team-a@paklog.com"
+            createdBy: "scheduler@paklog.com"
+
+    MaintenanceStarted:
+      name: MaintenanceStarted
+      title: Maintenance Started Event
+      summary: Published when maintenance work begins
+      description: |
+        Event indicating maintenance work has started. Asset status is typically
+        updated to MAINTENANCE when this event is published.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/MaintenanceStartedPayload'
+      examples:
+        - name: maintenanceBegins
+          summary: Technician starts maintenance work
+          payload:
+            eventId: "evt_z9x8c7v6b5n4m3"
+            eventType: "MaintenanceStarted"
+            timestamp: "2024-11-15T08:15:00Z"
+            scheduleId: "mnt_p1q2r3s4t5u6"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            technicianId: "tech_12345"
+            technicianName: "Mike Johnson"
+            actualStartTime: "2024-11-15T08:15:00Z"
+
+    MaintenanceCompleted:
+      name: MaintenanceCompleted
+      title: Maintenance Completed Event
+      summary: Published when maintenance work is completed
+      description: |
+        Event indicating maintenance has been successfully completed. Includes
+        cost information and notes about work performed.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/MaintenanceCompletedPayload'
+      examples:
+        - name: maintenanceFinished
+          summary: Maintenance work completed successfully
+          payload:
+            eventId: "evt_l1k2j3h4g5f6d7s8"
+            eventType: "MaintenanceCompleted"
+            timestamp: "2024-11-15T11:45:00Z"
+            scheduleId: "mnt_p1q2r3s4t5u6"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            completedBy: "tech_12345"
+            completionTime: "2024-11-15T11:45:00Z"
+            actualDurationHours: 3.5
+            laborCost: 385.00
+            partsCost: 127.50
+            workPerformed: "Replaced hydraulic fluid, changed oil filter, inspected all systems. All components within normal parameters."
+            nextMaintenanceDate: "2025-02-15T08:00:00Z"
+
+    MaintenanceOverdue:
+      name: MaintenanceOverdue
+      title: Maintenance Overdue Event
+      summary: Published when scheduled maintenance is not completed on time
+      description: |
+        Event indicating scheduled maintenance has passed its due date without completion.
+        Triggers escalation notifications to management.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/MaintenanceOverduePayload'
+      examples:
+        - name: overdueAlert
+          summary: Maintenance overdue alert
+          payload:
+            eventId: "evt_o1v2e3r4d5u6e7"
+            eventType: "MaintenanceOverdue"
+            timestamp: "2024-11-16T00:00:00Z"
+            scheduleId: "mnt_overdue789"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            scheduledDate: "2024-11-15T08:00:00Z"
+            daysOverdue: 1
+            maintenanceType: "PREVENTIVE"
+            assignedTo: "maintenance-team-b@paklog.com"
+            escalationLevel: "WARNING"
+
+    WorkOrderCreated:
+      name: WorkOrderCreated
+      title: Work Order Created Event
+      summary: Published when a new work order is created
+      description: |
+        Event indicating a new work order has been created and assigned.
+        Triggers notifications and updates task management systems.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/WorkOrderCreatedPayload'
+      examples:
+        - name: emergencyWorkOrder
+          summary: Critical emergency work order
+          payload:
+            eventId: "evt_w1o2r3k4o5r6d7e8"
+            eventType: "WorkOrderCreated"
+            timestamp: "2024-11-01T10:45:00Z"
+            workOrderId: "wo_x1y2z3a4b5c6"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            title: "Hydraulic System Failure"
+            description: "Forklift #1 hydraulic lift system completely failed during operation. Equipment inoperable."
+            priority: "CRITICAL"
+            assignedTo: "john.smith@paklog.com"
+            estimatedCost: 850.00
+            createdBy: "ops.manager@paklog.com"
+
+    WorkOrderAssigned:
+      name: WorkOrderAssigned
+      title: Work Order Assigned Event
+      summary: Published when work order is assigned or reassigned
+      description: |
+        Event indicating a work order has been assigned to a technician.
+        May also be published when work order is reassigned.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/WorkOrderAssignedPayload'
+      examples:
+        - name: workOrderReassigned
+          summary: Work order reassigned to different technician
+          payload:
+            eventId: "evt_a1s2s3i4g5n6e7d8"
+            eventType: "WorkOrderAssigned"
+            timestamp: "2024-11-01T11:00:00Z"
+            workOrderId: "wo_x1y2z3a4b5c6"
+            previouslyAssignedTo: "john.smith@paklog.com"
+            newlyAssignedTo: "sarah.jones@paklog.com"
+            reassignmentReason: "Specialized hydraulic expertise required"
+            assignedBy: "supervisor@paklog.com"
+
+    WorkOrderCompleted:
+      name: WorkOrderCompleted
+      title: Work Order Completed Event
+      summary: Published when work order is completed
+      description: |
+        Event indicating work order has been completed. Includes final costs
+        and resolution details.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/WorkOrderCompletedPayload'
+      examples:
+        - name: workOrderFinished
+          summary: Work order completed successfully
+          payload:
+            eventId: "evt_c1o2m3p4l5e6t7e8"
+            eventType: "WorkOrderCompleted"
+            timestamp: "2024-11-01T16:30:00Z"
+            workOrderId: "wo_x1y2z3a4b5c6"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            completedBy: "sarah.jones@paklog.com"
+            completionTime: "2024-11-01T16:30:00Z"
+            actualLaborHours: 5.5
+            laborCost: 605.00
+            partsCost: 347.80
+            totalCost: 952.80
+            resolution: "Replaced hydraulic pump and seals. System tested and operational. Asset returned to service."
+            assetNewStatus: "ACTIVE"
+
+    FailurePredicted:
+      name: FailurePredicted
+      title: Failure Predicted Event
+      summary: Published when ML model predicts potential failure
+      description: |
+        Event from predictive analytics system indicating potential equipment failure.
+        High-probability predictions trigger automatic maintenance scheduling.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/FailurePredictedPayload'
+      examples:
+        - name: highRiskPrediction
+          summary: High risk failure prediction
+          payload:
+            eventId: "evt_p1r2e3d4i5c6t7"
+            eventType: "FailurePredicted"
+            timestamp: "2024-11-01T12:00:00Z"
+            predictionId: "pred_m7n8o9p0q1r2"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            failureType: "Hydraulic Pump Failure"
+            probability: 0.87
+            confidenceScore: 0.92
+            predictedFailureDate: "2024-11-15T00:00:00Z"
+            daysUntilPredictedFailure: 14
+            recommendation: "URGENT: Replace hydraulic pump within 14 days. Asset has exceeded recommended operating hours."
+            contributingFactors:
+              - factor: "Operating hours exceeded recommendation"
+                impact: 0.35
+              - factor: "Pressure readings showing 15% degradation"
+                impact: 0.28
+              - factor: "Increased temperature readings"
+                impact: 0.24
+            modelVersion: "v2.3.1"
+            dataPointsAnalyzed: 8947
+
+    HighRiskAlert:
+      name: HighRiskAlert
+      title: High Risk Alert Event
+      summary: Published for critical failure predictions requiring immediate action
+      description: |
+        Urgent alert event for predictions with very high failure probability (>75%).
+        Triggers immediate notifications to management and automated maintenance scheduling.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/HighRiskAlertPayload'
+      examples:
+        - name: criticalAlert
+          summary: Critical failure risk alert
+          payload:
+            eventId: "evt_a1l2e3r4t5h6i7g8"
+            eventType: "HighRiskAlert"
+            timestamp: "2024-11-01T12:01:00Z"
+            alertId: "alert_critical_001"
+            predictionId: "pred_m7n8o9p0q1r2"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            assetName: "Main Warehouse Forklift #1"
+            riskLevel: "CRITICAL"
+            probability: 0.87
+            urgency: "IMMEDIATE"
+            recommendedAction: "Schedule immediate maintenance within 48 hours to prevent operational shutdown"
+            potentialImpact: "Equipment failure will halt operations in Warehouse A Zone 1, affecting 15% of daily throughput"
+            notifyManagers:
+              - "ops.manager@paklog.com"
+              - "maintenance.manager@paklog.com"
+              - "warehouse.director@paklog.com"
+
+    PredictiveMaintenanceScheduled:
+      name: PredictiveMaintenanceScheduled
+      title: Predictive Maintenance Scheduled Event
+      summary: Published when maintenance is auto-scheduled from prediction
+      description: |
+        Event indicating the system has automatically scheduled maintenance based
+        on failure prediction. Created when prediction probability exceeds threshold.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/PredictiveMaintenanceScheduledPayload'
+      examples:
+        - name: autoScheduled
+          summary: Auto-scheduled predictive maintenance
+          payload:
+            eventId: "evt_s1c2h3e4d5u6l7e8"
+            eventType: "PredictiveMaintenanceScheduled"
+            timestamp: "2024-11-01T12:05:00Z"
+            scheduleId: "mnt_pred_auto_001"
+            predictionId: "pred_m7n8o9p0q1r2"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            maintenanceType: "PREDICTIVE"
+            scheduledDate: "2024-11-08T08:00:00Z"
+            description: "Predictive maintenance based on ML failure forecast: Hydraulic pump replacement"
+            priority: "HIGH"
+            estimatedCost: 850.00
+            autoScheduled: true
+            createdBy: "ml-scheduler@paklog.com"
+
+    UtilizationUpdated:
+      name: UtilizationUpdated
+      title: Utilization Updated Event
+      summary: Published hourly with asset utilization metrics
+      description: |
+        High-volume event published every hour for active assets with current
+        utilization and performance metrics. Used for real-time monitoring and analytics.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/UtilizationUpdatedPayload'
+      examples:
+        - name: hourlyMetrics
+          summary: Hourly utilization metrics
+          payload:
+            eventId: "evt_u1t2i3l4i5z6"
+            eventType: "UtilizationUpdated"
+            timestamp: "2024-11-01T14:00:00Z"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            measurementPeriodStart: "2024-11-01T13:00:00Z"
+            measurementPeriodEnd: "2024-11-01T14:00:00Z"
+            activeMinutes: 47
+            idleMinutes: 13
+            utilizationPercentage: 78.33
+            tasksCompleted: 12
+            distanceTraveled: 3.7
+            energyConsumed: 4.2
+            averageLoadWeight: 850.0
+
+    OperatingHoursRecorded:
+      name: OperatingHoursRecorded
+      title: Operating Hours Recorded Event
+      summary: Published daily with total operating hours
+      description: |
+        Daily event recording total operating hours for the asset. Used for
+        maintenance scheduling and lifecycle analysis.
+      contentType: application/json
+      traits:
+        - $ref: '#/components/messageTraits/commonHeaders'
+      payload:
+        $ref: '#/components/schemas/OperatingHoursRecordedPayload'
+      examples:
+        - name: dailyHours
+          summary: Daily operating hours recorded
+          payload:
+            eventId: "evt_h1o2u3r4s5"
+            eventType: "OperatingHoursRecorded"
+            timestamp: "2024-11-01T23:59:59Z"
+            assetId: "ast_7k8m9n0p1q2r3s4t"
+            recordDate: "2024-11-01"
+            dailyOperatingHours: 9.5
+            totalOperatingHours: 2856
+            averageDailyUtilization: 79.2
+            maintenanceThresholdHours: 3000
+            hoursUntilMaintenance: 144
+
+  schemas:
+    AssetRegisteredPayload:
+      type: object
+      description: Payload for AssetRegistered event
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - assetId
+        - serialNumber
+        - name
+        - type
+        - manufacturer
+        - model
+        - purchaseDate
+        - purchaseCost
+        - location
+      properties:
+        eventId:
+          type: string
+          description: Unique event identifier
+          pattern: '^evt_[a-zA-Z0-9]{16}$'
+        eventType:
+          type: string
+          const: AssetRegistered
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp in ISO 8601 format
+        assetId:
+          type: string
+          description: Unique asset identifier
+        serialNumber:
+          type: string
+          description: Manufacturer serial number
+        name:
+          type: string
+          description: Asset name
+        type:
+          type: string
+          enum: [FORKLIFT, CONVEYOR, PALLET_JACK, ROBOT, PACKAGING_MACHINE, SCANNER, PRINTER, SORTING_SYSTEM, AGV]
+        manufacturer:
+          type: string
+          description: Manufacturer name
+        model:
+          type: string
+          description: Model number
+        purchaseDate:
+          type: string
+          format: date
+        purchaseCost:
+          type: number
+          format: double
+        location:
+          type: string
+          description: Physical location
+        registeredBy:
+          type: string
+          description: User who registered the asset
+
+    AssetStatusChangedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - assetId
+        - previousStatus
+        - newStatus
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: AssetStatusChanged
+        timestamp:
+          type: string
+          format: date-time
+        assetId:
+          type: string
+        previousStatus:
+          type: string
+          enum: [ACTIVE, INACTIVE, MAINTENANCE, RETIRED, UNDER_REPAIR]
+        newStatus:
+          type: string
+          enum: [ACTIVE, INACTIVE, MAINTENANCE, RETIRED, UNDER_REPAIR]
+        reason:
+          type: string
+          description: Reason for status change
+        changedBy:
+          type: string
+        relatedWorkOrderId:
+          type: string
+          description: Related work order if applicable
+
+    AssetLocationChangedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - assetId
+        - previousLocation
+        - newLocation
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: AssetLocationChanged
+        timestamp:
+          type: string
+          format: date-time
+        assetId:
+          type: string
+        previousLocation:
+          type: string
+        newLocation:
+          type: string
+        movedBy:
+          type: string
+        reason:
+          type: string
+
+    AssetRetiredPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - assetId
+        - retirementReason
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: AssetRetired
+        timestamp:
+          type: string
+          format: date-time
+        assetId:
+          type: string
+        retirementReason:
+          type: string
+        finalOperatingHours:
+          type: integer
+        finalValue:
+          type: number
+        disposalMethod:
+          type: string
+        retiredBy:
+          type: string
+
+    MaintenanceScheduledPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - scheduleId
+        - assetId
+        - maintenanceType
+        - scheduledDate
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: MaintenanceScheduled
+        timestamp:
+          type: string
+          format: date-time
+        scheduleId:
+          type: string
+        assetId:
+          type: string
+        maintenanceType:
+          type: string
+          enum: [PREVENTIVE, CORRECTIVE, PREDICTIVE, EMERGENCY]
+        scheduledDate:
+          type: string
+          format: date-time
+        description:
+          type: string
+        estimatedDurationHours:
+          type: number
+        assignedTo:
+          type: string
+        createdBy:
+          type: string
+
+    MaintenanceStartedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - scheduleId
+        - assetId
+        - technicianId
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: MaintenanceStarted
+        timestamp:
+          type: string
+          format: date-time
+        scheduleId:
+          type: string
+        assetId:
+          type: string
+        technicianId:
+          type: string
+        technicianName:
+          type: string
+        actualStartTime:
+          type: string
+          format: date-time
+
+    MaintenanceCompletedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - scheduleId
+        - assetId
+        - completedBy
+        - completionTime
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: MaintenanceCompleted
+        timestamp:
+          type: string
+          format: date-time
+        scheduleId:
+          type: string
+        assetId:
+          type: string
+        completedBy:
+          type: string
+        completionTime:
+          type: string
+          format: date-time
+        actualDurationHours:
+          type: number
+        laborCost:
+          type: number
+        partsCost:
+          type: number
+        workPerformed:
+          type: string
+        nextMaintenanceDate:
+          type: string
+          format: date-time
+
+    MaintenanceOverduePayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - scheduleId
+        - assetId
+        - scheduledDate
+        - daysOverdue
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: MaintenanceOverdue
+        timestamp:
+          type: string
+          format: date-time
+        scheduleId:
+          type: string
+        assetId:
+          type: string
+        scheduledDate:
+          type: string
+          format: date-time
+        daysOverdue:
+          type: integer
+        maintenanceType:
+          type: string
+          enum: [PREVENTIVE, CORRECTIVE, PREDICTIVE, EMERGENCY]
+        assignedTo:
+          type: string
+        escalationLevel:
+          type: string
+          enum: [WARNING, URGENT, CRITICAL]
+
+    WorkOrderCreatedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - workOrderId
+        - assetId
+        - title
+        - priority
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: WorkOrderCreated
+        timestamp:
+          type: string
+          format: date-time
+        workOrderId:
+          type: string
+        assetId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [CRITICAL, HIGH, MEDIUM, LOW]
+        assignedTo:
+          type: string
+        estimatedCost:
+          type: number
+        createdBy:
+          type: string
+
+    WorkOrderAssignedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - workOrderId
+        - newlyAssignedTo
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: WorkOrderAssigned
+        timestamp:
+          type: string
+          format: date-time
+        workOrderId:
+          type: string
+        previouslyAssignedTo:
+          type: string
+        newlyAssignedTo:
+          type: string
+        reassignmentReason:
+          type: string
+        assignedBy:
+          type: string
+
+    WorkOrderCompletedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - workOrderId
+        - assetId
+        - completedBy
+        - completionTime
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: WorkOrderCompleted
+        timestamp:
+          type: string
+          format: date-time
+        workOrderId:
+          type: string
+        assetId:
+          type: string
+        completedBy:
+          type: string
+        completionTime:
+          type: string
+          format: date-time
+        actualLaborHours:
+          type: number
+        laborCost:
+          type: number
+        partsCost:
+          type: number
+        totalCost:
+          type: number
+        resolution:
+          type: string
+        assetNewStatus:
+          type: string
+
+    FailurePredictedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - predictionId
+        - assetId
+        - failureType
+        - probability
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: FailurePredicted
+        timestamp:
+          type: string
+          format: date-time
+        predictionId:
+          type: string
+        assetId:
+          type: string
+        failureType:
+          type: string
+        probability:
+          type: number
+          minimum: 0
+          maximum: 1
+        confidenceScore:
+          type: number
+        predictedFailureDate:
+          type: string
+          format: date-time
+        daysUntilPredictedFailure:
+          type: integer
+        recommendation:
+          type: string
+        contributingFactors:
+          type: array
+          items:
+            type: object
+            properties:
+              factor:
+                type: string
+              impact:
+                type: number
+        modelVersion:
+          type: string
+        dataPointsAnalyzed:
+          type: integer
+
+    HighRiskAlertPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - alertId
+        - predictionId
+        - assetId
+        - riskLevel
+        - probability
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: HighRiskAlert
+        timestamp:
+          type: string
+          format: date-time
+        alertId:
+          type: string
+        predictionId:
+          type: string
+        assetId:
+          type: string
+        assetName:
+          type: string
+        riskLevel:
+          type: string
+          enum: [HIGH, CRITICAL, SEVERE]
+        probability:
+          type: number
+        urgency:
+          type: string
+          enum: [IMMEDIATE, URGENT, HIGH]
+        recommendedAction:
+          type: string
+        potentialImpact:
+          type: string
+        notifyManagers:
+          type: array
+          items:
+            type: string
+
+    PredictiveMaintenanceScheduledPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - scheduleId
+        - predictionId
+        - assetId
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: PredictiveMaintenanceScheduled
+        timestamp:
+          type: string
+          format: date-time
+        scheduleId:
+          type: string
+        predictionId:
+          type: string
+        assetId:
+          type: string
+        maintenanceType:
+          type: string
+          const: PREDICTIVE
+        scheduledDate:
+          type: string
+          format: date-time
+        description:
+          type: string
+        priority:
+          type: string
+        estimatedCost:
+          type: number
+        autoScheduled:
+          type: boolean
+        createdBy:
+          type: string
+
+    UtilizationUpdatedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - assetId
+        - measurementPeriodStart
+        - measurementPeriodEnd
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: UtilizationUpdated
+        timestamp:
+          type: string
+          format: date-time
+        assetId:
+          type: string
+        measurementPeriodStart:
+          type: string
+          format: date-time
+        measurementPeriodEnd:
+          type: string
+          format: date-time
+        activeMinutes:
+          type: integer
+        idleMinutes:
+          type: integer
+        utilizationPercentage:
+          type: number
+        tasksCompleted:
+          type: integer
+        distanceTraveled:
+          type: number
+          description: Distance in kilometers
+        energyConsumed:
+          type: number
+          description: Energy in kWh
+        averageLoadWeight:
+          type: number
+          description: Average load weight in kg
+
+    OperatingHoursRecordedPayload:
+      type: object
+      required:
+        - eventId
+        - eventType
+        - timestamp
+        - assetId
+        - recordDate
+        - dailyOperatingHours
+        - totalOperatingHours
+      properties:
+        eventId:
+          type: string
+        eventType:
+          type: string
+          const: OperatingHoursRecorded
+        timestamp:
+          type: string
+          format: date-time
+        assetId:
+          type: string
+        recordDate:
+          type: string
+          format: date
+        dailyOperatingHours:
+          type: number
+        totalOperatingHours:
+          type: integer
+        averageDailyUtilization:
+          type: number
+        maintenanceThresholdHours:
+          type: integer
+        hoursUntilMaintenance:
+          type: integer
+
+  messageTraits:
+    commonHeaders:
+      headers:
+        type: object
+        properties:
+          correlationId:
+            type: string
+            description: Correlation ID for tracing related events across services
+            example: "corr_1a2b3c4d5e6f"
+          source:
+            type: string
+            description: Source service that published the event
+            example: "equipment-asset-management-service"
+          version:
+            type: string
+            description: Event schema version
+            example: "1.0.0"
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: SASL/SCRAM-SHA-256 authentication for Kafka

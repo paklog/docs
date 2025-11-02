@@ -1,0 +1,485 @@
+openapi: 3.1.0
+info:
+  title: Inventory Management API
+  description: |
+    # Overview
+    API for managing and querying logical inventory levels across the fulfillment network.
+
+    ## Features
+    - **Real-time Stock Queries**: Get current stock levels with caching for performance
+    - **Stock Adjustments**: Manual adjustments with audit trail
+    - **Bulk Allocations**: High-performance allocation processing (10,000+ items)
+    - **Inventory Health**: Turnover analysis and dead stock detection
+    - **CloudEvents Integration**: Event-driven architecture with standardized events
+
+    ## Performance
+    - L1 Cache (Caffeine): Sub-millisecond response times
+    - L2 Cache (Redis): Distributed caching across instances
+    - Async Processing: Non-blocking operations for metrics and events
+    - MongoDB Aggregation: Server-side processing for complex queries
+
+    ## Observability
+    - OpenTelemetry distributed tracing
+    - Prometheus metrics exposition
+    - Structured logging with correlation IDs
+  version: 1.0.0
+  contact:
+    name: Paklog Platform Team
+    email: platform@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+servers:
+  - url: https://api.paklog.com/fulfillment/inventory/v1
+    description: Production
+  - url: https://api-staging.paklog.com/fulfillment/inventory/v1
+    description: Staging
+  - url: http://localhost:8085/inventory
+    description: Local Development
+paths:
+  /stock_levels/{sku}:
+    get:
+      summary: Get Stock Level for a SKU
+      description: |
+        Retrieves the current inventory levels for a specific SKU.
+        This corresponds to the user story INV-10.
+      operationId: get_stock_level_by_sku
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          description: The unique seller SKU to query.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK. The current stock level is returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockLevel'
+              examples:
+                inStock:
+                  summary: Product in stock
+                  value:
+                    sku: "SKU-12345"
+                    quantity_on_hand: 500
+                    quantity_allocated: 150
+                    available_to_promise: 350
+                lowStock:
+                  summary: Low stock product
+                  value:
+                    sku: "SKU-67890"
+                    quantity_on_hand: 10
+                    quantity_allocated: 8
+                    available_to_promise: 2
+                outOfStock:
+                  summary: Out of stock product
+                  value:
+                    sku: "SKU-99999"
+                    quantity_on_hand: 0
+                    quantity_allocated: 0
+                    available_to_promise: 0
+        '404':
+          description: Not Found. No stock record found for the given SKU.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Not Found"
+                message: "No stock record found for SKU: SKU-INVALID"
+                timestamp: "2025-10-05T20:00:00Z"
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      summary: Adjust a Stock Level
+      description: |
+        Allows an authorized user, like an Inventory Manager, to make a manual adjustment to the quantity on hand for a SKU.
+        This corresponds to the user story INV-08.
+      operationId: adjust_stock_level
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          description: The unique seller SKU to adjust.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStockLevelRequest'
+      responses:
+        '200':
+          description: OK. The adjustment was successful and the updated stock level is returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockLevel'
+        '400':
+          description: Bad Request. The request body is invalid or business rules violated.
+        '404':
+          description: Not Found. No stock record found for the SKU to be adjusted.
+        '500':
+          description: Internal Server Error.
+  /inventory_health_metrics:
+    get:
+      summary: Get Inventory Health Metrics
+      description: |
+        Retrieves inventory health metrics including turnover rates and dead stock analysis.
+        This corresponds to the user story INV-11.
+      operationId: get_inventory_health_metrics
+      parameters:
+        - name: category
+          in: query
+          required: false
+          description: Filter by product category
+          schema:
+            type: string
+        - name: start_date
+          in: query
+          required: false
+          description: Start date for the analysis period (ISO 8601 format)
+          schema:
+            type: string
+            format: date
+        - name: end_date
+          in: query
+          required: false
+          description: End date for the analysis period (ISO 8601 format)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK. Inventory health metrics are returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryHealthMetrics'
+              example:
+                inventory_turnover: 4.5
+                dead_stock_skus: ["SKU-111", "SKU-222", "SKU-333"]
+                total_skus: 1500
+                out_of_stock_skus: 25
+        '400':
+          description: Bad Request. Invalid query parameters.
+        '500':
+          description: Internal Server Error.
+
+  /allocations/bulk:
+    post:
+      summary: Bulk Allocate Stock
+      description: |
+        High-performance bulk allocation endpoint for processing large order batches.
+        Optimized to handle 10,000+ allocation requests in a single API call.
+
+        **Performance Characteristics:**
+        - Batch processing with parallel execution
+        - Database connection pooling
+        - Optimistic locking for concurrency
+        - Partial success handling
+
+        **Use Cases:**
+        - Order wave processing
+        - Batch order import
+        - Marketplace bulk fulfillment
+      operationId: bulk_allocate_stock
+      tags:
+        - Bulk Operations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkAllocationRequest'
+            example:
+              requests:
+                - sku: "SKU-12345"
+                  quantity: 10
+                  order_id: "ORD-001"
+                - sku: "SKU-67890"
+                  quantity: 5
+                  order_id: "ORD-002"
+                - sku: "SKU-11111"
+                  quantity: 20
+                  order_id: "ORD-003"
+      responses:
+        '200':
+          description: OK. Bulk allocation completed with results for each item.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkAllocationResponse'
+              example:
+                successful_allocations: 2
+                failed_allocations: 1
+                processing_time_ms: 450
+                results:
+                  - sku: "SKU-12345"
+                    order_id: "ORD-001"
+                    success: true
+                    allocated_quantity: 10
+                  - sku: "SKU-67890"
+                    order_id: "ORD-002"
+                    success: true
+                    allocated_quantity: 5
+                  - sku: "SKU-11111"
+                    order_id: "ORD-003"
+                    success: false
+                    error_message: "Insufficient stock: available=15, requested=20"
+        '400':
+          description: Bad Request. Invalid request format.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /stock_levels/{sku}/reservations:
+    post:
+      summary: Create Stock Reservation
+      description: |
+        Reserves (allocates) stock for a specific order.
+        This reduces the available-to-promise quantity without physically picking the item.
+      operationId: create_reservation
+      tags:
+        - Stock Operations
+      parameters:
+        - name: sku
+          in: path
+          required: true
+          description: The unique seller SKU to reserve stock for
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReservationRequest'
+            example:
+              quantity: 5
+              order_id: "ORD-12345"
+      responses:
+        '202':
+          description: Accepted. Stock reservation is being processed.
+        '400':
+          description: Bad Request. Invalid request or insufficient stock.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found. SKU does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error.
+
+components:
+  schemas:
+    StockLevel:
+      type: object
+      properties:
+        sku:
+          type: string
+          description: The unique identifier for the product.
+        quantity_on_hand:
+          type: integer
+          format: int32
+          description: The total physical quantity of the item in the warehouse.
+          minimum: 0
+        quantity_allocated:
+          type: integer
+          format: int32
+          description: The quantity reserved for open orders that have not yet been picked.
+          minimum: 0
+        available_to_promise:
+          type: integer
+          format: int32
+          description: The quantity available for new sales (on_hand - allocated).
+          minimum: 0
+      required:
+        - sku
+        - quantity_on_hand
+        - quantity_allocated
+        - available_to_promise
+
+    UpdateStockLevelRequest:
+      type: object
+      description: Describes the adjustment to be made to a stock level.
+      required:
+        - quantity_change
+        - reason_code
+      properties:
+        quantity_change:
+          type: integer
+          format: int32
+          description: The change to apply to the quantity on hand. Can be positive (stock intake) or negative (damage, loss).
+        reason_code:
+          type: string
+          enum: [damaged, stock_intake, cycle_count, lost, found, ITEM_PICKED, ALLOCATION, DEALLOCATION, STOCK_RECEIPT]
+          description: Code indicating the reason for the adjustment.
+        comment:
+          type: string
+          description: An optional free-text comment explaining the adjustment.
+
+    InventoryHealthMetrics:
+      type: object
+      properties:
+        inventory_turnover:
+          type: number
+          format: double
+          description: The rate at which inventory is sold, used, or replaced.
+        dead_stock_skus:
+          type: array
+          items:
+            type: string
+          description: List of SKUs identified as dead stock (no movement over a period).
+        total_skus:
+          type: integer
+          format: int64
+          description: Total number of unique SKUs tracked.
+        out_of_stock_skus:
+          type: integer
+          format: int64
+          description: Number of SKUs currently with zero quantity on hand.
+      required:
+        - inventory_turnover
+        - dead_stock_skus
+        - total_skus
+        - out_of_stock_skus
+
+    BulkAllocationRequest:
+      type: object
+      description: Request for bulk stock allocation across multiple SKUs and orders
+      required:
+        - requests
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/AllocationRequestItem'
+          minItems: 1
+          maxItems: 10000
+          description: List of allocation requests to process
+
+    AllocationRequestItem:
+      type: object
+      required:
+        - sku
+        - quantity
+        - order_id
+      properties:
+        sku:
+          type: string
+          description: The SKU to allocate
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Quantity to allocate
+        order_id:
+          type: string
+          description: Order ID for the allocation
+
+    BulkAllocationResponse:
+      type: object
+      description: Response from bulk allocation operation
+      required:
+        - successful_allocations
+        - failed_allocations
+        - processing_time_ms
+        - results
+      properties:
+        successful_allocations:
+          type: integer
+          format: int32
+          description: Number of successful allocations
+        failed_allocations:
+          type: integer
+          format: int32
+          description: Number of failed allocations
+        processing_time_ms:
+          type: integer
+          format: int64
+          description: Total processing time in milliseconds
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AllocationResult'
+          description: Detailed results for each allocation request
+
+    AllocationResult:
+      type: object
+      required:
+        - sku
+        - order_id
+        - success
+      properties:
+        sku:
+          type: string
+          description: The SKU that was processed
+        order_id:
+          type: string
+          description: The order ID
+        success:
+          type: boolean
+          description: Whether the allocation succeeded
+        allocated_quantity:
+          type: integer
+          format: int32
+          description: Quantity successfully allocated (only present if success=true)
+        error_message:
+          type: string
+          description: Error message (only present if success=false)
+
+    CreateReservationRequest:
+      type: object
+      required:
+        - quantity
+        - order_id
+      properties:
+        quantity:
+          type: integer
+          format: int32
+          minimum: 1
+          description: Quantity to reserve
+        order_id:
+          type: string
+          description: Order ID for the reservation
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error type
+        message:
+          type: string
+          description: Human-readable error message
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp when error occurred
+        trace_id:
+          type: string
+          description: Distributed trace ID for debugging

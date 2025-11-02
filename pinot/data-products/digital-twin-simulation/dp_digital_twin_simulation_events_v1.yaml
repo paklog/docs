@@ -1,0 +1,20 @@
+name: dp_digital_twin_simulation_events_v1
+service: digital-twin-simulation
+domain: rnd
+kind: source-aligned
+description: Digital twin simulation events for optimization and runs.
+owner: digital-twin-owners@paklog.com
+kafka_topics:
+  - digital-twin.events
+pinot_table: dp_digital_twin_simulation_events_v1
+schema_file: pinot/schemas/digital-twin-simulation/dp_digital_twin_simulation_events_v1.schema.json
+table_files:
+  dev: pinot/tables/digital-twin-simulation/dp_digital_twin_simulation_events_v1.table.dev.json
+  staging: pinot/tables/digital-twin-simulation/dp_digital_twin_simulation_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, simulation]
+

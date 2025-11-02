@@ -1,0 +1,20 @@
+name: dp_wes_orchestration_engine_events_v1
+service: wes-orchestration-engine
+domain: wes
+kind: source-aligned
+description: WES orchestration workflow events for observability and analysis.
+owner: wes-orchestration@paklog.com
+kafka_topics:
+  - physical-operations.wes-orchestration.workflow-events
+pinot_table: dp_wes_orchestration_engine_events_v1
+schema_file: pinot/schemas/wes-orchestration-engine/dp_wes_orchestration_engine_events_v1.schema.json
+table_files:
+  dev: pinot/tables/wes-orchestration-engine/dp_wes_orchestration_engine_events_v1.table.dev.json
+  staging: pinot/tables/wes-orchestration-engine/dp_wes_orchestration_engine_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, wes]
+

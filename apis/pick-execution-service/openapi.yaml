@@ -1,0 +1,1295 @@
+openapi: 3.0.3
+info:
+  title: Pick Execution Service API
+  description: |
+    The Pick Execution Service manages the execution of picking operations in the warehouse.
+    It handles pick session management, pick path optimization using TSP and 2-opt algorithms,
+    put wall operations for batch picking, and real-time pick confirmation. The service optimizes
+    pick routes to minimize travel distance and provides mobile-friendly APIs for warehouse workers.
+  version: 1.0.0
+  contact:
+    name: WES Team
+    email: wes-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8083
+    description: Local development
+  - url: https://pick-execution.paklog.com
+    description: Production
+
+tags:
+  - name: Pick Sessions
+    description: Pick session management operations
+  - name: Pick Instructions
+    description: Pick instruction operations
+  - name: Put Wall
+    description: Put wall operations for batch picking
+  - name: Path Optimization
+    description: Pick path optimization operations
+  - name: Mobile
+    description: Mobile device API for pickers
+  - name: Monitoring
+    description: Pick performance monitoring
+
+paths:
+  /sessions:
+    get:
+      tags:
+        - Pick Sessions
+      summary: List pick sessions
+      description: Retrieve a list of pick sessions with optional filtering
+      operationId: listPickSessions
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - $ref: '#/components/parameters/SessionStatus'
+        - $ref: '#/components/parameters/PickerId'
+        - $ref: '#/components/parameters/WaveId'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: List of pick sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PickSession'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Pick Sessions
+      summary: Create pick session
+      description: Create a new pick session from assigned tasks or wave
+      operationId: createPickSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+            examples:
+              discretePicking:
+                summary: Discrete picking session
+                value:
+                  pickerId: PICKER-001
+                  warehouseId: WH-001
+                  strategy: DISCRETE
+                  taskIds:
+                    - TASK-101
+                    - TASK-102
+                    - TASK-103
+                  optimizePath: true
+              batchPicking:
+                summary: Batch picking with put wall
+                value:
+                  pickerId: PICKER-002
+                  warehouseId: WH-001
+                  strategy: BATCH
+                  waveId: WAVE-12345
+                  putWallId: PUTWALL-A
+                  optimizePath: true
+      responses:
+        '201':
+          description: Pick session created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickSessionDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /sessions/{sessionId}:
+    get:
+      tags:
+        - Pick Sessions
+      summary: Get pick session
+      description: Retrieve detailed information about a pick session
+      operationId: getPickSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Pick session details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickSessionDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Pick Sessions
+      summary: Cancel pick session
+      description: Cancel a pick session and release its tasks
+      operationId: cancelPickSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pick session cancelled successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /sessions/{sessionId}/start:
+    post:
+      tags:
+        - Pick Sessions
+      summary: Start pick session
+      description: Start the pick session and begin picking
+      operationId: startPickSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startLocation:
+                  type: string
+                  description: Starting location of picker
+                deviceId:
+                  type: string
+      responses:
+        '200':
+          description: Pick session started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickSessionDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /sessions/{sessionId}/complete:
+    post:
+      tags:
+        - Pick Sessions
+      summary: Complete pick session
+      description: Mark pick session as completed
+      operationId: completePickSession
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                completedAt:
+                  type: string
+                  format: date-time
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Pick session completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickSessionDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sessions/{sessionId}/instructions:
+    get:
+      tags:
+        - Pick Instructions
+      summary: Get pick instructions
+      description: Get all pick instructions for a session
+      operationId: getPickInstructions
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/InstructionStatus'
+      responses:
+        '200':
+          description: Pick instructions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PickInstruction'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sessions/{sessionId}/instructions/next:
+    get:
+      tags:
+        - Pick Instructions
+      summary: Get next pick instruction
+      description: Get the next pick instruction based on optimized path
+      operationId: getNextPickInstruction
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: currentLocation
+          in: query
+          schema:
+            type: string
+          description: Current location of picker
+      responses:
+        '200':
+          description: Next pick instruction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickInstruction'
+        '404':
+          description: No more picks available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: No more picks in session
+
+  /sessions/{sessionId}/instructions/{instructionId}/confirm:
+    post:
+      tags:
+        - Pick Instructions
+      summary: Confirm pick
+      description: Confirm a pick instruction with actual quantity
+      operationId: confirmPick
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: instructionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmPickRequest'
+      responses:
+        '200':
+          description: Pick confirmed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickInstruction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sessions/{sessionId}/instructions/{instructionId}/short-pick:
+    post:
+      tags:
+        - Pick Instructions
+      summary: Report short pick
+      description: Report a short pick (partial quantity or zero)
+      operationId: reportShortPick
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: instructionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShortPickRequest'
+      responses:
+        '200':
+          description: Short pick reported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickInstruction'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /sessions/{sessionId}/optimize-path:
+    post:
+      tags:
+        - Path Optimization
+      summary: Optimize pick path
+      description: Re-optimize the pick path for remaining instructions
+      operationId: optimizePickPath
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentLocation:
+                  type: string
+                  description: Current location of picker
+                algorithm:
+                  type: string
+                  enum: [NEAREST_NEIGHBOR, TWO_OPT, GENETIC]
+                  default: TWO_OPT
+      responses:
+        '200':
+          description: Path optimized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizationResult'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /put-walls:
+    get:
+      tags:
+        - Put Wall
+      summary: List put walls
+      description: Get list of put walls
+      operationId: listPutWalls
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: available
+          in: query
+          schema:
+            type: boolean
+          description: Filter by availability
+      responses:
+        '200':
+          description: List of put walls
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PutWall'
+
+    post:
+      tags:
+        - Put Wall
+      summary: Create put wall
+      description: Create a new put wall
+      operationId: createPutWall
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePutWallRequest'
+      responses:
+        '201':
+          description: Put wall created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutWall'
+
+  /put-walls/{putWallId}:
+    get:
+      tags:
+        - Put Wall
+      summary: Get put wall details
+      description: Get detailed information about a put wall
+      operationId: getPutWall
+      parameters:
+        - name: putWallId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Put wall details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutWallDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /put-walls/{putWallId}/slots/{slotId}/assign:
+    post:
+      tags:
+        - Put Wall
+      summary: Assign order to slot
+      description: Assign an order to a put wall slot
+      operationId: assignOrderToSlot
+      parameters:
+        - name: putWallId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - orderId
+              properties:
+                orderId:
+                  type: string
+      responses:
+        '200':
+          description: Order assigned to slot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutWallSlot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /put-walls/{putWallId}/slots/{slotId}/put:
+    post:
+      tags:
+        - Put Wall
+      summary: Put item in slot
+      description: Put a picked item into a put wall slot
+      operationId: putItemInSlot
+      parameters:
+        - name: putWallId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - productId
+                - quantity
+              properties:
+                productId:
+                  type: string
+                sku:
+                  type: string
+                quantity:
+                  type: integer
+                barcode:
+                  type: string
+      responses:
+        '200':
+          description: Item put in slot successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutWallSlot'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /put-walls/{putWallId}/slots/{slotId}/complete:
+    post:
+      tags:
+        - Put Wall
+      summary: Complete put wall slot
+      description: Mark a put wall slot as complete
+      operationId: completePutWallSlot
+      parameters:
+        - name: putWallId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Slot completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PutWallSlot'
+
+  /put-walls/{putWallId}/clear:
+    post:
+      tags:
+        - Put Wall
+      summary: Clear put wall
+      description: Clear all slots in put wall
+      operationId: clearPutWall
+      parameters:
+        - name: putWallId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Put wall cleared successfully
+
+  /mobile/sessions/active:
+    get:
+      tags:
+        - Mobile
+      summary: Get active session
+      description: Get active pick session for picker (mobile API)
+      operationId: getActiveSession
+      parameters:
+        - name: pickerId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileSessionResponse'
+        '404':
+          description: No active session
+
+  /mobile/sessions/{sessionId}/current-pick:
+    get:
+      tags:
+        - Mobile
+      summary: Get current pick
+      description: Get current pick instruction (mobile API)
+      operationId: getCurrentPick
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: Current pick instruction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobilePickInstruction'
+        '404':
+          description: No current pick
+
+  /mobile/sessions/{sessionId}/scan:
+    post:
+      tags:
+        - Mobile
+      summary: Scan barcode
+      description: Process barcode scan during picking (mobile API)
+      operationId: scanDuringPick
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - barcode
+                - scanType
+              properties:
+                barcode:
+                  type: string
+                scanType:
+                  type: string
+                  enum: [LOCATION, PRODUCT, ORDER, VERIFICATION]
+      responses:
+        '200':
+          description: Scan processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+                  nextAction:
+                    type: string
+                  quantity:
+                    type: integer
+
+  /metrics/picker/{pickerId}:
+    get:
+      tags:
+        - Monitoring
+      summary: Get picker metrics
+      description: Get productivity metrics for a picker
+      operationId: getPickerMetrics
+      parameters:
+        - name: pickerId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Picker metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickerMetrics'
+
+  /metrics/sessions:
+    get:
+      tags:
+        - Monitoring
+      summary: Get session metrics
+      description: Get aggregate pick session metrics
+      operationId: getSessionMetrics
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Session metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionMetrics'
+
+components:
+  parameters:
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique identifier of the pick session
+
+    WarehouseId:
+      name: warehouseId
+      in: query
+      schema:
+        type: string
+      description: Filter by warehouse ID
+
+    SessionStatus:
+      name: status
+      in: query
+      schema:
+        $ref: '#/components/schemas/SessionStatus'
+      description: Filter by session status
+
+    PickerId:
+      name: pickerId
+      in: query
+      schema:
+        type: string
+      description: Filter by picker ID
+
+    WaveId:
+      name: waveId
+      in: query
+      schema:
+        type: string
+      description: Filter by wave ID
+
+    DateFrom:
+      name: dateFrom
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Filter from this date
+
+    DateTo:
+      name: dateTo
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Filter to this date
+
+    PageNumber:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+
+    PageSize:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+
+  schemas:
+    PickSession:
+      type: object
+      required:
+        - sessionId
+        - pickerId
+        - warehouseId
+        - status
+        - strategy
+        - createdAt
+      properties:
+        sessionId:
+          type: string
+        pickerId:
+          type: string
+        pickerName:
+          type: string
+        warehouseId:
+          type: string
+        waveId:
+          type: string
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        strategy:
+          $ref: '#/components/schemas/PickStrategy'
+        putWallId:
+          type: string
+        totalInstructions:
+          type: integer
+        completedInstructions:
+          type: integer
+        totalUnits:
+          type: integer
+        pickedUnits:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        estimatedDistance:
+          type: number
+          description: Estimated travel distance in meters
+        actualDistance:
+          type: number
+          description: Actual travel distance in meters
+
+    PickSessionDetails:
+      allOf:
+        - $ref: '#/components/schemas/PickSession'
+        - type: object
+          properties:
+            instructions:
+              type: array
+              items:
+                $ref: '#/components/schemas/PickInstruction'
+            pickPath:
+              $ref: '#/components/schemas/PickPath'
+            performance:
+              $ref: '#/components/schemas/SessionPerformance'
+
+    SessionStatus:
+      type: string
+      enum:
+        - CREATED
+        - IN_PROGRESS
+        - PAUSED
+        - COMPLETED
+        - CANCELLED
+
+    PickStrategy:
+      type: string
+      enum:
+        - DISCRETE
+        - BATCH
+        - ZONE
+        - CLUSTER
+      description: Pick strategy type
+
+    PickInstruction:
+      type: object
+      required:
+        - instructionId
+        - sessionId
+        - productId
+        - quantity
+        - pickLocation
+        - sequenceNumber
+      properties:
+        instructionId:
+          type: string
+        sessionId:
+          type: string
+        orderId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        productName:
+          type: string
+        quantity:
+          type: integer
+        pickedQuantity:
+          type: integer
+        pickLocation:
+          type: string
+        zone:
+          type: string
+        aisle:
+          type: string
+        bay:
+          type: string
+        level:
+          type: string
+        destinationLocation:
+          type: string
+          description: Put wall slot or staging location
+        sequenceNumber:
+          type: integer
+          description: Order in optimized pick path
+        status:
+          $ref: '#/components/schemas/InstructionStatus'
+        pickedAt:
+          type: string
+          format: date-time
+        lpn:
+          type: string
+
+    InstructionStatus:
+      type: string
+      enum:
+        - PENDING
+        - IN_PROGRESS
+        - COMPLETED
+        - SHORT_PICKED
+        - SKIPPED
+
+    PickPath:
+      type: object
+      properties:
+        pathId:
+          type: string
+        algorithm:
+          type: string
+          enum: [NEAREST_NEIGHBOR, TWO_OPT, GENETIC]
+        totalDistance:
+          type: number
+          description: Total distance in meters
+        estimatedDuration:
+          type: integer
+          description: Estimated duration in minutes
+        waypoints:
+          type: array
+          items:
+            type: object
+            properties:
+              sequence:
+                type: integer
+              location:
+                type: string
+              instructionId:
+                type: string
+              distanceFromPrevious:
+                type: number
+        optimizationImprovement:
+          type: number
+          description: Percentage improvement from optimization
+
+    CreateSessionRequest:
+      type: object
+      required:
+        - pickerId
+        - warehouseId
+        - strategy
+      properties:
+        pickerId:
+          type: string
+        warehouseId:
+          type: string
+        strategy:
+          $ref: '#/components/schemas/PickStrategy'
+        taskIds:
+          type: array
+          items:
+            type: string
+          description: Specific task IDs to include
+        waveId:
+          type: string
+          description: Wave to pick from
+        putWallId:
+          type: string
+          description: Put wall for batch picking
+        optimizePath:
+          type: boolean
+          default: true
+        startLocation:
+          type: string
+          description: Starting location
+
+    ConfirmPickRequest:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          description: Actual quantity picked
+        barcode:
+          type: string
+          description: Product barcode scanned
+        lpn:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    ShortPickRequest:
+      type: object
+      required:
+        - quantity
+        - reason
+      properties:
+        quantity:
+          type: integer
+          description: Actual quantity picked (may be 0)
+        reason:
+          type: string
+          enum: [OUT_OF_STOCK, DAMAGED, LOCATION_EMPTY, CANNOT_FIND, OTHER]
+        notes:
+          type: string
+
+    OptimizationResult:
+      type: object
+      properties:
+        pickPath:
+          $ref: '#/components/schemas/PickPath'
+        instructions:
+          type: array
+          items:
+            $ref: '#/components/schemas/PickInstruction'
+        improvement:
+          type: object
+          properties:
+            distanceReduction:
+              type: number
+              format: percentage
+            timeReduction:
+              type: integer
+              description: Time saved in minutes
+
+    PutWall:
+      type: object
+      properties:
+        putWallId:
+          type: string
+        name:
+          type: string
+        warehouseId:
+          type: string
+        location:
+          type: string
+        totalSlots:
+          type: integer
+        availableSlots:
+          type: integer
+        status:
+          type: string
+          enum: [AVAILABLE, IN_USE, FULL, BLOCKED]
+
+    PutWallDetails:
+      allOf:
+        - $ref: '#/components/schemas/PutWall'
+        - type: object
+          properties:
+            slots:
+              type: array
+              items:
+                $ref: '#/components/schemas/PutWallSlot'
+
+    PutWallSlot:
+      type: object
+      properties:
+        slotId:
+          type: string
+        slotNumber:
+          type: string
+        orderId:
+          type: string
+        status:
+          type: string
+          enum: [EMPTY, ASSIGNED, IN_PROGRESS, COMPLETE]
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              sku:
+                type: string
+              expectedQuantity:
+                type: integer
+              actualQuantity:
+                type: integer
+
+    CreatePutWallRequest:
+      type: object
+      required:
+        - name
+        - warehouseId
+        - location
+        - totalSlots
+      properties:
+        name:
+          type: string
+        warehouseId:
+          type: string
+        location:
+          type: string
+        totalSlots:
+          type: integer
+
+    MobileSessionResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        status:
+          $ref: '#/components/schemas/SessionStatus'
+        strategy:
+          $ref: '#/components/schemas/PickStrategy'
+        totalPicks:
+          type: integer
+        completedPicks:
+          type: integer
+        remainingPicks:
+          type: integer
+        currentInstruction:
+          $ref: '#/components/schemas/MobilePickInstruction'
+        progress:
+          type: number
+          format: percentage
+
+    MobilePickInstruction:
+      type: object
+      properties:
+        instructionId:
+          type: string
+        orderId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        productName:
+          type: string
+        productImage:
+          type: string
+          format: uri
+        quantity:
+          type: integer
+        pickLocation:
+          type: string
+        zone:
+          type: string
+        aisle:
+          type: string
+        bay:
+          type: string
+        level:
+          type: string
+        destinationSlot:
+          type: string
+        instructions:
+          type: array
+          items:
+            type: string
+        sequenceNumber:
+          type: integer
+        remainingInSession:
+          type: integer
+
+    SessionPerformance:
+      type: object
+      properties:
+        unitsPerHour:
+          type: number
+        linesPerHour:
+          type: number
+        accuracy:
+          type: number
+          format: percentage
+        shortPicks:
+          type: integer
+        travelEfficiency:
+          type: number
+          format: percentage
+
+    PickerMetrics:
+      type: object
+      properties:
+        pickerId:
+          type: string
+        totalSessions:
+          type: integer
+        completedSessions:
+          type: integer
+        totalPicks:
+          type: integer
+        totalUnits:
+          type: integer
+        avgUnitsPerHour:
+          type: number
+        avgLinesPerHour:
+          type: number
+        accuracy:
+          type: number
+          format: percentage
+        shortPickRate:
+          type: number
+          format: percentage
+
+    SessionMetrics:
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+        completedSessions:
+          type: integer
+        inProgressSessions:
+          type: integer
+        avgSessionDuration:
+          type: integer
+          description: Minutes
+        avgPicksPerSession:
+          type: number
+        avgUnitsPerSession:
+          type: number
+        overallAccuracy:
+          type: number
+          format: percentage
+        sessionsByStrategy:
+          type: object
+          additionalProperties:
+            type: integer
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        first:
+          type: boolean
+        last:
+          type: boolean
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - bearerAuth: []
+  - apiKey: []

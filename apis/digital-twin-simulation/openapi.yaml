@@ -1,0 +1,1358 @@
+openapi: 3.1.0
+info:
+  title: Digital Twin & Simulation Service API
+  version: 1.0.0
+  description: |
+    # Digital Twin & Simulation Service
+
+    Complete REST API for managing warehouse digital twins, simulation scenarios, and optimization recommendations.
+
+    ## Overview
+
+    This service enables comprehensive warehouse simulation and digital twin capabilities for the Paklog WMS/WES platform:
+
+    - **Digital Twin Models**: Create and manage virtual representations of physical warehouses with 3D coordinates and zone configurations
+    - **Simulation Scenarios**: Design and execute what-if scenarios for capacity planning, optimization, stress testing, and historical replay
+    - **Real-time Simulation**: Run time-accelerated simulations with configurable parameters
+    - **Performance Metrics**: Track throughput, utilization, cycle time, queue length, resource usage, and cost metrics
+    - **AI-Powered Optimization**: Receive intelligent recommendations for warehouse layout and process improvements
+
+    ## Use Cases
+
+    - **Capacity Planning**: Test warehouse capacity under different order volumes
+    - **Layout Optimization**: Identify optimal warehouse zone configurations
+    - **What-If Analysis**: Evaluate operational changes before implementation
+    - **Stress Testing**: Validate warehouse performance under peak load conditions
+    - **Historical Replay**: Analyze past performance to identify improvement opportunities
+
+    ## Authentication
+
+    This API uses standard authentication mechanisms (configure based on your deployment).
+
+  contact:
+    name: Paklog Engineering Team
+    email: engineering@paklog.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.paklog.com/digital-twin/v1
+    description: Production server
+  - url: https://staging.paklog.com/digital-twin/v1
+    description: Staging server
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+tags:
+  - name: Warehouse Models
+    description: |
+      Operations for creating and managing digital twin warehouse models.
+      Models represent the physical warehouse layout with 3D dimensions and zones.
+  - name: Simulation Scenarios
+    description: |
+      Create and manage simulation scenarios for different testing purposes.
+      Scenarios define the conditions and parameters for simulation runs.
+  - name: Simulation Runs
+    description: |
+      Execute and monitor simulation runs. Track real-time progress and state.
+  - name: Performance Metrics
+    description: |
+      Retrieve detailed performance metrics from simulation runs including
+      throughput, utilization, cycle time, and resource usage.
+  - name: Optimization Recommendations
+    description: |
+      AI-generated recommendations for warehouse optimization based on simulation results.
+      Includes expected improvement estimates and confidence scores.
+
+paths:
+  /simulations/models:
+    post:
+      tags:
+        - Warehouse Models
+      summary: Create a new warehouse digital twin model
+      description: |
+        Creates a new digital twin model representing a physical warehouse.
+
+        The model includes:
+        - 3D dimensional coordinates (x, y, z in meters)
+        - Warehouse metadata (name, description)
+        - Reference to the actual warehouse ID
+
+        Once created, zones can be added to define storage areas, picking areas,
+        shipping/receiving docks, and other functional spaces within the warehouse.
+
+        **Example Use Case**: Creating a model for a new 50,000 sq ft warehouse
+        with 20ft ceilings before construction is complete to test layout efficiency.
+
+      operationId: createWarehouseModel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWarehouseModelCommand'
+            examples:
+              large-warehouse:
+                summary: Large distribution center
+                value:
+                  warehouseId: "WH-DC-001"
+                  name: "Northeast Distribution Center"
+                  description: "Primary distribution center serving northeastern region. High-velocity e-commerce fulfillment with automated picking zones."
+                  dimensions:
+                    x: 200.0
+                    y: 150.0
+                    z: 12.0
+              small-warehouse:
+                summary: Small local warehouse
+                value:
+                  warehouseId: "WH-LOCAL-042"
+                  name: "Boston Local Fulfillment"
+                  description: "Urban micro-fulfillment center for same-day delivery operations"
+                  dimensions:
+                    x: 50.0
+                    y: 40.0
+                    z: 8.0
+      responses:
+        '201':
+          description: Warehouse model created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseModel'
+              examples:
+                created-model:
+                  summary: Newly created warehouse model
+                  value:
+                    modelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                    warehouseId: "WH-DC-001"
+                    name: "Northeast Distribution Center"
+                    description: "Primary distribution center serving northeastern region. High-velocity e-commerce fulfillment with automated picking zones."
+                    dimensions:
+                      x: 200.0
+                      y: 150.0
+                      z: 12.0
+                    zones: []
+                    totalAisles: 0
+                    totalLocations: 0
+                    totalResources: 0
+                    createdAt: "2025-01-15T14:30:00Z"
+                    updatedAt: "2025-01-15T14:30:00Z"
+                    synced: false
+                    lastSyncTime: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /simulations/scenarios:
+    post:
+      tags:
+        - Simulation Scenarios
+      summary: Create a new simulation scenario
+      description: |
+        Creates a simulation scenario that defines the parameters and conditions for running simulations.
+
+        Scenarios support multiple types:
+        - **WHAT_IF**: Test specific operational changes
+        - **CAPACITY_PLANNING**: Evaluate warehouse capacity under different loads
+        - **OPTIMIZATION**: Find optimal configurations for specific goals
+        - **STRESS_TEST**: Test warehouse under extreme conditions
+        - **HISTORICAL_REPLAY**: Replay historical data to analyze past performance
+        - **MONTE_CARLO**: Run probabilistic simulations with random variations
+
+        Each scenario can specify optimization goals:
+        - **MAXIMIZE_THROUGHPUT**: Process maximum orders per hour
+        - **MINIMIZE_COST**: Reduce operational costs
+        - **MAXIMIZE_UTILIZATION**: Optimize resource and space usage
+        - **MINIMIZE_CYCLE_TIME**: Reduce order fulfillment time
+        - **BALANCE_ALL**: Multi-objective optimization
+
+      operationId: createScenario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScenarioCommand'
+            examples:
+              peak-season-planning:
+                summary: Peak season capacity planning
+                value:
+                  name: "Q4 Peak Season - 3x Volume"
+                  description: "Simulate warehouse performance during holiday peak with 3x normal order volume to identify capacity constraints and bottlenecks"
+                  type: "CAPACITY_PLANNING"
+                  baseModelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                  parameters:
+                    orderVolumeMultiplier: 3.0
+                    peakHours: [9, 10, 11, 14, 15, 16]
+                    additionalStaff: 15
+                    overtimeEnabled: true
+                  optimizationGoal: "MAXIMIZE_THROUGHPUT"
+                  createdBy: "operations@paklog.com"
+              layout-optimization:
+                summary: Warehouse layout optimization
+                value:
+                  name: "Fast-Mover Zone Optimization"
+                  description: "Optimize placement of high-velocity SKUs to minimize travel distance and picking time"
+                  type: "OPTIMIZATION"
+                  baseModelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                  parameters:
+                    topSkuPercentage: 20
+                    pickingStrategy: "zone-based"
+                    considerReplenishment: true
+                  optimizationGoal: "MINIMIZE_CYCLE_TIME"
+                  createdBy: "planning@paklog.com"
+              stress-test:
+                summary: Black Friday stress test
+                value:
+                  name: "Black Friday Extreme Load Test"
+                  description: "Stress test with 5x normal volume plus 50% order complexity increase"
+                  type: "STRESS_TEST"
+                  baseModelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                  parameters:
+                    orderVolumeMultiplier: 5.0
+                    avgLinesPerOrder: 4.5
+                    spikePatterns: ["9am-burst", "12pm-sustained", "3pm-burst"]
+                  optimizationGoal: "BALANCE_ALL"
+                  createdBy: "reliability@paklog.com"
+      responses:
+        '201':
+          description: Scenario created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationScenario'
+              examples:
+                created-scenario:
+                  summary: Created capacity planning scenario
+                  value:
+                    scenarioId: "scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+                    name: "Q4 Peak Season - 3x Volume"
+                    description: "Simulate warehouse performance during holiday peak with 3x normal order volume to identify capacity constraints and bottlenecks"
+                    type: "CAPACITY_PLANNING"
+                    baseModelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                    parameters:
+                      orderVolumeMultiplier: 3.0
+                      peakHours: [9, 10, 11, 14, 15, 16]
+                      additionalStaff: 15
+                      overtimeEnabled: true
+                    optimizationGoal: "MAXIMIZE_THROUGHPUT"
+                    createdAt: "2025-01-15T15:00:00Z"
+                    createdBy: "operations@paklog.com"
+                    active: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      tags:
+        - Simulation Scenarios
+      summary: List all simulation scenarios
+      description: |
+        Retrieves a list of all simulation scenarios, optionally filtered to show only active scenarios.
+
+        Active scenarios are those currently available for running new simulations.
+        Inactive scenarios are archived but retained for historical reference.
+
+      operationId: listScenarios
+      parameters:
+        - name: activeOnly
+          in: query
+          description: Filter to show only active scenarios
+          required: false
+          schema:
+            type: boolean
+            default: false
+          examples:
+            all:
+              summary: Return all scenarios
+              value: false
+            activeOnly:
+              summary: Return only active scenarios
+              value: true
+      responses:
+        '200':
+          description: List of scenarios retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SimulationScenario'
+              examples:
+                multiple-scenarios:
+                  summary: Multiple scenarios returned
+                  value:
+                    - scenarioId: "scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+                      name: "Q4 Peak Season - 3x Volume"
+                      description: "Simulate warehouse performance during holiday peak"
+                      type: "CAPACITY_PLANNING"
+                      baseModelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                      optimizationGoal: "MAXIMIZE_THROUGHPUT"
+                      createdAt: "2025-01-15T15:00:00Z"
+                      createdBy: "operations@paklog.com"
+                      active: true
+                    - scenarioId: "scenario-1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e"
+                      name: "Fast-Mover Zone Optimization"
+                      description: "Optimize placement of high-velocity SKUs"
+                      type: "OPTIMIZATION"
+                      baseModelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                      optimizationGoal: "MINIMIZE_CYCLE_TIME"
+                      createdAt: "2025-01-14T10:30:00Z"
+                      createdBy: "planning@paklog.com"
+                      active: true
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /simulations/runs:
+    post:
+      tags:
+        - Simulation Runs
+      summary: Start a new simulation run
+      description: |
+        Starts a new simulation run based on a scenario and warehouse model.
+
+        The simulation will:
+        1. Initialize the digital twin state from the warehouse model
+        2. Apply scenario parameters and conditions
+        3. Run time-accelerated simulation (configurable acceleration factor)
+        4. Generate events and collect metrics in real-time
+        5. Produce optimization recommendations upon completion
+
+        **Acceleration Factor**: Controls simulation speed
+        - 1x = real-time (1 simulated hour = 1 actual hour)
+        - 10x = 10 simulated hours per actual hour
+        - 100x = useful for quick what-if analysis
+        - 1000x = rapid monte carlo scenarios
+
+        The simulation publishes events to Kafka for real-time monitoring and can be
+        tracked via WebSocket for live updates.
+
+      operationId: startSimulation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartSimulationCommand'
+            examples:
+              peak-season-simulation:
+                summary: 24-hour peak season simulation
+                value:
+                  scenarioId: "scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+                  modelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                  name: "Peak Season Run - Jan 15"
+                  startTime: "2025-12-01T00:00:00"
+                  endTime: "2025-12-02T00:00:00"
+                  accelerationFactor: 100
+                  initiatedBy: "operations@paklog.com"
+              week-long-analysis:
+                summary: Week-long operational analysis
+                value:
+                  scenarioId: "scenario-1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e"
+                  modelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                  name: "Full Week Performance Analysis"
+                  startTime: "2025-01-20T00:00:00"
+                  endTime: "2025-01-27T00:00:00"
+                  accelerationFactor: 1000
+                  initiatedBy: "analytics@paklog.com"
+      responses:
+        '201':
+          description: Simulation run started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationRun'
+              examples:
+                started-run:
+                  summary: Newly started simulation run
+                  value:
+                    runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                    scenarioId: "scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+                    modelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                    name: "Peak Season Run - Jan 15"
+                    state: "RUNNING"
+                    timeWindow:
+                      startTime: "2025-12-01T00:00:00"
+                      endTime: "2025-12-02T00:00:00"
+                      accelerationFactor: 100
+                    events: []
+                    metrics: {}
+                    startedAt: "2025-01-15T16:00:00Z"
+                    completedAt: null
+                    initiatedBy: "operations@paklog.com"
+                    errorMessage: null
+                    totalEventsProcessed: 0
+                    progress: 0.0
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /simulations/runs/{runId}:
+    get:
+      tags:
+        - Simulation Runs
+      summary: Get simulation run details
+      description: |
+        Retrieves detailed information about a specific simulation run including:
+        - Current state (IDLE, RUNNING, PAUSED, COMPLETED, FAILED)
+        - Progress percentage
+        - Events processed
+        - Current metric values
+        - Error information if failed
+
+        Poll this endpoint to monitor long-running simulations, or use WebSocket
+        subscriptions for real-time updates.
+
+      operationId: getSimulationRun
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          description: Unique identifier of the simulation run
+          schema:
+            type: string
+            format: uuid
+          examples:
+            running:
+              summary: Running simulation
+              value: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+            completed:
+              summary: Completed simulation
+              value: "run-1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+      responses:
+        '200':
+          description: Simulation run details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationRun'
+              examples:
+                running-simulation:
+                  summary: Simulation in progress
+                  value:
+                    runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                    scenarioId: "scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+                    modelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                    name: "Peak Season Run - Jan 15"
+                    state: "RUNNING"
+                    timeWindow:
+                      startTime: "2025-12-01T00:00:00"
+                      endTime: "2025-12-02T00:00:00"
+                      accelerationFactor: 100
+                    metrics:
+                      throughput: 1250.5
+                      utilization: 0.87
+                      avgCycleTime: 245.3
+                    startedAt: "2025-01-15T16:00:00Z"
+                    completedAt: null
+                    initiatedBy: "operations@paklog.com"
+                    errorMessage: null
+                    totalEventsProcessed: 45230
+                    progress: 62.5
+                completed-simulation:
+                  summary: Completed simulation
+                  value:
+                    runId: "run-1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d"
+                    scenarioId: "scenario-1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e"
+                    modelId: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+                    name: "Layout Optimization Test"
+                    state: "COMPLETED"
+                    timeWindow:
+                      startTime: "2025-01-10T00:00:00"
+                      endTime: "2025-01-11T00:00:00"
+                      accelerationFactor: 50
+                    metrics:
+                      throughput: 980.2
+                      utilization: 0.92
+                      avgCycleTime: 198.7
+                    startedAt: "2025-01-14T09:00:00Z"
+                    completedAt: "2025-01-14T09:28:00Z"
+                    initiatedBy: "planning@paklog.com"
+                    errorMessage: null
+                    totalEventsProcessed: 72451
+                    progress: 100.0
+                failed-simulation:
+                  summary: Failed simulation
+                  value:
+                    runId: "run-9f8e7d6c-5b4a-3c2b-1d0e-9f8e7d6c5b4a"
+                    scenarioId: "scenario-error-test"
+                    modelId: "model-invalid"
+                    name: "Test Run"
+                    state: "FAILED"
+                    timeWindow:
+                      startTime: "2025-01-15T00:00:00"
+                      endTime: "2025-01-16T00:00:00"
+                      accelerationFactor: 10
+                    startedAt: "2025-01-15T14:00:00Z"
+                    completedAt: "2025-01-15T14:05:00Z"
+                    initiatedBy: "test@paklog.com"
+                    errorMessage: "Model validation failed: Invalid zone configuration - Zone Z001 coordinates overlap with Z002"
+                    totalEventsProcessed: 1203
+                    progress: 12.3
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /simulations/runs/{runId}/metrics:
+    get:
+      tags:
+        - Performance Metrics
+      summary: Get performance metrics for a simulation run
+      description: |
+        Retrieves detailed performance metrics collected during a simulation run.
+
+        Metrics include historical time series data showing how values changed
+        throughout the simulation, including:
+
+        - **Throughput**: Orders/items processed per hour
+        - **Utilization**: Resource and space utilization percentages
+        - **Cycle Time**: Average time from order receipt to shipment
+        - **Queue Length**: Average queue depths at bottleneck points
+        - **Resource Usage**: Worker and equipment utilization
+        - **Cost Per Order**: Operational cost breakdown
+        - **Efficiency**: Overall operational efficiency score
+
+        Each metric includes min/max/average values and a complete time series
+        for trend analysis and visualization.
+
+      operationId: getMetrics
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          description: Unique identifier of the simulation run
+          schema:
+            type: string
+            format: uuid
+          example: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+      responses:
+        '200':
+          description: Metrics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PerformanceMetric'
+              examples:
+                comprehensive-metrics:
+                  summary: Complete metric set from simulation
+                  value:
+                    - metricId: "metric-throughput-001"
+                      runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                      type: "THROUGHPUT"
+                      name: "Order Throughput"
+                      unit: "orders/hour"
+                      currentValue: 1250.5
+                      minValue: 890.2
+                      maxValue: 1450.8
+                      avgValue: 1180.3
+                      firstRecordedAt: "2025-01-15T16:00:00Z"
+                      lastRecordedAt: "2025-01-15T17:30:00Z"
+                    - metricId: "metric-utilization-001"
+                      runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                      type: "UTILIZATION"
+                      name: "Worker Utilization"
+                      unit: "percentage"
+                      currentValue: 87.5
+                      minValue: 62.3
+                      maxValue: 94.8
+                      avgValue: 84.2
+                      firstRecordedAt: "2025-01-15T16:00:00Z"
+                      lastRecordedAt: "2025-01-15T17:30:00Z"
+                    - metricId: "metric-cycletime-001"
+                      runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                      type: "CYCLE_TIME"
+                      name: "Average Order Cycle Time"
+                      unit: "seconds"
+                      currentValue: 245.3
+                      minValue: 198.7
+                      maxValue: 312.5
+                      avgValue: 251.8
+                      firstRecordedAt: "2025-01-15T16:00:00Z"
+                      lastRecordedAt: "2025-01-15T17:30:00Z"
+                    - metricId: "metric-cost-001"
+                      runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                      type: "COST_PER_ORDER"
+                      name: "Cost Per Order"
+                      unit: "USD"
+                      currentValue: 3.45
+                      minValue: 3.12
+                      maxValue: 4.87
+                      avgValue: 3.58
+                      firstRecordedAt: "2025-01-15T16:00:00Z"
+                      lastRecordedAt: "2025-01-15T17:30:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /simulations/runs/{runId}/recommendations:
+    get:
+      tags:
+        - Optimization Recommendations
+      summary: Get AI-generated optimization recommendations
+      description: |
+        Retrieves optimization recommendations generated by analyzing simulation results.
+
+        The AI optimization engine analyzes:
+        - Performance bottlenecks and constraints
+        - Resource utilization patterns
+        - Workflow inefficiencies
+        - Layout optimization opportunities
+        - Staffing and scheduling improvements
+
+        Each recommendation includes:
+        - **Title & Description**: Clear explanation of the optimization
+        - **Suggested Changes**: Specific parameter modifications
+        - **Expected Improvement**: Quantified benefit estimate
+        - **Confidence Score**: AI confidence in the recommendation (0-1)
+        - **Impact Analysis**: Detailed explanation of expected effects
+        - **Cost/ROI Estimates**: Financial impact projections
+        - **Implementation Status**: Whether the recommendation has been applied
+
+        Recommendations are ranked by expected impact and confidence.
+
+      operationId: getRecommendations
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          description: Unique identifier of the simulation run
+          schema:
+            type: string
+            format: uuid
+          example: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+      responses:
+        '200':
+          description: Recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OptimizationRecommendation'
+              examples:
+                high-impact-recommendations:
+                  summary: High-impact optimization recommendations
+                  value:
+                    - recommendationId: "rec-layout-001"
+                      runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                      title: "Relocate Fast-Moving SKUs Closer to Shipping"
+                      description: "Analysis shows top 15% of SKUs (by order frequency) account for 68% of picking activity. Relocating these items to zones within 50ft of shipping dock would significantly reduce travel time."
+                      goal: "MINIMIZE_CYCLE_TIME"
+                      suggestedChanges:
+                        targetSkuPercentile: 15
+                        maxDistanceFromShipping: 50
+                        affectedZones: ["ZONE-A", "ZONE-B", "ZONE-C"]
+                        estimatedMoves: 2400
+                      expectedImprovement: 18.5
+                      confidence: 0.89
+                      impactAnalysis: "Projected to reduce average picking cycle time from 245s to 200s (-18.5%). Will affect 2,400 SKU locations. One-time relocation cost estimated at $12,000. Expected to save 4.2 labor hours per day."
+                      estimatedCost: 12000.00
+                      estimatedROI: 285.5
+                      generatedAt: "2025-01-15T17:45:00Z"
+                      implemented: false
+                      implementedAt: null
+                    - recommendationId: "rec-staffing-001"
+                      runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                      title: "Add 2 Pickers During 2-4pm Peak"
+                      description: "Simulation identified consistent bottleneck during 2-4pm window where pick queue length exceeded 45 minutes. Adding 2 additional pickers during this window would eliminate the bottleneck."
+                      goal: "MAXIMIZE_THROUGHPUT"
+                      suggestedChanges:
+                        additionalPickersNeeded: 2
+                        peakWindow: "14:00-16:00"
+                        affectedShifts: ["day-shift"]
+                      expectedImprovement: 12.3
+                      confidence: 0.92
+                      impactAnalysis: "Would increase peak throughput from 1,250 to 1,404 orders/hour (+12.3%). Eliminates afternoon backlog that currently delays 8% of orders. Requires 4 additional labor hours per day."
+                      estimatedCost: 60000.00
+                      estimatedROI: 145.8
+                      generatedAt: "2025-01-15T17:45:00Z"
+                      implemented: false
+                      implementedAt: null
+                    - recommendationId: "rec-equipment-001"
+                      runId: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+                      title: "Add 1 Forklift to Zone D"
+                      description: "Zone D replenishment operations show forklift utilization at 96% during peak, causing 15-minute average delays. Additional forklift would optimize replenishment flow."
+                      goal: "MAXIMIZE_UTILIZATION"
+                      suggestedChanges:
+                        equipmentType: "forklift"
+                        targetZone: "ZONE-D"
+                        quantity: 1
+                      expectedImprovement: 8.7
+                      confidence: 0.85
+                      impactAnalysis: "Would reduce Zone D replenishment delays by 87%, improving overall utilization by 8.7%. Forklift utilization would balance at 62% with two units. Eliminates stockout delays affecting approximately 120 picks per day."
+                      estimatedCost: 35000.00
+                      estimatedROI: 98.3
+                      generatedAt: "2025-01-15T17:45:00Z"
+                      implemented: false
+                      implementedAt: null
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  schemas:
+    CreateWarehouseModelCommand:
+      type: object
+      required:
+        - warehouseId
+        - name
+        - dimensions
+      properties:
+        warehouseId:
+          type: string
+          description: Reference to the actual warehouse entity in the WMS
+          example: "WH-DC-001"
+        name:
+          type: string
+          description: Human-readable name for the warehouse model
+          minLength: 1
+          maxLength: 200
+          example: "Northeast Distribution Center"
+        description:
+          type: string
+          description: Detailed description of the warehouse and its purpose
+          maxLength: 2000
+          example: "Primary distribution center serving northeastern region with high-velocity e-commerce fulfillment"
+        dimensions:
+          $ref: '#/components/schemas/Coordinates3D'
+
+    Coordinates3D:
+      type: object
+      required:
+        - x
+        - y
+        - z
+      description: 3D coordinates in meters representing warehouse dimensions or positions
+      properties:
+        x:
+          type: number
+          format: double
+          description: X-axis dimension/position in meters (typically length)
+          minimum: 0
+          example: 200.0
+        y:
+          type: number
+          format: double
+          description: Y-axis dimension/position in meters (typically width)
+          minimum: 0
+          example: 150.0
+        z:
+          type: number
+          format: double
+          description: Z-axis dimension/position in meters (typically height)
+          minimum: 0
+          example: 12.0
+
+    WarehouseModel:
+      type: object
+      description: Digital twin representation of a physical warehouse
+      properties:
+        modelId:
+          type: string
+          format: uuid
+          description: Unique identifier for the warehouse model
+          example: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+        warehouseId:
+          type: string
+          description: Reference to the actual warehouse in the WMS
+          example: "WH-DC-001"
+        name:
+          type: string
+          description: Name of the warehouse model
+          example: "Northeast Distribution Center"
+        description:
+          type: string
+          description: Detailed description
+          example: "Primary distribution center serving northeastern region"
+        dimensions:
+          $ref: '#/components/schemas/Coordinates3D'
+        zones:
+          type: array
+          description: Warehouse zones (storage, picking, shipping, etc.)
+          items:
+            $ref: '#/components/schemas/WarehouseZone'
+        totalAisles:
+          type: integer
+          description: Total number of aisles in the warehouse
+          example: 48
+        totalLocations:
+          type: integer
+          description: Total number of storage locations
+          example: 12500
+        totalResources:
+          type: integer
+          description: Total number of resources (workers, forklifts, etc.)
+          example: 35
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when model was created
+          example: "2025-01-15T14:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when model was last updated
+          example: "2025-01-15T14:30:00Z"
+        synced:
+          type: boolean
+          description: Whether model is synchronized with actual warehouse state
+          example: true
+        lastSyncTime:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last synchronization timestamp
+          example: "2025-01-15T14:00:00Z"
+
+    WarehouseZone:
+      type: object
+      description: A functional zone within the warehouse (storage, picking, shipping, etc.)
+      properties:
+        zoneId:
+          type: string
+          description: Unique zone identifier
+          example: "ZONE-A-PICK"
+        name:
+          type: string
+          description: Zone name
+          example: "Zone A - Fast Mover Picking"
+        type:
+          type: string
+          enum: [STORAGE, PICKING, PACKING, SHIPPING, RECEIVING, STAGING, RETURNS]
+          description: Functional type of the zone
+          example: "PICKING"
+        startCoordinates:
+          $ref: '#/components/schemas/Coordinates3D'
+        endCoordinates:
+          $ref: '#/components/schemas/Coordinates3D'
+        capacity:
+          type: integer
+          description: Total capacity (pallets, bins, or items depending on zone type)
+          example: 2500
+        currentOccupancy:
+          type: integer
+          description: Current occupancy level
+          example: 2180
+        aisleIds:
+          type: array
+          items:
+            type: string
+          description: Aisles within this zone
+          example: ["A01", "A02", "A03"]
+        resourceIds:
+          type: array
+          items:
+            type: string
+          description: Resources assigned to this zone
+          example: ["PICKER-001", "PICKER-002", "FORKLIFT-05"]
+
+    CreateScenarioCommand:
+      type: object
+      required:
+        - name
+        - type
+        - baseModelId
+        - optimizationGoal
+        - createdBy
+      properties:
+        name:
+          type: string
+          description: Name of the scenario
+          minLength: 1
+          maxLength: 200
+          example: "Q4 Peak Season - 3x Volume"
+        description:
+          type: string
+          description: Detailed description of what the scenario tests
+          maxLength: 2000
+          example: "Simulate warehouse performance during holiday peak with 3x normal order volume"
+        type:
+          $ref: '#/components/schemas/ScenarioType'
+        baseModelId:
+          type: string
+          format: uuid
+          description: Warehouse model to use as the baseline
+          example: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+        parameters:
+          type: object
+          description: Scenario-specific parameters (flexible key-value pairs)
+          additionalProperties: true
+          example:
+            orderVolumeMultiplier: 3.0
+            peakHours: [9, 10, 11, 14, 15, 16]
+            additionalStaff: 15
+        optimizationGoal:
+          $ref: '#/components/schemas/OptimizationGoal'
+        createdBy:
+          type: string
+          description: User or system that created the scenario
+          example: "operations@paklog.com"
+
+    ScenarioType:
+      type: string
+      enum:
+        - WHAT_IF
+        - CAPACITY_PLANNING
+        - OPTIMIZATION
+        - STRESS_TEST
+        - HISTORICAL_REPLAY
+        - MONTE_CARLO
+      description: |
+        Type of simulation scenario:
+        - **WHAT_IF**: Test specific operational changes
+        - **CAPACITY_PLANNING**: Evaluate capacity under different loads
+        - **OPTIMIZATION**: Find optimal configurations
+        - **STRESS_TEST**: Test under extreme conditions
+        - **HISTORICAL_REPLAY**: Replay historical data
+        - **MONTE_CARLO**: Probabilistic simulation with variations
+      example: "CAPACITY_PLANNING"
+
+    OptimizationGoal:
+      type: string
+      enum:
+        - MAXIMIZE_THROUGHPUT
+        - MINIMIZE_COST
+        - MAXIMIZE_UTILIZATION
+        - MINIMIZE_CYCLE_TIME
+        - BALANCE_ALL
+      description: |
+        Primary optimization objective:
+        - **MAXIMIZE_THROUGHPUT**: Process maximum orders/hour
+        - **MINIMIZE_COST**: Reduce operational costs
+        - **MAXIMIZE_UTILIZATION**: Optimize resource and space usage
+        - **MINIMIZE_CYCLE_TIME**: Reduce order fulfillment time
+        - **BALANCE_ALL**: Multi-objective optimization
+      example: "MAXIMIZE_THROUGHPUT"
+
+    SimulationScenario:
+      type: object
+      description: A configured simulation scenario ready for execution
+      properties:
+        scenarioId:
+          type: string
+          format: uuid
+          description: Unique scenario identifier
+          example: "scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+        name:
+          type: string
+          example: "Q4 Peak Season - 3x Volume"
+        description:
+          type: string
+          example: "Simulate warehouse performance during holiday peak"
+        type:
+          $ref: '#/components/schemas/ScenarioType'
+        baseModelId:
+          type: string
+          format: uuid
+          example: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+        parameters:
+          type: object
+          additionalProperties: true
+          example:
+            orderVolumeMultiplier: 3.0
+            peakHours: [9, 10, 11, 14, 15, 16]
+        optimizationGoal:
+          $ref: '#/components/schemas/OptimizationGoal'
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-01-15T15:00:00Z"
+        createdBy:
+          type: string
+          example: "operations@paklog.com"
+        active:
+          type: boolean
+          description: Whether scenario is active and available for new runs
+          example: true
+
+    StartSimulationCommand:
+      type: object
+      required:
+        - scenarioId
+        - modelId
+        - startTime
+        - endTime
+        - accelerationFactor
+        - initiatedBy
+      properties:
+        scenarioId:
+          type: string
+          format: uuid
+          description: Scenario to execute
+          example: "scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+        modelId:
+          type: string
+          format: uuid
+          description: Warehouse model to simulate
+          example: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+        name:
+          type: string
+          description: Optional name for this specific run
+          example: "Peak Season Run - Jan 15"
+        startTime:
+          type: string
+          format: date-time
+          description: Simulated start time (in simulation timeline)
+          example: "2025-12-01T00:00:00"
+        endTime:
+          type: string
+          format: date-time
+          description: Simulated end time (in simulation timeline)
+          example: "2025-12-02T00:00:00"
+        accelerationFactor:
+          type: integer
+          description: Time acceleration multiplier (1x = real-time, 100x = 100 simulated hours per actual hour)
+          minimum: 1
+          maximum: 10000
+          example: 100
+        initiatedBy:
+          type: string
+          description: User or system initiating the simulation
+          example: "operations@paklog.com"
+
+    SimulationRun:
+      type: object
+      description: An active or completed simulation run instance
+      properties:
+        runId:
+          type: string
+          format: uuid
+          description: Unique run identifier
+          example: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+        scenarioId:
+          type: string
+          format: uuid
+          example: "scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d"
+        modelId:
+          type: string
+          format: uuid
+          example: "model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d"
+        name:
+          type: string
+          example: "Peak Season Run - Jan 15"
+        state:
+          $ref: '#/components/schemas/ModelState'
+        timeWindow:
+          $ref: '#/components/schemas/SimulationTimeWindow'
+        events:
+          type: array
+          description: Simulation events (may be truncated for large runs)
+          items:
+            type: object
+        metrics:
+          type: object
+          description: Current metric values (key-value pairs)
+          additionalProperties:
+            type: number
+          example:
+            throughput: 1250.5
+            utilization: 0.87
+            avgCycleTime: 245.3
+        startedAt:
+          type: string
+          format: date-time
+          description: Actual start time (wall clock)
+          example: "2025-01-15T16:00:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Actual completion time (wall clock)
+          example: "2025-01-15T16:45:00Z"
+        initiatedBy:
+          type: string
+          example: "operations@paklog.com"
+        errorMessage:
+          type: string
+          nullable: true
+          description: Error message if simulation failed
+          example: null
+        totalEventsProcessed:
+          type: integer
+          description: Number of simulation events processed
+          example: 45230
+        progress:
+          type: number
+          format: double
+          description: Completion percentage (0-100)
+          minimum: 0
+          maximum: 100
+          example: 62.5
+
+    ModelState:
+      type: string
+      enum:
+        - IDLE
+        - RUNNING
+        - PAUSED
+        - COMPLETED
+        - FAILED
+      description: |
+        Current state of the simulation run:
+        - **IDLE**: Initialized but not yet started
+        - **RUNNING**: Currently executing
+        - **PAUSED**: Temporarily paused
+        - **COMPLETED**: Successfully finished
+        - **FAILED**: Terminated due to error
+      example: "RUNNING"
+
+    SimulationTimeWindow:
+      type: object
+      description: Time window for the simulation
+      required:
+        - startTime
+        - endTime
+        - accelerationFactor
+      properties:
+        startTime:
+          type: string
+          format: date-time
+          description: Simulated start time
+          example: "2025-12-01T00:00:00"
+        endTime:
+          type: string
+          format: date-time
+          description: Simulated end time
+          example: "2025-12-02T00:00:00"
+        accelerationFactor:
+          type: integer
+          description: Time acceleration multiplier
+          example: 100
+
+    PerformanceMetric:
+      type: object
+      description: Performance metric collected during simulation
+      properties:
+        metricId:
+          type: string
+          format: uuid
+          description: Unique metric identifier
+          example: "metric-throughput-001"
+        runId:
+          type: string
+          format: uuid
+          description: Associated simulation run
+          example: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+        type:
+          $ref: '#/components/schemas/MetricType'
+        name:
+          type: string
+          description: Human-readable metric name
+          example: "Order Throughput"
+        unit:
+          type: string
+          description: Unit of measurement
+          example: "orders/hour"
+        currentValue:
+          type: number
+          format: double
+          description: Most recent value
+          example: 1250.5
+        minValue:
+          type: number
+          format: double
+          description: Minimum value observed
+          example: 890.2
+        maxValue:
+          type: number
+          format: double
+          description: Maximum value observed
+          example: 1450.8
+        avgValue:
+          type: number
+          format: double
+          description: Average value
+          example: 1180.3
+        firstRecordedAt:
+          type: string
+          format: date-time
+          description: First measurement timestamp
+          example: "2025-01-15T16:00:00Z"
+        lastRecordedAt:
+          type: string
+          format: date-time
+          description: Most recent measurement timestamp
+          example: "2025-01-15T17:30:00Z"
+
+    MetricType:
+      type: string
+      enum:
+        - THROUGHPUT
+        - UTILIZATION
+        - CYCLE_TIME
+        - QUEUE_LENGTH
+        - RESOURCE_USAGE
+        - COST_PER_ORDER
+        - EFFICIENCY
+      description: |
+        Type of performance metric:
+        - **THROUGHPUT**: Items/orders processed per time unit
+        - **UTILIZATION**: Resource or space utilization percentage
+        - **CYCLE_TIME**: Time to complete processes
+        - **QUEUE_LENGTH**: Queue depths at bottlenecks
+        - **RESOURCE_USAGE**: Worker and equipment usage
+        - **COST_PER_ORDER**: Operational cost metrics
+        - **EFFICIENCY**: Overall efficiency scores
+      example: "THROUGHPUT"
+
+    OptimizationRecommendation:
+      type: object
+      description: AI-generated optimization recommendation based on simulation analysis
+      properties:
+        recommendationId:
+          type: string
+          format: uuid
+          description: Unique recommendation identifier
+          example: "rec-layout-001"
+        runId:
+          type: string
+          format: uuid
+          description: Simulation run that generated this recommendation
+          example: "run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f"
+        title:
+          type: string
+          description: Concise recommendation title
+          example: "Relocate Fast-Moving SKUs Closer to Shipping"
+        description:
+          type: string
+          description: Detailed explanation of the recommendation
+          example: "Analysis shows top 15% of SKUs account for 68% of picking activity. Relocating these items would reduce travel time significantly."
+        goal:
+          $ref: '#/components/schemas/OptimizationGoal'
+        suggestedChanges:
+          type: object
+          description: Specific parameter changes to implement
+          additionalProperties: true
+          example:
+            targetSkuPercentile: 15
+            maxDistanceFromShipping: 50
+            affectedZones: ["ZONE-A", "ZONE-B"]
+        expectedImprovement:
+          type: number
+          format: double
+          description: Expected improvement percentage
+          example: 18.5
+        confidence:
+          type: number
+          format: double
+          description: AI confidence score (0-1)
+          minimum: 0
+          maximum: 1
+          example: 0.89
+        impactAnalysis:
+          type: string
+          description: Detailed analysis of expected impact
+          example: "Projected to reduce cycle time from 245s to 200s (-18.5%). Will require relocating 2,400 SKUs."
+        estimatedCost:
+          type: number
+          format: double
+          description: Estimated implementation cost in USD
+          example: 12000.00
+        estimatedROI:
+          type: number
+          format: double
+          description: Estimated return on investment percentage
+          example: 285.5
+        generatedAt:
+          type: string
+          format: date-time
+          description: When recommendation was generated
+          example: "2025-01-15T17:45:00Z"
+        implemented:
+          type: boolean
+          description: Whether recommendation has been implemented
+          example: false
+        implementedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: When recommendation was implemented
+          example: null
+
+    ErrorResponse:
+      type: object
+      description: Standard error response
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Error occurrence timestamp
+          example: "2025-01-15T16:00:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: Error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Error message
+          example: "Invalid acceleration factor: must be between 1 and 10000"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/simulations/runs"
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input parameters
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-01-15T16:00:00Z"
+            status: 400
+            error: "Bad Request"
+            message: "Invalid acceleration factor: must be between 1 and 10000"
+            path: "/api/v1/simulations/runs"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-01-15T16:00:00Z"
+            status: 404
+            error: "Not Found"
+            message: "Simulation run not found: run-invalid-id"
+            path: "/api/v1/simulations/runs/run-invalid-id"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2025-01-15T16:00:00Z"
+            status: 500
+            error: "Internal Server Error"
+            message: "An unexpected error occurred while processing the simulation"
+            path: "/api/v1/simulations/runs"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication
+
+security:
+  - bearerAuth: []

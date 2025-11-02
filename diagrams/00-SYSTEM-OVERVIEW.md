@@ -1,6 +1,6 @@
 # PakLog Complete System Architecture Overview
 
-## Microservices Ecosystem - All 22 Services
+## Microservices Ecosystem - 21 Core Services
 
 ```mermaid
 graph TB
@@ -10,7 +10,6 @@ graph TB
         OM[Order Management<br/>Order Lifecycle]
         PC[Product Catalog<br/>SKU Master Data]
         ST[Shipment Transportation<br/>Carrier Integration]
-        WO[Warehouse Operations<br/>Core WMS]
     end
 
     subgraph "Phase 2: Execution Services"
@@ -54,10 +53,9 @@ graph TB
     OM --> I
     OM --> C
     OM --> ST
-    OM --> WO
 
     %% Wave and Task Flow
-    WO --> WP
+    OM --> WP
     WP --> TE
     TE --> PE
     PE --> PS
@@ -78,20 +76,20 @@ graph TB
     PA --> WP
     PA --> WL
     YM --> ST
-    CD --> WO
+    CD --> TE
 
     %% Customer Services
     LMD --> ST
-    VAS --> WO
-    QC --> WO
+    VAS --> TE
+    QC --> PE
 
     %% Intelligence Platform
-    DT --> WO
+    DT --> WP
     PI --> TE
     EA --> RF
     FS --> OM
     CX --> OM
-    SM --> WO
+    SM --> I
 
     classDef foundation fill:#e1f5e1,stroke:#4caf50,stroke-width:2px
     classDef execution fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
@@ -100,7 +98,7 @@ graph TB
     classDef customer fill:#fce4ec,stroke:#e91e63,stroke-width:2px
     classDef intelligence fill:#e0f2f1,stroke:#009688,stroke-width:2px
 
-    class C,I,OM,PC,ST,WO foundation
+    class C,I,OM,PC,ST foundation
     class WP,TE,PE,PS,PT,LM,WL execution
     class RM,RF,WES advanced
     class PA,YM,CD optimization
@@ -110,37 +108,36 @@ graph TB
 
 ## Service Categories and Responsibilities
 
-### Phase 1: Foundation Services (Core WMS)
+### Phase 1: Foundation Services (Core)
 1. **Cartonization** - 3D bin-packing optimization for shipping cartons
 2. **Inventory** - Real-time inventory tracking and management
 3. **Order Management** - Order lifecycle from creation to fulfillment
 4. **Product Catalog** - SKU master data and product information
 5. **Shipment Transportation** - Carrier integration and shipment tracking
-6. **Warehouse Operations** - Core warehouse management functions
 
 ### Phase 2: Execution Services (Operational Layer)
-7. **Wave Planning** - Intelligent wave creation and optimization
-8. **Task Execution** - Task queue management and assignment
-9. **Pick Execution** - Mobile picking with path optimization (TSP)
-10. **Pack & Ship** - Packing station operations and shipping
-11. **Physical Tracking** - License plate and asset tracking
-12. **Location Master** - Warehouse location and slotting management
-13. **Workload Planning** - Labor forecasting and shift planning
+6. **Wave Planning** - Intelligent wave creation and optimization
+7. **Task Execution** - Task queue management and assignment
+8. **Pick Execution** - Mobile picking with path optimization (TSP)
+9. **Pack & Ship** - Packing station operations and shipping
+10. **Physical Tracking** - License plate and asset tracking
+11. **Location Master** - Warehouse location and slotting management
+12. **Workload Planning** - Labor forecasting and shift planning
 
 ### Phase 3: Advanced Operations
-14. **Returns Management** - RMA processing and fraud detection
-15. **Robotics Fleet Management** - AMR/AGV orchestration with A* pathfinding
-16. **WES Orchestration Engine** - Workflow orchestration with saga pattern
+13. **Returns Management** - RMA processing and fraud detection
+14. **Robotics Fleet Management** - AMR/AGV orchestration with A* pathfinding
+15. **WES Orchestration Engine** - Workflow orchestration with saga pattern
 
 ### Phase 4: Optimization & Intelligence
-17. **Predictive Analytics Platform** - ML-based forecasting and predictions
-18. **Yard Management System** - Dock door scheduling and trailer tracking
-19. **Cross-Docking Operations** - Flow-through and consolidation
+16. **Predictive Analytics Platform** - ML-based forecasting and predictions
+17. **Yard Management System** - Dock door scheduling and trailer tracking
+18. **Cross-Docking Operations** - Flow-through and consolidation
 
 ### Phase 5: Customer & Value Services
-20. **Last-Mile Delivery** - Route optimization with VRP algorithm
-21. **Value-Added Services** - Kitting, customization, gift wrapping
-22. **Quality Compliance** - Statistical Process Control (SPC) and inspection
+19. **Last-Mile Delivery** - Route optimization with VRP algorithm
+20. **Value-Added Services** - Kitting, customization, gift wrapping
+21. **Quality Compliance** - Statistical Process Control (SPC) and inspection
 
 ### Phase 6: Intelligence Platform (Supporting Services)
 - **Digital Twin Simulation** - Virtual warehouse modeling and what-if analysis

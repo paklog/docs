@@ -1,0 +1,94 @@
+{
+  "info": {
+    "_postman_id": "f6a1b2c3-d4e5-4f3g-9h7i-6d1e2f3a4b5c",
+    "name": "Sustainability Management API",
+    "description": "API for tracking environmental impact, managing carbon footprint, and providing ESG reporting.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Carbon Footprint",
+      "item": [
+        {
+          "name": "Get Carbon Footprint Report",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reports/carbon-footprint?period=monthly&date=2025-10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reports",
+                "carbon-footprint"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly"
+                },
+                {
+                  "key": "date",
+                  "value": "2025-10"
+                }
+              ]
+            },
+            "description": "**Summary**: Retrieves the calculated carbon footprint for a given period, broken down by scope."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Successful operation.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"period\": \"2025-10\",\n  \"totalEmissionsKgCO2e\": 152340,\n  \"breakdown\": {\n    \"scope1\": 45000,\n    \"scope2\": 85340,\n    \"scope3\": 22000\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Resource Optimization",
+      "item": [
+        {
+          "name": "Get Waste Reduction Metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/metrics/waste-reduction",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics",
+                "waste-reduction"
+              ]
+            },
+            "description": "**Summary**: Provides metrics on packaging waste reduction and recycling rates."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Successful operation.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"packagingWasteReductionPercentage\": 25.5,\n  \"recyclingRate\": 0.78\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1/sustainability"
+    }
+  ]
+}

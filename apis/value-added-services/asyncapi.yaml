@@ -1,0 +1,1119 @@
+asyncapi: 3.0.0
+
+info:
+  title: Value-Added Services (VAS) Events API
+  version: 1.0.0
+  description: |
+    ## Overview
+    The Value-Added Services Events API publishes domain events to Apache Kafka for all significant state changes in VAS order workflows. This enables event-driven architecture and real-time integration with downstream systems.
+
+    ## Event-Driven Architecture
+    The VAS service follows Event Sourcing and CQRS patterns:
+    - **Domain Events**: Published when aggregate state changes
+    - **CloudEvents Format**: All events use CloudEvents 1.0 specification
+    - **Kafka Transport**: Events delivered via Apache Kafka with at-least-once delivery
+    - **Event Ordering**: Events for the same order maintain ordering via partition key (orderId)
+
+    ## Event Flow
+    ```
+    1. VAS Order Created → VASOrderCreated
+    2. Workflow Started → VASWorkflowStarted
+    3. Quality Checks → QualityCheckPassed | QualityCheckFailed
+    4. Order Completed → VASOrderCompleted
+                      → KittingCompleted (if KITTING)
+                      → CustomizationCompleted (if CUSTOMIZATION)
+    5. Order Failed → VASOrderFailedEvent (if max rework exceeded)
+    ```
+
+    ## CloudEvents Structure
+    All events are wrapped in CloudEvents format with:
+    - **id**: Unique event identifier (UUID)
+    - **type**: Event type (e.g., com.paklog.vas.VASOrderCreated)
+    - **source**: Event source (https://paklog.com/vas)
+    - **time**: Event timestamp (ISO 8601)
+    - **datacontenttype**: application/json
+    - **data**: Event payload (domain event)
+
+    ## Use Cases
+    - **Billing Integration**: Subscribe to VASOrderCompleted for invoicing
+    - **Inventory Updates**: Track KittingCompleted for component depletion
+    - **Analytics**: Monitor all events for operational metrics
+    - **Notifications**: Alert on QualityCheckFailed or VASOrderFailed
+    - **SLA Monitoring**: Track workflow timing via Started/Completed events
+    - **Audit Trail**: Maintain complete event history for compliance
+
+    ## Consumer Guidelines
+    - **Idempotency**: Handle duplicate events gracefully (use eventId for deduplication)
+    - **Ordering**: Events for same orderId maintain order within partition
+    - **Retry Logic**: Implement exponential backoff for processing failures
+    - **Dead Letter Queue**: Configure DLQ for poison messages
+    - **Schema Evolution**: Events are backward compatible; new fields may be added
+
+  contact:
+    name: Paklog Engineering Team
+    email: engineering@paklog.com
+    url: https://paklog.com
+  license:
+    name: Proprietary
+    url: https://paklog.com/license
+
+servers:
+  production:
+    host: kafka.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    tags:
+      - name: env:production
+        description: Production environment
+    bindings:
+      kafka:
+        schemaRegistryUrl: https://schema-registry.paklog.com
+        schemaRegistryVendor: confluent
+
+  staging:
+    host: kafka-staging.paklog.com:9092
+    protocol: kafka
+    description: Staging Kafka cluster
+    tags:
+      - name: env:staging
+        description: Staging environment
+
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka
+    tags:
+      - name: env:development
+        description: Local development
+
+defaultContentType: application/json
+
+channels:
+  vasEvents:
+    address: support-intelligence.value-added-services.events
+    messages:
+      VASOrderCreated:
+        $ref: '#/components/messages/VASOrderCreated'
+      VASWorkflowStarted:
+        $ref: '#/components/messages/VASWorkflowStarted'
+      VASOrderCompleted:
+        $ref: '#/components/messages/VASOrderCompleted'
+      VASOrderFailed:
+        $ref: '#/components/messages/VASOrderFailed'
+      QualityCheckPassed:
+        $ref: '#/components/messages/QualityCheckPassed'
+      QualityCheckFailed:
+        $ref: '#/components/messages/QualityCheckFailed'
+      KittingCompleted:
+        $ref: '#/components/messages/KittingCompleted'
+      CustomizationCompleted:
+        $ref: '#/components/messages/CustomizationCompleted'
+    description: |
+      Main event stream for all Value-Added Services domain events.
+
+      **Topic Configuration:**
+      - Partitions: 10 (partitioned by orderId for ordering guarantee)
+      - Replication Factor: 3 (high availability)
+      - Retention: 30 days (compliance and replay)
+      - Cleanup Policy: Delete (time-based retention)
+
+      **Partition Strategy:**
+      Events for the same orderId are routed to the same partition to maintain
+      ordering guarantees. Partition key is set to the orderId field.
+
+      **Consumer Groups:**
+      - `billing-service`: Consumes VASOrderCompleted for invoicing
+      - `analytics-service`: Consumes all events for metrics
+      - `notification-service`: Consumes failure and completion events
+      - `inventory-service`: Consumes KittingCompleted for stock updates
+      - `audit-service`: Consumes all events for compliance logging
+    bindings:
+      kafka:
+        topic: support-intelligence.value-added-services.events
+        partitions: 10
+        replicas: 3
+        configs:
+          retention.ms: 2592000000  # 30 days
+          cleanup.policy: delete
+          compression.type: snappy
+          min.insync.replicas: 2
+
+operations:
+  publishVASOrderCreated:
+    action: send
+    channel:
+      $ref: '#/channels/vasEvents'
+    summary: Publish VAS Order Created event
+    description: |
+      Published when a new VAS order is created and initialized.
+
+      **Trigger:** POST /api/v1/vas/orders succeeds
+      **Publisher:** VAS Order Service
+      **Typical Consumers:**
+      - Analytics service for order volume tracking
+      - Notification service for customer alerts
+      - Dashboard service for real-time order displays
+    messages:
+      - $ref: '#/components/messages/VASOrderCreated'
+    tags:
+      - name: lifecycle
+        description: Order lifecycle event
+      - name: creation
+        description: Resource creation
+
+  publishVASWorkflowStarted:
+    action: send
+    channel:
+      $ref: '#/channels/vasEvents'
+    summary: Publish Workflow Started event
+    description: |
+      Published when a VAS order workflow begins execution.
+
+      **Trigger:** POST /api/v1/vas/orders/{id}/start succeeds
+      **Publisher:** VAS Order Service
+      **Typical Consumers:**
+      - SLA monitoring service (starts SLA timer)
+      - Workforce management for task assignment
+      - Real-time dashboard for workflow tracking
+    messages:
+      - $ref: '#/components/messages/VASWorkflowStarted'
+    tags:
+      - name: lifecycle
+        description: Order lifecycle event
+      - name: workflow
+        description: Workflow state change
+
+  publishVASOrderCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/vasEvents'
+    summary: Publish Order Completed event
+    description: |
+      Published when a VAS order completes successfully.
+
+      **Trigger:** POST /api/v1/vas/orders/{id}/complete succeeds
+      **Publisher:** VAS Order Service
+      **Typical Consumers:**
+      - **CRITICAL**: Billing service for invoice generation
+      - Inventory service for final stock reconciliation
+      - Customer notification service
+      - SLA monitoring (checks if slaViolated flag is set)
+      - Analytics for completion metrics and cost tracking
+
+      **Business Impact:**
+      This is the most critical event for billing and financial reporting.
+      Consumers must handle this event reliably with proper error handling.
+    messages:
+      - $ref: '#/components/messages/VASOrderCompleted'
+    tags:
+      - name: lifecycle
+        description: Order lifecycle event
+      - name: completion
+        description: Successful completion
+      - name: critical
+        description: Business-critical event
+
+  publishVASOrderFailed:
+    action: send
+    channel:
+      $ref: '#/channels/vasEvents'
+    summary: Publish Order Failed event
+    description: |
+      Published when a VAS order fails permanently (max rework attempts exceeded).
+
+      **Trigger:** Quality check failure after 2 rework attempts
+      **Publisher:** VAS Order Service
+      **Typical Consumers:**
+      - **URGENT**: Operations team notification
+      - Customer service for customer communication
+      - Analytics for failure rate tracking
+      - Root cause analysis system
+
+      **SLA Impact:**
+      Failed orders may require customer compensation or expedited replacement.
+    messages:
+      - $ref: '#/components/messages/VASOrderFailed'
+    tags:
+      - name: lifecycle
+        description: Order lifecycle event
+      - name: failure
+        description: Permanent failure
+      - name: urgent
+        description: Requires immediate attention
+
+  publishQualityCheckPassed:
+    action: send
+    channel:
+      $ref: '#/channels/vasEvents'
+    summary: Publish Quality Check Passed event
+    description: |
+      Published when a quality checkpoint passes evaluation.
+
+      **Trigger:** POST /api/v1/vas/orders/{id}/quality-check with passing grade
+      **Publisher:** VAS Order Service
+      **Typical Consumers:**
+      - Quality metrics dashboard
+      - Worker performance tracking
+      - Customer quality reports
+    messages:
+      - $ref: '#/components/messages/QualityCheckPassed'
+    tags:
+      - name: quality
+        description: Quality control event
+
+  publishQualityCheckFailed:
+    action: send
+    channel:
+      $ref: '#/channels/vasEvents'
+    summary: Publish Quality Check Failed event
+    description: |
+      Published when a quality checkpoint fails evaluation (triggers rework).
+
+      **Trigger:** POST /api/v1/vas/orders/{id}/quality-check with failing grade
+      **Publisher:** VAS Order Service
+      **Typical Consumers:**
+      - **ALERT**: Operations supervisor notification
+      - Quality issue tracking system
+      - Rework queue management
+      - Training identification for quality improvement
+    messages:
+      - $ref: '#/components/messages/QualityCheckFailed'
+    tags:
+      - name: quality
+        description: Quality control event
+      - name: rework
+        description: Requires rework
+
+  publishKittingCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/vasEvents'
+    summary: Publish Kitting Completed event
+    description: |
+      Published when a KITTING service order completes (in addition to VASOrderCompleted).
+
+      **Trigger:** Kitting order completion
+      **Publisher:** VAS Order Service
+      **Typical Consumers:**
+      - **CRITICAL**: Inventory service (deduct components from stock)
+      - Kitting analytics for component usage tracking
+      - Warehouse reporting
+    messages:
+      - $ref: '#/components/messages/KittingCompleted'
+    tags:
+      - name: service-specific
+        description: Service type specific event
+      - name: inventory
+        description: Affects inventory
+
+  publishCustomizationCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/vasEvents'
+    summary: Publish Customization Completed event
+    description: |
+      Published when a CUSTOMIZATION service order completes (in addition to VASOrderCompleted).
+
+      **Trigger:** Customization order completion
+      **Publisher:** VAS Order Service
+      **Typical Consumers:**
+      - Customer notification service (with photos of customization)
+      - Customization portfolio/gallery updates
+      - Customer satisfaction surveys
+    messages:
+      - $ref: '#/components/messages/CustomizationCompleted'
+    tags:
+      - name: service-specific
+        description: Service type specific event
+      - name: customer-facing
+        description: Customer notification event
+
+components:
+  messages:
+    VASOrderCreated:
+      name: VASOrderCreated
+      title: VAS Order Created Event
+      summary: Published when a new VAS order is created
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/CloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/VASOrderCreatedPayload'
+      examples:
+        - name: kittingOrderCreated
+          summary: Kitting order created with high priority
+          headers:
+            ce-id: "evt-123e4567-e89b-12d3-a456-426614174000"
+            ce-type: "com.paklog.vas.VASOrderCreated"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T09:45:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-123e4567-e89b-12d3-a456-426614174000"
+            occurredAt: "2025-11-01T09:45:00Z"
+            eventType: "VASOrderCreated"
+            orderId: "67890abc-def1-2345-6789-0abcdef12345"
+            orderNumber: "VAS-2025-001234"
+            serviceType: "KITTING"
+            customerId: "CUST-12345"
+            priority: "HIGH"
+        - name: giftWrapOrderCreated
+          summary: Gift wrap order created with urgent priority
+          headers:
+            ce-id: "evt-223e4567-e89b-12d3-a456-426614174001"
+            ce-type: "com.paklog.vas.VASOrderCreated"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T10:15:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-223e4567-e89b-12d3-a456-426614174001"
+            occurredAt: "2025-11-01T10:15:00Z"
+            eventType: "VASOrderCreated"
+            orderId: "abc12345-def6-7890-abcd-ef1234567891"
+            orderNumber: "VAS-2025-001235"
+            serviceType: "GIFT_WRAP"
+            customerId: "CUST-67890"
+            priority: "URGENT"
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID for partition routing
+            example: "67890abc-def1-2345-6789-0abcdef12345"
+          bindingVersion: 0.5.0
+
+    VASWorkflowStarted:
+      name: VASWorkflowStarted
+      title: VAS Workflow Started Event
+      summary: Published when VAS order workflow begins execution
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/CloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/VASWorkflowStartedPayload'
+      examples:
+        - name: kittingWorkflowStarted
+          summary: Kitting workflow started
+          headers:
+            ce-id: "evt-323e4567-e89b-12d3-a456-426614174002"
+            ce-type: "com.paklog.vas.VASWorkflowStarted"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T10:00:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-323e4567-e89b-12d3-a456-426614174002"
+            occurredAt: "2025-11-01T10:00:00Z"
+            eventType: "VASWorkflowStarted"
+            orderId: "67890abc-def1-2345-6789-0abcdef12345"
+            serviceType: "KITTING"
+            startedAt: "2025-11-01T10:00:00Z"
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID for partition routing
+            example: "67890abc-def1-2345-6789-0abcdef12345"
+          bindingVersion: 0.5.0
+
+    VASOrderCompleted:
+      name: VASOrderCompleted
+      title: VAS Order Completed Event
+      summary: Published when VAS order completes successfully
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/CloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/VASOrderCompletedPayload'
+      examples:
+        - name: completedWithinSLA
+          summary: Kitting order completed within SLA
+          headers:
+            ce-id: "evt-423e4567-e89b-12d3-a456-426614174003"
+            ce-type: "com.paklog.vas.VASOrderCompleted"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T16:50:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-423e4567-e89b-12d3-a456-426614174003"
+            occurredAt: "2025-11-01T16:50:00Z"
+            eventType: "VASOrderCompleted"
+            orderId: "67890abc-def1-2345-6789-0abcdef12345"
+            completedAt: "2025-11-01T16:50:00Z"
+            totalCost: 25.50
+            laborMinutes: 95
+            slaViolated: false
+        - name: completedWithSLAViolation
+          summary: Customization order completed with SLA violation
+          headers:
+            ce-id: "evt-523e4567-e89b-12d3-a456-426614174004"
+            ce-type: "com.paklog.vas.VASOrderCompleted"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-03T10:30:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-523e4567-e89b-12d3-a456-426614174004"
+            occurredAt: "2025-11-03T10:30:00Z"
+            eventType: "VASOrderCompleted"
+            orderId: "abc12345-def6-7890-abcd-ef1234567892"
+            completedAt: "2025-11-03T10:30:00Z"
+            totalCost: 206.25
+            laborMinutes: 165
+            slaViolated: true
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID for partition routing
+            example: "67890abc-def1-2345-6789-0abcdef12345"
+          bindingVersion: 0.5.0
+
+    VASOrderFailed:
+      name: VASOrderFailed
+      title: VAS Order Failed Event
+      summary: Published when VAS order fails permanently
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/CloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/VASOrderFailedPayload'
+      examples:
+        - name: maxReworkExceeded
+          summary: Order failed after maximum rework attempts
+          headers:
+            ce-id: "evt-623e4567-e89b-12d3-a456-426614174005"
+            ce-type: "com.paklog.vas.VASOrderFailed"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T18:30:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-623e4567-e89b-12d3-a456-426614174005"
+            occurredAt: "2025-11-01T18:30:00Z"
+            eventType: "VASOrderFailed"
+            orderId: "xyz98765-def6-7890-abcd-ef1234567893"
+            reason: "Maximum rework attempts exceeded"
+        - name: criticalDefect
+          summary: Order failed due to critical product defect
+          headers:
+            ce-id: "evt-723e4567-e89b-12d3-a456-426614174006"
+            ce-type: "com.paklog.vas.VASOrderFailed"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T14:45:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-723e4567-e89b-12d3-a456-426614174006"
+            occurredAt: "2025-11-01T14:45:00Z"
+            eventType: "VASOrderFailed"
+            orderId: "def45678-abc9-0123-4567-890abcdef894"
+            reason: "Critical product defect discovered - cannot be customized"
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID for partition routing
+            example: "xyz98765-def6-7890-abcd-ef1234567893"
+          bindingVersion: 0.5.0
+
+    QualityCheckPassed:
+      name: QualityCheckPassed
+      title: Quality Check Passed Event
+      summary: Published when quality checkpoint passes
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/CloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/QualityCheckPassedPayload'
+      examples:
+        - name: excellentGrade
+          summary: Quality check passed with excellent grade (A)
+          headers:
+            ce-id: "evt-823e4567-e89b-12d3-a456-426614174007"
+            ce-type: "com.paklog.vas.QualityCheckPassed"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T10:41:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-823e4567-e89b-12d3-a456-426614174007"
+            occurredAt: "2025-11-01T10:41:00Z"
+            eventType: "QualityCheckPassed"
+            orderId: "67890abc-def1-2345-6789-0abcdef12345"
+            checkpointId: "QC-001"
+            grade: "A_EXCELLENT"
+        - name: acceptableGrade
+          summary: Quality check passed with acceptable grade (C)
+          headers:
+            ce-id: "evt-923e4567-e89b-12d3-a456-426614174008"
+            ce-type: "com.paklog.vas.QualityCheckPassed"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T15:22:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-923e4567-e89b-12d3-a456-426614174008"
+            occurredAt: "2025-11-01T15:22:00Z"
+            eventType: "QualityCheckPassed"
+            orderId: "ghi12345-jkl6-7890-mnop-qr1234567895"
+            checkpointId: "QC-015"
+            grade: "C_ACCEPTABLE"
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID for partition routing
+            example: "67890abc-def1-2345-6789-0abcdef12345"
+          bindingVersion: 0.5.0
+
+    QualityCheckFailed:
+      name: QualityCheckFailed
+      title: Quality Check Failed Event
+      summary: Published when quality checkpoint fails (triggers rework)
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/CloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/QualityCheckFailedPayload'
+      examples:
+        - name: wrappingDefect
+          summary: Gift wrap quality check failed - wrapping defects
+          headers:
+            ce-id: "evt-a23e4567-e89b-12d3-a456-426614174009"
+            ce-type: "com.paklog.vas.QualityCheckFailed"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T11:30:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-a23e4567-e89b-12d3-a456-426614174009"
+            occurredAt: "2025-11-01T11:30:00Z"
+            eventType: "QualityCheckFailed"
+            orderId: "jkl67890-mno1-2345-pqrs-tuv234567896"
+            checkpointId: "QC-023"
+            reason: "Wrapping paper has multiple wrinkles, corners not crisp, alignment off-center. Requires complete rewrap."
+        - name: labelingMisalignment
+          summary: Labeling quality check failed - label misalignment
+          headers:
+            ce-id: "evt-b23e4567-e89b-12d3-a456-426614174010"
+            ce-type: "com.paklog.vas.QualityCheckFailed"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T13:15:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-b23e4567-e89b-12d3-a456-426614174010"
+            occurredAt: "2025-11-01T13:15:00Z"
+            eventType: "QualityCheckFailed"
+            orderId: "mno12345-pqr6-7890-stuv-wxy234567897"
+            checkpointId: "QC-031"
+            reason: "Label positioned 5mm outside tolerance zone, barcode partially obscured"
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID for partition routing
+            example: "jkl67890-mno1-2345-pqrs-tuv234567896"
+          bindingVersion: 0.5.0
+
+    KittingCompleted:
+      name: KittingCompleted
+      title: Kitting Completed Event
+      summary: Published when KITTING service completes
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/CloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/KittingCompletedPayload'
+      examples:
+        - name: promotionalKit
+          summary: Promotional kit with 5 components completed
+          headers:
+            ce-id: "evt-c23e4567-e89b-12d3-a456-426614174011"
+            ce-type: "com.paklog.vas.KittingCompleted"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T16:50:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-c23e4567-e89b-12d3-a456-426614174011"
+            occurredAt: "2025-11-01T16:50:00Z"
+            eventType: "KittingCompleted"
+            orderId: "67890abc-def1-2345-6789-0abcdef12345"
+            componentCount: 5
+        - name: starterKit
+          summary: Starter kit with 12 components completed
+          headers:
+            ce-id: "evt-d23e4567-e89b-12d3-a456-426614174012"
+            ce-type: "com.paklog.vas.KittingCompleted"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T17:30:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-d23e4567-e89b-12d3-a456-426614174012"
+            occurredAt: "2025-11-01T17:30:00Z"
+            eventType: "KittingCompleted"
+            orderId: "pqr67890-stu1-2345-vwxy-zab234567898"
+            componentCount: 12
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID for partition routing
+            example: "67890abc-def1-2345-6789-0abcdef12345"
+          bindingVersion: 0.5.0
+
+    CustomizationCompleted:
+      name: CustomizationCompleted
+      title: Customization Completed Event
+      summary: Published when CUSTOMIZATION service completes
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/CloudEventWrapper'
+      payload:
+        $ref: '#/components/schemas/CustomizationCompletedPayload'
+      examples:
+        - name: laserEngraving
+          summary: Laser engraving customization completed
+          headers:
+            ce-id: "evt-e23e4567-e89b-12d3-a456-426614174013"
+            ce-type: "com.paklog.vas.CustomizationCompleted"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T16:50:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-e23e4567-e89b-12d3-a456-426614174013"
+            occurredAt: "2025-11-01T16:50:00Z"
+            eventType: "CustomizationCompleted"
+            orderId: "abc12345-def6-7890-abcd-ef1234567892"
+            customerId: "CUST-54321"
+        - name: embroidery
+          summary: Custom embroidery completed
+          headers:
+            ce-id: "evt-f23e4567-e89b-12d3-a456-426614174014"
+            ce-type: "com.paklog.vas.CustomizationCompleted"
+            ce-source: "https://paklog.com/vas"
+            ce-specversion: "1.0"
+            ce-time: "2025-11-01T18:15:00Z"
+            ce-datacontenttype: "application/json"
+          payload:
+            eventId: "evt-f23e4567-e89b-12d3-a456-426614174014"
+            occurredAt: "2025-11-01T18:15:00Z"
+            eventType: "CustomizationCompleted"
+            orderId: "stu67890-vwx1-2345-yzab-cde234567899"
+            customerId: "CUST-98765"
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID for partition routing
+            example: "abc12345-def6-7890-abcd-ef1234567892"
+          bindingVersion: 0.5.0
+
+  schemas:
+    VASOrderCreatedPayload:
+      type: object
+      description: Payload for VAS Order Created event
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - orderId
+        - orderNumber
+        - serviceType
+        - customerId
+        - priority
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier (same as CloudEvent id)
+          example: "evt-123e4567-e89b-12d3-a456-426614174000"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred (ISO 8601)
+          example: "2025-11-01T09:45:00Z"
+        eventType:
+          type: string
+          const: "VASOrderCreated"
+          description: Event type identifier
+        orderId:
+          type: string
+          format: uuid
+          description: VAS order aggregate ID
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+        orderNumber:
+          type: string
+          description: Human-readable order number
+          example: "VAS-2025-001234"
+        serviceType:
+          type: string
+          enum: [KITTING, LABELING, GIFT_WRAP, CUSTOMIZATION, ASSEMBLY, REPACKAGING, QUALITY_INSPECTION, SORTING]
+          description: Type of VAS service
+          example: "KITTING"
+        customerId:
+          type: string
+          description: Customer who requested the order
+          example: "CUST-12345"
+        priority:
+          type: string
+          enum: [LOW, NORMAL, HIGH, URGENT]
+          description: Order priority level
+          example: "HIGH"
+
+    VASWorkflowStartedPayload:
+      type: object
+      description: Payload for Workflow Started event
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - orderId
+        - serviceType
+        - startedAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-323e4567-e89b-12d3-a456-426614174002"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T10:00:00Z"
+        eventType:
+          type: string
+          const: "VASWorkflowStarted"
+          description: Event type identifier
+        orderId:
+          type: string
+          format: uuid
+          description: VAS order ID
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+        serviceType:
+          type: string
+          enum: [KITTING, LABELING, GIFT_WRAP, CUSTOMIZATION, ASSEMBLY, REPACKAGING, QUALITY_INSPECTION, SORTING]
+          description: Service type
+          example: "KITTING"
+        startedAt:
+          type: string
+          format: date-time
+          description: When workflow execution started (SLA timer begins)
+          example: "2025-11-01T10:00:00Z"
+
+    VASOrderCompletedPayload:
+      type: object
+      description: Payload for Order Completed event
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - orderId
+        - completedAt
+        - totalCost
+        - laborMinutes
+        - slaViolated
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-423e4567-e89b-12d3-a456-426614174003"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T16:50:00Z"
+        eventType:
+          type: string
+          const: "VASOrderCompleted"
+          description: Event type identifier
+        orderId:
+          type: string
+          format: uuid
+          description: VAS order ID
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+        completedAt:
+          type: string
+          format: date-time
+          description: When order completed
+          example: "2025-11-01T16:50:00Z"
+        totalCost:
+          type: number
+          format: double
+          description: Calculated total cost in USD
+          example: 25.50
+          minimum: 0
+        laborMinutes:
+          type: integer
+          description: Total actual labor minutes
+          example: 95
+          minimum: 0
+        slaViolated:
+          type: boolean
+          description: Whether SLA was violated (completedAt > dueDate)
+          example: false
+
+    VASOrderFailedPayload:
+      type: object
+      description: Payload for Order Failed event
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - orderId
+        - reason
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-623e4567-e89b-12d3-a456-426614174005"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T18:30:00Z"
+        eventType:
+          type: string
+          const: "VASOrderFailed"
+          description: Event type identifier
+        orderId:
+          type: string
+          format: uuid
+          description: VAS order ID
+          example: "xyz98765-def6-7890-abcd-ef1234567893"
+        reason:
+          type: string
+          description: Reason for permanent failure
+          example: "Maximum rework attempts exceeded"
+
+    QualityCheckPassedPayload:
+      type: object
+      description: Payload for Quality Check Passed event
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - orderId
+        - checkpointId
+        - grade
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-823e4567-e89b-12d3-a456-426614174007"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T10:41:00Z"
+        eventType:
+          type: string
+          const: "QualityCheckPassed"
+          description: Event type identifier
+        orderId:
+          type: string
+          format: uuid
+          description: VAS order ID
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+        checkpointId:
+          type: string
+          description: Quality checkpoint identifier
+          example: "QC-001"
+        grade:
+          type: string
+          enum: [A_EXCELLENT, B_GOOD, C_ACCEPTABLE]
+          description: Quality grade (only passing grades)
+          example: "A_EXCELLENT"
+
+    QualityCheckFailedPayload:
+      type: object
+      description: Payload for Quality Check Failed event
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - orderId
+        - checkpointId
+        - reason
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-a23e4567-e89b-12d3-a456-426614174009"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T11:30:00Z"
+        eventType:
+          type: string
+          const: "QualityCheckFailed"
+          description: Event type identifier
+        orderId:
+          type: string
+          format: uuid
+          description: VAS order ID
+          example: "jkl67890-mno1-2345-pqrs-tuv234567896"
+        checkpointId:
+          type: string
+          description: Quality checkpoint identifier
+          example: "QC-023"
+        reason:
+          type: string
+          description: Detailed failure reason (from inspector notes)
+          example: "Wrapping paper has multiple wrinkles, corners not crisp, alignment off-center. Requires complete rewrap."
+
+    KittingCompletedPayload:
+      type: object
+      description: Payload for Kitting Completed event
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - orderId
+        - componentCount
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-c23e4567-e89b-12d3-a456-426614174011"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T16:50:00Z"
+        eventType:
+          type: string
+          const: "KittingCompleted"
+          description: Event type identifier
+        orderId:
+          type: string
+          format: uuid
+          description: VAS order ID
+          example: "67890abc-def1-2345-6789-0abcdef12345"
+        componentCount:
+          type: integer
+          description: Number of components in the completed kit
+          example: 5
+          minimum: 1
+          maximum: 20
+
+    CustomizationCompletedPayload:
+      type: object
+      description: Payload for Customization Completed event
+      required:
+        - eventId
+        - occurredAt
+        - eventType
+        - orderId
+        - customerId
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-e23e4567-e89b-12d3-a456-426614174013"
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T16:50:00Z"
+        eventType:
+          type: string
+          const: "CustomizationCompleted"
+          description: Event type identifier
+        orderId:
+          type: string
+          format: uuid
+          description: VAS order ID
+          example: "abc12345-def6-7890-abcd-ef1234567892"
+        customerId:
+          type: string
+          description: Customer ID for notification purposes
+          example: "CUST-54321"
+
+  messageTraits:
+    CloudEventWrapper:
+      headers:
+        type: object
+        description: CloudEvents 1.0 specification headers
+        required:
+          - ce-id
+          - ce-type
+          - ce-source
+          - ce-specversion
+        properties:
+          ce-id:
+            type: string
+            format: uuid
+            description: Unique identifier for the event (CloudEvents id)
+            example: "evt-123e4567-e89b-12d3-a456-426614174000"
+          ce-type:
+            type: string
+            description: Event type (CloudEvents type) - fully qualified
+            pattern: "^com\\.paklog\\.vas\\.[A-Za-z]+$"
+            examples:
+              - "com.paklog.vas.VASOrderCreated"
+              - "com.paklog.vas.VASWorkflowStarted"
+              - "com.paklog.vas.VASOrderCompleted"
+          ce-source:
+            type: string
+            format: uri
+            description: Event source (CloudEvents source)
+            const: "https://paklog.com/vas"
+          ce-specversion:
+            type: string
+            description: CloudEvents specification version
+            const: "1.0"
+          ce-time:
+            type: string
+            format: date-time
+            description: Event timestamp (CloudEvents time)
+            example: "2025-11-01T09:45:00Z"
+          ce-datacontenttype:
+            type: string
+            description: Content type of the data
+            const: "application/json"
+
+tags:
+  - name: lifecycle
+    description: Order lifecycle events (created, started, completed, failed)
+  - name: quality
+    description: Quality control events (passed, failed)
+  - name: service-specific
+    description: Service type specific events (kitting, customization)
+  - name: creation
+    description: Resource creation events
+  - name: workflow
+    description: Workflow state change events
+  - name: completion
+    description: Successful completion events
+  - name: failure
+    description: Failure events
+  - name: rework
+    description: Rework-related events
+  - name: critical
+    description: Business-critical events requiring reliable processing
+  - name: urgent
+    description: Events requiring immediate attention
+  - name: inventory
+    description: Events affecting inventory
+  - name: customer-facing
+    description: Events that trigger customer communications
+
+externalDocs:
+  description: VAS Service OpenAPI Documentation
+  url: https://api.paklog.com/vas/openapi.yaml

@@ -1,0 +1,10 @@
+{
+  "movementId": "MV-1001",
+  "lpn": "LPN-0001",
+  "fromLocation": "A1-01-001",
+  "toLocation": "B2-02-010",
+  "movementType": "MOVE",
+  "movedAt": "2024-11-01T10:32:45Z",
+  "warehouseId": "WH-001"
+}
+

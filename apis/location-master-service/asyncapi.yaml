@@ -1,0 +1,579 @@
+asyncapi: 2.6.0
+info:
+  title: Location Master Service Events
+  version: 1.0.0
+  description: |
+    Event-driven API for Location Master Service using Apache Kafka.
+    This service publishes and subscribes to events related to location configuration,
+    capacity changes, slotting optimization, and location status updates.
+  contact:
+    name: WMS Team
+    email: wms-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  development:
+    url: localhost:9092
+    protocol: kafka
+    description: Local Kafka broker
+  production:
+    url: kafka-cluster.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+
+defaultContentType: application/json
+
+channels:
+  location.created:
+    description: Published when a new location is created
+    publish:
+      operationId: publishLocationCreated
+      summary: Location created event
+      message:
+        $ref: '#/components/messages/LocationCreated'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  location.capacity.changed:
+    description: Published when location capacity is updated
+    publish:
+      operationId: publishLocationCapacityChanged
+      summary: Location capacity changed event
+      message:
+        $ref: '#/components/messages/LocationCapacityChanged'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  location.slotting.changed:
+    description: Published when location slotting classification changes
+    publish:
+      operationId: publishLocationSlottingChanged
+      summary: Location slotting changed event
+      message:
+        $ref: '#/components/messages/LocationSlottingChanged'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  location.status.changed:
+    description: Published when location status changes
+    publish:
+      operationId: publishLocationStatusChanged
+      summary: Location status changed event
+      message:
+        $ref: '#/components/messages/LocationStatusChanged'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  location.blocked:
+    description: Published when a location is blocked
+    publish:
+      operationId: publishLocationBlocked
+      summary: Location blocked event
+      message:
+        $ref: '#/components/messages/LocationBlocked'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  location.unblocked:
+    description: Published when a location is unblocked
+    publish:
+      operationId: publishLocationUnblocked
+      summary: Location unblocked event
+      message:
+        $ref: '#/components/messages/LocationUnblocked'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  location.deactivated:
+    description: Published when a location is deactivated
+    publish:
+      operationId: publishLocationDeactivated
+      summary: Location deactivated event
+      message:
+        $ref: '#/components/messages/LocationDeactivated'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Location ID
+
+  zone.created:
+    description: Published when a new zone is created
+    publish:
+      operationId: publishZoneCreated
+      summary: Zone created event
+      message:
+        $ref: '#/components/messages/ZoneCreated'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Zone ID
+
+  slotting.optimized:
+    description: Published when slotting optimization is completed
+    publish:
+      operationId: publishSlottingOptimized
+      summary: Slotting optimized event
+      message:
+        $ref: '#/components/messages/SlottingOptimized'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Warehouse ID
+
+  location.capacity.exceeded:
+    description: Subscribe to capacity exceeded events from Physical Tracking
+    subscribe:
+      operationId: onLocationCapacityExceeded
+      summary: Handle capacity exceeded warnings
+      message:
+        $ref: '#/components/messages/LocationCapacityExceeded'
+
+  location.state.changed:
+    description: Subscribe to location state changes from Physical Tracking
+    subscribe:
+      operationId: onLocationStateChanged
+      summary: Handle location state changes
+      message:
+        $ref: '#/components/messages/LocationStateChanged'
+
+components:
+  messages:
+    LocationCreated:
+      name: LocationCreated
+      title: Location Created Event
+      summary: Emitted when a new location is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationCreatedPayload'
+
+    LocationCapacityChanged:
+      name: LocationCapacityChanged
+      title: Location Capacity Changed Event
+      summary: Emitted when location capacity is updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationCapacityChangedPayload'
+
+    LocationSlottingChanged:
+      name: LocationSlottingChanged
+      title: Location Slotting Changed Event
+      summary: Emitted when location slotting class changes
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationSlottingChangedPayload'
+
+    LocationStatusChanged:
+      name: LocationStatusChanged
+      title: Location Status Changed Event
+      summary: Emitted when location status changes
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationStatusChangedPayload'
+
+    LocationBlocked:
+      name: LocationBlocked
+      title: Location Blocked Event
+      summary: Emitted when a location is blocked
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationBlockedPayload'
+
+    LocationUnblocked:
+      name: LocationUnblocked
+      title: Location Unblocked Event
+      summary: Emitted when a location is unblocked
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationUnblockedPayload'
+
+    LocationDeactivated:
+      name: LocationDeactivated
+      title: Location Deactivated Event
+      summary: Emitted when a location is deactivated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationDeactivatedPayload'
+
+    ZoneCreated:
+      name: ZoneCreated
+      title: Zone Created Event
+      summary: Emitted when a new zone is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ZoneCreatedPayload'
+
+    SlottingOptimized:
+      name: SlottingOptimized
+      title: Slotting Optimized Event
+      summary: Emitted when slotting optimization is completed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/SlottingOptimizedPayload'
+
+    LocationCapacityExceeded:
+      name: LocationCapacityExceeded
+      title: Location Capacity Exceeded Event
+      summary: Received when location capacity is exceeded
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationCapacityExceededPayload'
+
+    LocationStateChanged:
+      name: LocationStateChanged
+      title: Location State Changed Event
+      summary: Received when location occupancy state changes
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/LocationStateChangedPayload'
+
+  schemas:
+    LocationCreatedPayload:
+      type: object
+      required:
+        - locationId
+        - warehouseId
+        - type
+        - createdAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        type:
+          type: string
+          enum: [BIN, PALLET_RACK, FLOOR, STAGING, RECEIVING, SHIPPING, RESERVE, PICK_FACE, QUARANTINE]
+        zone:
+          type: string
+        aisle:
+          type: string
+        bay:
+          type: string
+        level:
+          type: string
+        slottingClass:
+          type: string
+          enum: [A_FAST, B_MEDIUM, C_SLOW, D_INACTIVE]
+        capacity:
+          type: object
+          properties:
+            maxPallets:
+              type: integer
+            maxWeight:
+              type: number
+            maxVolume:
+              type: number
+        dimensions:
+          type: object
+          properties:
+            length:
+              type: number
+            width:
+              type: number
+            height:
+              type: number
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    LocationCapacityChangedPayload:
+      type: object
+      required:
+        - locationId
+        - changedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        previousCapacity:
+          type: object
+          properties:
+            maxPallets:
+              type: integer
+            maxWeight:
+              type: number
+            maxVolume:
+              type: number
+        newCapacity:
+          type: object
+          properties:
+            maxPallets:
+              type: integer
+            maxWeight:
+              type: number
+            maxVolume:
+              type: number
+        reason:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        changedBy:
+          type: string
+
+    LocationSlottingChangedPayload:
+      type: object
+      required:
+        - locationId
+        - previousClass
+        - newClass
+        - changedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        previousClass:
+          type: string
+          enum: [A_FAST, B_MEDIUM, C_SLOW, D_INACTIVE]
+        newClass:
+          type: string
+          enum: [A_FAST, B_MEDIUM, C_SLOW, D_INACTIVE]
+        assignedProducts:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        changedBy:
+          type: string
+
+    LocationStatusChangedPayload:
+      type: object
+      required:
+        - locationId
+        - previousStatus
+        - newStatus
+        - changedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        previousStatus:
+          type: string
+          enum: [ACTIVE, INACTIVE, BLOCKED, RESERVED, DEACTIVATED]
+        newStatus:
+          type: string
+          enum: [ACTIVE, INACTIVE, BLOCKED, RESERVED, DEACTIVATED]
+        reason:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+        changedBy:
+          type: string
+
+    LocationBlockedPayload:
+      type: object
+      required:
+        - locationId
+        - reason
+        - blockedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        reason:
+          type: string
+        reasonCode:
+          type: string
+          enum: [MAINTENANCE, DAMAGE, SAFETY, CAPACITY_EXCEEDED, OTHER]
+        blockUntil:
+          type: string
+          format: date-time
+        blockedAt:
+          type: string
+          format: date-time
+        blockedBy:
+          type: string
+        notes:
+          type: string
+
+    LocationUnblockedPayload:
+      type: object
+      required:
+        - locationId
+        - unblockedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        unblockedAt:
+          type: string
+          format: date-time
+        unblockedBy:
+          type: string
+        wasBlockedFor:
+          type: integer
+          description: Duration blocked in minutes
+
+    LocationDeactivatedPayload:
+      type: object
+      required:
+        - locationId
+        - reason
+        - deactivatedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        reason:
+          type: string
+        deactivatedAt:
+          type: string
+          format: date-time
+        deactivatedBy:
+          type: string
+
+    ZoneCreatedPayload:
+      type: object
+      required:
+        - zoneId
+        - name
+        - warehouseId
+        - zoneType
+        - createdAt
+      properties:
+        zoneId:
+          type: string
+        name:
+          type: string
+        warehouseId:
+          type: string
+        zoneType:
+          type: string
+          enum: [PICKING, RESERVE, STAGING, RECEIVING, SHIPPING]
+        totalLocations:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    SlottingOptimizedPayload:
+      type: object
+      required:
+        - warehouseId
+        - strategy
+        - optimizedAt
+      properties:
+        warehouseId:
+          type: string
+        zone:
+          type: string
+        strategy:
+          type: string
+          enum: [ABC_VELOCITY, PROXIMITY, AFFINITY, BALANCED]
+        totalRecommendations:
+          type: integer
+        appliedRecommendations:
+          type: integer
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              currentLocation:
+                type: string
+              recommendedLocation:
+                type: string
+              reason:
+                type: string
+        estimatedDistanceReduction:
+          type: number
+          format: percentage
+        optimizedAt:
+          type: string
+          format: date-time
+        optimizedBy:
+          type: string
+
+    LocationCapacityExceededPayload:
+      type: object
+      required:
+        - locationId
+        - capacity
+        - currentOccupancy
+        - detectedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        capacity:
+          type: integer
+        currentOccupancy:
+          type: integer
+        excessCount:
+          type: integer
+        detectedAt:
+          type: string
+          format: date-time
+
+    LocationStateChangedPayload:
+      type: object
+      required:
+        - locationId
+        - previousStatus
+        - newStatus
+        - changedAt
+      properties:
+        locationId:
+          type: string
+        warehouseId:
+          type: string
+        previousStatus:
+          type: string
+          enum: [EMPTY, PARTIALLY_OCCUPIED, FULL, BLOCKED]
+        newStatus:
+          type: string
+          enum: [EMPTY, PARTIALLY_OCCUPIED, FULL, BLOCKED]
+        licensePlateCount:
+          type: integer
+        utilization:
+          type: number
+          format: percentage
+        changedAt:
+          type: string
+          format: date-time

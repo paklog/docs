@@ -1,0 +1,22 @@
+name: dp_order_management_events_v1
+service: order-management
+domain: fulfillment
+kind: source-aligned
+description: >-
+  Source-aligned CloudEvents for Order Management lifecycle (received, validated,
+  invalidated, cancelled) ingested from Kafka into Pinot for near real-time analytics.
+owner: fulfillment-platform@paklog.com
+kafka_topics:
+  - fulfillment.order_management.v1.events
+pinot_table: dp_order_management_events_v1
+schema_file: pinot/schemas/order-management/dp_order_management_events_v1.schema.json
+table_files:
+  dev: pinot/tables/order-management/dp_order_management_events_v1.table.dev.json
+  staging: pinot/tables/order-management/dp_order_management_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, cloudevents, fulfillment]
+

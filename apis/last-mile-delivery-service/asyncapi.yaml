@@ -1,0 +1,538 @@
+asyncapi: 3.0.0
+info:
+  title: Last-Mile Delivery Coordination Events API
+  version: 1.0.0
+  description: |
+    Event-driven API for the Paklog Last-Mile Delivery Coordination service.
+    This service publishes CloudEvents to Kafka topics for delivery tracking,
+    route management, and customer notifications.
+  contact:
+    name: Paklog Platform Team
+    url: https://paklog.com
+
+servers:
+  production:
+    host: kafka.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    tags:
+      - name: env:production
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka broker
+    tags:
+      - name: env:development
+
+defaultContentType: application/cloudevents+json
+
+channels:
+  deliveryEvents:
+    address: delivery-events
+    description: |
+      Main channel for all delivery-related domain events.
+      All events are published as CloudEvents v1.0 format.
+    messages:
+      RouteCreated:
+        $ref: '#/components/messages/RouteCreated'
+      RouteOptimized:
+        $ref: '#/components/messages/RouteOptimized'
+      RouteCompleted:
+        $ref: '#/components/messages/RouteCompleted'
+      DeliveryStarted:
+        $ref: '#/components/messages/DeliveryStarted'
+      DeliveryCompleted:
+        $ref: '#/components/messages/DeliveryCompleted'
+      DeliveryFailed:
+        $ref: '#/components/messages/DeliveryFailed'
+      CustomerNotified:
+        $ref: '#/components/messages/CustomerNotified'
+
+operations:
+  publishRouteCreated:
+    action: send
+    channel:
+      $ref: '#/channels/deliveryEvents'
+    messages:
+      - $ref: '#/channels/deliveryEvents/messages/RouteCreated'
+
+  publishRouteOptimized:
+    action: send
+    channel:
+      $ref: '#/channels/deliveryEvents'
+    messages:
+      - $ref: '#/channels/deliveryEvents/messages/RouteOptimized'
+
+  publishRouteCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/deliveryEvents'
+    messages:
+      - $ref: '#/channels/deliveryEvents/messages/RouteCompleted'
+
+  publishDeliveryStarted:
+    action: send
+    channel:
+      $ref: '#/channels/deliveryEvents'
+    messages:
+      - $ref: '#/channels/deliveryEvents/messages/DeliveryStarted'
+
+  publishDeliveryCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/deliveryEvents'
+    messages:
+      - $ref: '#/channels/deliveryEvents/messages/DeliveryCompleted'
+
+  publishDeliveryFailed:
+    action: send
+    channel:
+      $ref: '#/channels/deliveryEvents'
+    messages:
+      - $ref: '#/channels/deliveryEvents/messages/DeliveryFailed'
+
+  publishCustomerNotified:
+    action: send
+    channel:
+      $ref: '#/channels/deliveryEvents'
+    messages:
+      - $ref: '#/channels/deliveryEvents/messages/CustomerNotified'
+
+components:
+  messages:
+    RouteCreated:
+      name: RouteCreated
+      title: Route Created Event
+      summary: Published when a new delivery route is created
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEvent'
+      payload:
+        $ref: '#/components/schemas/RouteCreatedPayload'
+      examples:
+        - payload:
+            specversion: '1.0'
+            type: com.paklog.lastmile.RouteCreated
+            source: https://paklog.com/lastmile
+            id: 550e8400-e29b-41d4-a716-446655440000
+            time: '2025-11-01T10:30:00Z'
+            datacontenttype: application/json
+            data:
+              routeId: route-123
+              routeNumber: RT-2025-001
+              vehicleId: vehicle-456
+              driverId: driver-789
+              totalStops: 15
+
+    RouteOptimized:
+      name: RouteOptimized
+      title: Route Optimized Event
+      summary: Published when a route is optimized
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEvent'
+      payload:
+        $ref: '#/components/schemas/RouteOptimizedPayload'
+      examples:
+        - payload:
+            specversion: '1.0'
+            type: com.paklog.lastmile.RouteOptimized
+            source: https://paklog.com/lastmile
+            id: 550e8400-e29b-41d4-a716-446655440001
+            time: '2025-11-01T10:35:00Z'
+            datacontenttype: application/json
+            data:
+              routeId: route-123
+              totalDistance: 45.7
+              optimizationScore: 92
+              stopCount: 15
+
+    RouteCompleted:
+      name: RouteCompleted
+      title: Route Completed Event
+      summary: Published when a delivery route is completed
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEvent'
+      payload:
+        $ref: '#/components/schemas/RouteCompletedPayload'
+      examples:
+        - payload:
+            specversion: '1.0'
+            type: com.paklog.lastmile.RouteCompleted
+            source: https://paklog.com/lastmile
+            id: 550e8400-e29b-41d4-a716-446655440002
+            time: '2025-11-01T18:30:00Z'
+            datacontenttype: application/json
+            data:
+              routeId: route-123
+              completedAt: '2025-11-01T18:30:00Z'
+              totalStops: 15
+              successfulStops: 13
+              failedStops: 2
+              totalDistanceKm: 45.7
+
+    DeliveryStarted:
+      name: DeliveryStarted
+      title: Delivery Started Event
+      summary: Published when a delivery route starts
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEvent'
+      payload:
+        $ref: '#/components/schemas/DeliveryStartedPayload'
+      examples:
+        - payload:
+            specversion: '1.0'
+            type: com.paklog.lastmile.DeliveryStarted
+            source: https://paklog.com/lastmile
+            id: 550e8400-e29b-41d4-a716-446655440003
+            time: '2025-11-01T08:00:00Z'
+            datacontenttype: application/json
+            data:
+              routeId: route-123
+              driverId: driver-789
+              vehicleId: vehicle-456
+              startedAt: '2025-11-01T08:00:00Z'
+
+    DeliveryCompleted:
+      name: DeliveryCompleted
+      title: Delivery Completed Event
+      summary: Published when a delivery stop is successfully completed
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEvent'
+      payload:
+        $ref: '#/components/schemas/DeliveryCompletedPayload'
+      examples:
+        - payload:
+            specversion: '1.0'
+            type: com.paklog.lastmile.DeliveryCompleted
+            source: https://paklog.com/lastmile
+            id: 550e8400-e29b-41d4-a716-446655440004
+            time: '2025-11-01T09:15:00Z'
+            datacontenttype: application/json
+            data:
+              routeId: route-123
+              stopId: stop-001
+              customerId: customer-123
+              completedAt: '2025-11-01T09:15:00Z'
+              attemptNumber: 1
+
+    DeliveryFailed:
+      name: DeliveryFailed
+      title: Delivery Failed Event
+      summary: Published when a delivery attempt fails
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEvent'
+      payload:
+        $ref: '#/components/schemas/DeliveryFailedPayload'
+      examples:
+        - payload:
+            specversion: '1.0'
+            type: com.paklog.lastmile.DeliveryFailed
+            source: https://paklog.com/lastmile
+            id: 550e8400-e29b-41d4-a716-446655440005
+            time: '2025-11-01T14:30:00Z'
+            datacontenttype: application/json
+            data:
+              routeId: route-123
+              stopId: stop-008
+              customerId: customer-456
+              reason: Customer not available
+              attemptsCount: 2
+
+    CustomerNotified:
+      name: CustomerNotified
+      title: Customer Notified Event
+      summary: Published when a customer is notified about their delivery
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEvent'
+      payload:
+        $ref: '#/components/schemas/CustomerNotifiedPayload'
+      examples:
+        - payload:
+            specversion: '1.0'
+            type: com.paklog.lastmile.CustomerNotified
+            source: https://paklog.com/lastmile
+            id: 550e8400-e29b-41d4-a716-446655440006
+            time: '2025-11-01T07:45:00Z'
+            datacontenttype: application/json
+            data:
+              routeId: route-123
+              notificationType: SMS
+              message: Your delivery is on its way!
+
+  schemas:
+    CloudEventWrapper:
+      type: object
+      required:
+        - specversion
+        - type
+        - source
+        - id
+      properties:
+        specversion:
+          type: string
+          const: '1.0'
+          description: CloudEvents specification version
+        type:
+          type: string
+          description: Event type identifier
+        source:
+          type: string
+          format: uri
+          description: Event source identifier
+        id:
+          type: string
+          format: uuid
+          description: Unique event identifier
+        time:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+        datacontenttype:
+          type: string
+          const: application/json
+          description: Content type of the data payload
+        data:
+          type: object
+          description: Event-specific payload
+
+    RouteCreatedPayload:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - routeId
+                - routeNumber
+                - vehicleId
+                - driverId
+                - totalStops
+              properties:
+                routeId:
+                  type: string
+                  description: Unique route identifier
+                routeNumber:
+                  type: string
+                  description: Human-readable route number
+                vehicleId:
+                  type: string
+                  description: Assigned vehicle identifier
+                driverId:
+                  type: string
+                  description: Assigned driver identifier
+                totalStops:
+                  type: integer
+                  minimum: 0
+                  description: Total number of stops in the route
+
+    RouteOptimizedPayload:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - routeId
+                - totalDistance
+                - optimizationScore
+                - stopCount
+              properties:
+                routeId:
+                  type: string
+                  description: Route identifier
+                totalDistance:
+                  type: number
+                  format: double
+                  minimum: 0
+                  description: Total route distance in kilometers
+                optimizationScore:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                  description: Route optimization score (0-100)
+                stopCount:
+                  type: integer
+                  minimum: 0
+                  description: Number of stops in the optimized route
+
+    RouteCompletedPayload:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - routeId
+                - completedAt
+                - totalStops
+                - successfulStops
+                - failedStops
+                - totalDistanceKm
+              properties:
+                routeId:
+                  type: string
+                  description: Route identifier
+                completedAt:
+                  type: string
+                  format: date-time
+                  description: Route completion timestamp
+                totalStops:
+                  type: integer
+                  minimum: 0
+                  description: Total number of stops
+                successfulStops:
+                  type: integer
+                  minimum: 0
+                  description: Number of successfully completed stops
+                failedStops:
+                  type: integer
+                  minimum: 0
+                  description: Number of failed delivery attempts
+                totalDistanceKm:
+                  type: number
+                  format: double
+                  minimum: 0
+                  description: Total distance traveled in kilometers
+
+    DeliveryStartedPayload:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - routeId
+                - driverId
+                - vehicleId
+                - startedAt
+              properties:
+                routeId:
+                  type: string
+                  description: Route identifier
+                driverId:
+                  type: string
+                  description: Driver identifier
+                vehicleId:
+                  type: string
+                  description: Vehicle identifier
+                startedAt:
+                  type: string
+                  format: date-time
+                  description: Delivery start timestamp
+
+    DeliveryCompletedPayload:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - routeId
+                - stopId
+                - customerId
+                - completedAt
+                - attemptNumber
+              properties:
+                routeId:
+                  type: string
+                  description: Route identifier
+                stopId:
+                  type: string
+                  description: Delivery stop identifier
+                customerId:
+                  type: string
+                  description: Customer identifier
+                completedAt:
+                  type: string
+                  format: date-time
+                  description: Delivery completion timestamp
+                attemptNumber:
+                  type: integer
+                  minimum: 1
+                  description: Delivery attempt number
+
+    DeliveryFailedPayload:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - routeId
+                - stopId
+                - customerId
+                - reason
+                - attemptsCount
+              properties:
+                routeId:
+                  type: string
+                  description: Route identifier
+                stopId:
+                  type: string
+                  description: Delivery stop identifier
+                customerId:
+                  type: string
+                  description: Customer identifier
+                reason:
+                  type: string
+                  description: Reason for delivery failure
+                attemptsCount:
+                  type: integer
+                  minimum: 1
+                  description: Total number of delivery attempts made
+
+    CustomerNotifiedPayload:
+      allOf:
+        - $ref: '#/components/schemas/CloudEventWrapper'
+        - type: object
+          properties:
+            data:
+              type: object
+              required:
+                - routeId
+                - notificationType
+                - message
+              properties:
+                routeId:
+                  type: string
+                  description: Route identifier
+                notificationType:
+                  type: string
+                  enum: [SMS, EMAIL, PUSH]
+                  description: Type of notification sent
+                message:
+                  type: string
+                  description: Notification message content
+
+  messageTraits:
+    cloudEvent:
+      headers:
+        type: object
+        properties:
+          ce_specversion:
+            type: string
+            const: '1.0'
+          ce_type:
+            type: string
+            pattern: '^com\.paklog\.lastmile\.'
+          ce_source:
+            type: string
+            const: 'https://paklog.com/lastmile'
+          ce_id:
+            type: string
+            format: uuid
+          ce_time:
+            type: string
+            format: date-time

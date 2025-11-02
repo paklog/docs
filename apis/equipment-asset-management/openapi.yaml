@@ -1,0 +1,1006 @@
+openapi: 3.1.0
+
+info:
+  title: Equipment & Asset Management API
+  version: 1.0.0
+  description: |
+    # Equipment & Asset Management API
+
+    This comprehensive API provides complete lifecycle management for warehouse and logistics equipment assets.
+    It enables organizations to track, monitor, maintain, and optimize their equipment fleet with predictive
+    maintenance capabilities.
+
+    ## Key Features
+    - **Asset Registration & Tracking**: Complete lifecycle tracking from purchase to retirement
+    - **Work Order Management**: Create and manage maintenance and repair work orders
+    - **Predictive Maintenance**: AI-powered failure prediction and maintenance scheduling
+    - **Utilization Monitoring**: Track equipment usage and performance metrics
+    - **Cost Management**: Monitor purchase costs, depreciation, and maintenance expenses
+
+    ## Business Value
+    - Reduce unexpected equipment downtime by up to 45%
+    - Optimize maintenance costs through predictive scheduling
+    - Extend asset lifespan through proactive maintenance
+    - Improve operational efficiency with real-time asset visibility
+    - Make data-driven decisions on equipment replacement and procurement
+
+  contact:
+    name: Paklog Equipment Team
+    email: equipment@paklog.com
+    url: https://paklog.com/support
+  license:
+    name: Proprietary
+    url: https://paklog.com/license
+
+servers:
+  - url: https://api.paklog.com/equipment/v1
+    description: Production server
+  - url: https://api-staging.paklog.com/equipment/v1
+    description: Staging server
+  - url: http://localhost:8080/api/v1/equipment
+    description: Local development server
+
+tags:
+  - name: Assets
+    description: |
+      Asset management operations for registering, tracking, and monitoring warehouse equipment.
+      Assets represent physical equipment items tracked throughout their lifecycle.
+  - name: Work Orders
+    description: |
+      Work order management for maintenance, repairs, and servicing activities.
+      Work orders track all maintenance activities from creation to completion.
+  - name: Maintenance
+    description: |
+      Scheduled and preventive maintenance operations.
+      Includes maintenance scheduling, tracking, and completion management.
+  - name: Predictions
+    description: |
+      Predictive analytics for equipment failure forecasting.
+      Uses machine learning models to predict potential failures before they occur.
+
+paths:
+  /assets:
+    post:
+      tags:
+        - Assets
+      summary: Register a new asset
+      description: |
+        Register a new equipment asset into the system. This creates a complete asset record
+        with identification, purchase information, and initial configuration.
+
+        **Business Context:**
+        - Called when new equipment is purchased and added to inventory
+        - Initiates tracking for warranty, maintenance scheduling, and depreciation
+        - Creates the foundation for all future asset management operations
+
+        **Validation Rules:**
+        - Serial number must be unique across all assets
+        - Purchase date cannot be in the future
+        - Purchase cost must be positive
+        - Asset type must match one of the supported equipment categories
+
+        **Downstream Effects:**
+        - Triggers automatic maintenance schedule creation based on asset type
+        - Initiates depreciation calculation schedule
+        - Creates initial utilization tracking record
+        - Publishes AssetRegistered event to event bus
+      operationId: registerAsset
+      requestBody:
+        required: true
+        description: Asset registration details including identification, purchase info, and location
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterAssetCommand'
+            examples:
+              forklift:
+                summary: Register a new forklift
+                description: Example of registering a warehouse forklift with full details
+                value:
+                  serialNumber: "FKL-2024-001"
+                  name: "Main Warehouse Forklift #1"
+                  type: "FORKLIFT"
+                  manufacturer: "Toyota Material Handling"
+                  model: "8FGU25"
+                  purchaseDate: "2024-01-15"
+                  purchaseCost: 45000.00
+                  location: "Warehouse A - Zone 1"
+              robot:
+                summary: Register an autonomous mobile robot
+                description: Example of registering an AGV (Automated Guided Vehicle)
+                value:
+                  serialNumber: "AGV-2024-R42"
+                  name: "Autonomous Robot #42"
+                  type: "AGV"
+                  manufacturer: "KUKA Robotics"
+                  model: "KMR iiwa"
+                  purchaseDate: "2024-02-20"
+                  purchaseCost: 125000.00
+                  location: "Distribution Center - Floor 2"
+              conveyor:
+                summary: Register a conveyor belt system
+                description: Example of registering a large conveyor system
+                value:
+                  serialNumber: "CNV-WH-2024-12"
+                  name: "Main Line Conveyor System"
+                  type: "CONVEYOR"
+                  manufacturer: "Interroll"
+                  model: "RollerDrive EC5000"
+                  purchaseDate: "2024-03-10"
+                  purchaseCost: 78500.00
+                  location: "Warehouse B - Shipping Area"
+      responses:
+        '201':
+          description: |
+            Asset successfully registered and ready for tracking.
+            The response includes the complete asset record with system-generated fields.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Asset'
+              examples:
+                forklift:
+                  summary: Successfully registered forklift
+                  value:
+                    assetId: "ast_7k8m9n0p1q2r3s4t"
+                    serialNumber: "FKL-2024-001"
+                    name: "Main Warehouse Forklift #1"
+                    type: "FORKLIFT"
+                    status: "ACTIVE"
+                    manufacturer: "Toyota Material Handling"
+                    model: "8FGU25"
+                    purchaseDate: "2024-01-15"
+                    warrantyExpiryDate: "2027-01-15"
+                    purchaseCost: 45000.00
+                    currentValue: 45000.00
+                    location: "Warehouse A - Zone 1"
+                    lastMaintenanceDate: null
+                    nextMaintenanceDate: "2024-04-15T08:00:00Z"
+                    totalOperatingHours: 0
+                    utilizationPercentage: 0.0
+        '400':
+          description: Invalid request data or validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicateSerial:
+                  summary: Duplicate serial number
+                  value:
+                    timestamp: "2024-11-01T10:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "Asset with serial number 'FKL-2024-001' already exists"
+                    path: "/api/v1/equipment/assets"
+                invalidDate:
+                  summary: Invalid purchase date
+                  value:
+                    timestamp: "2024-11-01T10:30:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "Purchase date cannot be in the future"
+                    path: "/api/v1/equipment/assets"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assets/active:
+    get:
+      tags:
+        - Assets
+      summary: Get all active assets
+      description: |
+        Retrieve a list of all assets currently in active status. Active assets are those
+        currently in use and available for operations (not under maintenance, retired, or inactive).
+
+        **Business Context:**
+        - Used by operations teams to view available equipment
+        - Displayed on warehouse dashboards for resource planning
+        - Used by dispatchers for task assignment
+
+        **Status Filtering:**
+        - Only returns assets with status = ACTIVE
+        - Excludes assets under maintenance, repair, retired, or inactive
+
+        **Use Cases:**
+        - Dashboard displays showing available equipment count
+        - Task assignment systems selecting available assets
+        - Utilization reports calculating active asset usage
+        - Capacity planning and resource allocation
+      operationId: getActiveAssets
+      responses:
+        '200':
+          description: List of active assets successfully retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Asset'
+                description: Array of active assets sorted by name
+              examples:
+                multipleAssets:
+                  summary: Multiple active assets
+                  value:
+                    - assetId: "ast_1a2b3c4d5e6f"
+                      serialNumber: "FKL-2024-001"
+                      name: "Main Warehouse Forklift #1"
+                      type: "FORKLIFT"
+                      status: "ACTIVE"
+                      manufacturer: "Toyota Material Handling"
+                      model: "8FGU25"
+                      purchaseDate: "2024-01-15"
+                      warrantyExpiryDate: "2027-01-15"
+                      purchaseCost: 45000.00
+                      currentValue: 42750.00
+                      location: "Warehouse A - Zone 1"
+                      lastMaintenanceDate: "2024-10-15T14:30:00Z"
+                      nextMaintenanceDate: "2025-01-15T08:00:00Z"
+                      totalOperatingHours: 2847
+                      utilizationPercentage: 78.5
+                    - assetId: "ast_9g8h7i6j5k4l"
+                      serialNumber: "AGV-2024-R42"
+                      name: "Autonomous Robot #42"
+                      type: "AGV"
+                      status: "ACTIVE"
+                      manufacturer: "KUKA Robotics"
+                      model: "KMR iiwa"
+                      purchaseDate: "2024-02-20"
+                      warrantyExpiryDate: "2027-02-20"
+                      purchaseCost: 125000.00
+                      currentValue: 121875.00
+                      location: "Distribution Center - Floor 2"
+                      lastMaintenanceDate: "2024-10-20T09:00:00Z"
+                      nextMaintenanceDate: "2024-12-20T09:00:00Z"
+                      totalOperatingHours: 5432
+                      utilizationPercentage: 92.3
+                emptyList:
+                  summary: No active assets
+                  description: Response when no assets are currently active
+                  value: []
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /work-orders:
+    post:
+      tags:
+        - Work Orders
+      summary: Create a new work order
+      description: |
+        Create a work order for maintenance, repair, or servicing of an asset.
+        Work orders track all activities from assignment through completion.
+
+        **Business Context:**
+        - Created when maintenance is needed (scheduled or reactive)
+        - Assigns work to specific technicians or teams
+        - Tracks labor and parts costs
+        - Records resolution details for historical analysis
+
+        **Work Order Lifecycle:**
+        1. CREATED - Initial state when work order is created
+        2. ASSIGNED - Work order assigned to technician
+        3. IN_PROGRESS - Work actively being performed
+        4. COMPLETED - Work finished successfully
+        5. CANCELLED - Work order cancelled (reason required)
+
+        **Priority Levels:**
+        - CRITICAL: Equipment failure causing operational shutdown (< 2 hour response)
+        - HIGH: Major issues affecting productivity (< 4 hour response)
+        - MEDIUM: Scheduled maintenance or minor issues (< 24 hour response)
+        - LOW: Non-urgent improvements or inspections (< 1 week response)
+
+        **Downstream Effects:**
+        - Updates asset status to UNDER_REPAIR if priority is CRITICAL or HIGH
+        - Sends notification to assigned technician
+        - Creates calendar event for scheduled work
+        - Publishes WorkOrderCreated event to event bus
+      operationId: createWorkOrder
+      requestBody:
+        required: true
+        description: Work order details including asset, description, priority, and assignment
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkOrderCommand'
+            examples:
+              criticalRepair:
+                summary: Critical equipment failure
+                description: Emergency work order for broken forklift
+                value:
+                  assetId: "ast_1a2b3c4d5e6f"
+                  title: "Hydraulic System Failure"
+                  description: "Forklift #1 hydraulic lift system completely failed during operation. Equipment inoperable. Hydraulic fluid leak detected from main cylinder. Operator reported sudden loss of lift capacity with loud hissing sound."
+                  priority: "CRITICAL"
+                  assignedTo: "john.smith@paklog.com"
+              preventiveMaintenance:
+                summary: Scheduled preventive maintenance
+                description: Routine preventive maintenance work order
+                value:
+                  assetId: "ast_9g8h7i6j5k4l"
+                  title: "Quarterly Preventive Maintenance - AGV Robot #42"
+                  description: "Scheduled quarterly maintenance including: battery health check, wheel alignment, sensor calibration, software updates, and complete diagnostic scan. Est. 3-4 hours downtime."
+                  priority: "MEDIUM"
+                  assignedTo: "robotics-team@paklog.com"
+              inspection:
+                summary: Safety inspection
+                description: Routine safety compliance inspection
+                value:
+                  assetId: "ast_7k8m9n0p1q2r"
+                  title: "Annual Safety Inspection - Conveyor System"
+                  description: "Annual OSHA-required safety inspection of conveyor belt system. Check emergency stops, guards, warning signage, and operational safety features."
+                  priority: "LOW"
+                  assignedTo: "safety-team@paklog.com"
+      responses:
+        '201':
+          description: Work order successfully created and assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkOrder'
+              examples:
+                created:
+                  summary: Work order created
+                  value:
+                    workOrderId: "wo_x1y2z3a4b5c6"
+                    assetId: "ast_1a2b3c4d5e6f"
+                    title: "Hydraulic System Failure"
+                    description: "Forklift #1 hydraulic lift system completely failed during operation. Equipment inoperable. Hydraulic fluid leak detected from main cylinder."
+                    priority: "CRITICAL"
+                    assignedTo: "john.smith@paklog.com"
+                    status: "CREATED"
+                    createdAt: "2024-11-01T10:45:00Z"
+                    completedAt: null
+                    laborCost: 0.0
+                    partsCost: 0.0
+                    resolution: null
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                assetNotFound:
+                  summary: Asset not found
+                  value:
+                    timestamp: "2024-11-01T10:45:00Z"
+                    status: 400
+                    error: "Bad Request"
+                    message: "Asset with ID 'ast_invalid123' not found"
+                    path: "/api/v1/equipment/work-orders"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /maintenance/pending:
+    get:
+      tags:
+        - Maintenance
+      summary: Get pending maintenance schedules
+      description: |
+        Retrieve all maintenance schedules that are pending (not yet completed).
+        Includes both overdue and upcoming scheduled maintenance.
+
+        **Business Context:**
+        - Used by maintenance teams to plan daily/weekly work
+        - Displayed on maintenance planning dashboards
+        - Integrated with work order creation systems
+        - Used for resource allocation and scheduling
+
+        **Schedule Types Included:**
+        - PREVENTIVE: Regular scheduled maintenance (oil changes, inspections, etc.)
+        - PREDICTIVE: AI-recommended maintenance based on failure predictions
+        - CORRECTIVE: Follow-up maintenance from previous issues
+        - EMERGENCY: Urgent maintenance needs
+
+        **Sorting:**
+        - Results sorted by scheduled date (earliest first)
+        - Overdue items appear at the top of the list
+
+        **Use Cases:**
+        - Daily maintenance team work planning
+        - Maintenance backlog management
+        - Technician workload balancing
+        - Maintenance KPI tracking (overdue rate, completion rate)
+      operationId: getPendingMaintenance
+      responses:
+        '200':
+          description: List of pending maintenance schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MaintenanceSchedule'
+                description: Array of pending maintenance schedules sorted by scheduled date
+              examples:
+                pendingSchedules:
+                  summary: Multiple pending maintenance items
+                  value:
+                    - scheduleId: "mnt_p1q2r3s4t5u6"
+                      assetId: "ast_1a2b3c4d5e6f"
+                      type: "PREVENTIVE"
+                      scheduledDate: "2024-10-28T08:00:00Z"
+                      intervalDays: 90
+                      description: "Quarterly maintenance: fluid checks, filter replacement, general inspection"
+                      assignedTo: "maintenance-team-a@paklog.com"
+                      completed: false
+                      completedDate: null
+                    - scheduleId: "mnt_v7w8x9y0z1a2"
+                      assetId: "ast_9g8h7i6j5k4l"
+                      type: "PREDICTIVE"
+                      scheduledDate: "2024-11-05T14:00:00Z"
+                      intervalDays: 0
+                      description: "Battery replacement recommended by predictive model (87% probability of failure within 30 days)"
+                      assignedTo: "robotics-team@paklog.com"
+                      completed: false
+                      completedDate: null
+                    - scheduleId: "mnt_b3c4d5e6f7g8"
+                      assetId: "ast_7k8m9n0p1q2r"
+                      type: "PREVENTIVE"
+                      scheduledDate: "2024-11-12T10:00:00Z"
+                      intervalDays: 180
+                      description: "Semi-annual conveyor belt inspection and lubrication"
+                      assignedTo: "maintenance-team-b@paklog.com"
+                      completed: false
+                      completedDate: null
+                emptyList:
+                  summary: No pending maintenance
+                  value: []
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assets/{assetId}/predict-failure:
+    get:
+      tags:
+        - Predictions
+      summary: Get failure prediction for an asset
+      description: |
+        Get AI-powered failure prediction for a specific asset. The prediction model
+        analyzes historical data, operating hours, maintenance history, and sensor data
+        to forecast potential failures.
+
+        **Business Context:**
+        - Enables proactive maintenance before failures occur
+        - Reduces unexpected downtime and emergency repairs
+        - Optimizes maintenance scheduling and parts inventory
+        - Improves asset reliability and lifespan
+
+        **Prediction Model:**
+        - Machine learning model trained on historical failure data
+        - Considers: operating hours, age, maintenance history, usage patterns
+        - Updates daily with new operational data
+        - Accuracy improves over time with more data
+
+        **Probability Thresholds:**
+        - 0-25%: Low risk - continue normal operation
+        - 26-50%: Moderate risk - schedule preventive maintenance
+        - 51-75%: High risk - prioritize maintenance within 2 weeks
+        - 76-100%: Critical risk - immediate maintenance required
+
+        **Failure Types Predicted:**
+        - Mechanical failures (bearings, gears, motors)
+        - Hydraulic system failures
+        - Electrical component failures
+        - Battery/power system degradation
+        - Sensor/control system issues
+
+        **Integration:**
+        - Predictions automatically create maintenance schedules when probability > 50%
+        - High-risk predictions trigger notifications to maintenance teams
+        - Predictions feed into parts procurement forecasting
+      operationId: predictFailure
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          description: Unique identifier of the asset to analyze
+          schema:
+            type: string
+            pattern: '^ast_[a-zA-Z0-9]{12,20}$'
+          examples:
+            forklift:
+              summary: Forklift asset ID
+              value: "ast_1a2b3c4d5e6f"
+            robot:
+              summary: Robot asset ID
+              value: "ast_9g8h7i6j5k4l"
+      responses:
+        '200':
+          description: Failure prediction generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailurePrediction'
+              examples:
+                highRisk:
+                  summary: High risk prediction - immediate action needed
+                  description: Critical prediction requiring immediate maintenance
+                  value:
+                    predictionId: "pred_m7n8o9p0q1r2"
+                    assetId: "ast_1a2b3c4d5e6f"
+                    failureType: "Hydraulic Pump Failure"
+                    probability: 0.87
+                    predictedFailureDate: "2024-11-15T00:00:00Z"
+                    recommendation: "URGENT: Replace hydraulic pump within 14 days. Asset has exceeded recommended operating hours (2847 vs 2500 max). Pressure readings show 15% degradation. Schedule immediate maintenance to prevent catastrophic failure and operational shutdown."
+                    generatedAt: "2024-11-01T12:00:00Z"
+                    actionTaken: false
+                moderateRisk:
+                  summary: Moderate risk - schedule maintenance
+                  description: Moderate risk prediction for battery replacement
+                  value:
+                    predictionId: "pred_s3t4u5v6w7x8"
+                    assetId: "ast_9g8h7i6j5k4l"
+                    failureType: "Battery Degradation"
+                    probability: 0.62
+                    predictedFailureDate: "2024-12-20T00:00:00Z"
+                    recommendation: "Battery capacity has decreased to 73% of original. Charge cycles indicate 18-24 months remaining life. Schedule battery replacement during next planned maintenance window. Monitor weekly for accelerated degradation."
+                    generatedAt: "2024-11-01T12:00:00Z"
+                    actionTaken: false
+                lowRisk:
+                  summary: Low risk - continue normal operation
+                  description: Asset in good condition with low failure probability
+                  value:
+                    predictionId: "pred_y9z0a1b2c3d4"
+                    assetId: "ast_7k8m9n0p1q2r"
+                    failureType: "Motor Bearing Wear"
+                    probability: 0.18
+                    predictedFailureDate: "2025-06-15T00:00:00Z"
+                    recommendation: "Asset operating within normal parameters. All components showing expected wear patterns. Continue standard preventive maintenance schedule. No immediate action required."
+                    generatedAt: "2024-11-01T12:00:00Z"
+                    actionTaken: false
+        '404':
+          description: Asset not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  summary: Asset does not exist
+                  value:
+                    timestamp: "2024-11-01T12:00:00Z"
+                    status: 404
+                    error: "Not Found"
+                    message: "Asset with ID 'ast_invalid123' not found"
+                    path: "/api/v1/equipment/assets/ast_invalid123/predict-failure"
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  schemas:
+    RegisterAssetCommand:
+      type: object
+      required:
+        - serialNumber
+        - name
+        - type
+        - manufacturer
+        - model
+        - purchaseDate
+        - purchaseCost
+        - location
+      properties:
+        serialNumber:
+          type: string
+          description: Unique serial number or identifier from manufacturer
+          minLength: 3
+          maxLength: 100
+          example: "FKL-2024-001"
+        name:
+          type: string
+          description: Human-readable name for the asset
+          minLength: 3
+          maxLength: 200
+          example: "Main Warehouse Forklift #1"
+        type:
+          $ref: '#/components/schemas/AssetType'
+        manufacturer:
+          type: string
+          description: Equipment manufacturer name
+          minLength: 2
+          maxLength: 100
+          example: "Toyota Material Handling"
+        model:
+          type: string
+          description: Manufacturer's model number or name
+          minLength: 1
+          maxLength: 100
+          example: "8FGU25"
+        purchaseDate:
+          type: string
+          format: date
+          description: Date the asset was purchased (ISO 8601 format)
+          example: "2024-01-15"
+        purchaseCost:
+          type: number
+          format: double
+          description: Original purchase cost in USD
+          minimum: 0
+          exclusiveMinimum: true
+          example: 45000.00
+        location:
+          type: string
+          description: Current physical location of the asset
+          minLength: 2
+          maxLength: 200
+          example: "Warehouse A - Zone 1"
+
+    CreateWorkOrderCommand:
+      type: object
+      required:
+        - assetId
+        - title
+        - description
+        - priority
+        - assignedTo
+      properties:
+        assetId:
+          type: string
+          description: ID of the asset requiring work
+          pattern: '^ast_[a-zA-Z0-9]{12,20}$'
+          example: "ast_1a2b3c4d5e6f"
+        title:
+          type: string
+          description: Brief title describing the work needed
+          minLength: 5
+          maxLength: 200
+          example: "Hydraulic System Failure"
+        description:
+          type: string
+          description: Detailed description of the work to be performed
+          minLength: 10
+          maxLength: 5000
+          example: "Forklift #1 hydraulic lift system completely failed during operation. Equipment inoperable."
+        priority:
+          type: string
+          description: Work order priority level
+          enum: [CRITICAL, HIGH, MEDIUM, LOW]
+          example: "CRITICAL"
+        assignedTo:
+          type: string
+          description: Email or ID of technician/team assigned to the work
+          format: email
+          example: "john.smith@paklog.com"
+
+    Asset:
+      type: object
+      description: Complete asset record with all tracking information
+      properties:
+        assetId:
+          type: string
+          description: System-generated unique identifier
+          readOnly: true
+          example: "ast_7k8m9n0p1q2r3s4t"
+        serialNumber:
+          type: string
+          description: Manufacturer's serial number
+          example: "FKL-2024-001"
+        name:
+          type: string
+          description: Asset name
+          example: "Main Warehouse Forklift #1"
+        type:
+          $ref: '#/components/schemas/AssetType'
+        status:
+          $ref: '#/components/schemas/AssetStatus'
+        manufacturer:
+          type: string
+          description: Equipment manufacturer
+          example: "Toyota Material Handling"
+        model:
+          type: string
+          description: Model number
+          example: "8FGU25"
+        purchaseDate:
+          type: string
+          format: date
+          description: Purchase date
+          example: "2024-01-15"
+        warrantyExpiryDate:
+          type: string
+          format: date
+          description: Warranty expiration date (typically 3 years from purchase)
+          nullable: true
+          example: "2027-01-15"
+        purchaseCost:
+          type: number
+          format: double
+          description: Original purchase cost in USD
+          example: 45000.00
+        currentValue:
+          type: number
+          format: double
+          description: Current depreciated value in USD
+          example: 42750.00
+        location:
+          type: string
+          description: Current physical location
+          example: "Warehouse A - Zone 1"
+        lastMaintenanceDate:
+          type: string
+          format: date-time
+          description: Date/time of last completed maintenance
+          nullable: true
+          example: "2024-10-15T14:30:00Z"
+        nextMaintenanceDate:
+          type: string
+          format: date-time
+          description: Scheduled date/time for next maintenance
+          nullable: true
+          example: "2025-01-15T08:00:00Z"
+        totalOperatingHours:
+          type: integer
+          description: Cumulative operating hours
+          minimum: 0
+          example: 2847
+        utilizationPercentage:
+          type: number
+          format: double
+          description: Equipment utilization rate (0-100%)
+          minimum: 0
+          maximum: 100
+          example: 78.5
+
+    WorkOrder:
+      type: object
+      description: Work order for maintenance or repair activities
+      properties:
+        workOrderId:
+          type: string
+          description: System-generated work order ID
+          readOnly: true
+          example: "wo_x1y2z3a4b5c6"
+        assetId:
+          type: string
+          description: Associated asset ID
+          example: "ast_1a2b3c4d5e6f"
+        title:
+          type: string
+          description: Work order title
+          example: "Hydraulic System Failure"
+        description:
+          type: string
+          description: Detailed work description
+          example: "Forklift #1 hydraulic lift system completely failed during operation."
+        priority:
+          type: string
+          description: Priority level
+          enum: [CRITICAL, HIGH, MEDIUM, LOW]
+          example: "CRITICAL"
+        assignedTo:
+          type: string
+          description: Assigned technician/team
+          example: "john.smith@paklog.com"
+        status:
+          type: string
+          description: Current work order status
+          enum: [CREATED, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED]
+          example: "CREATED"
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          readOnly: true
+          example: "2024-11-01T10:45:00Z"
+        completedAt:
+          type: string
+          format: date-time
+          description: Completion timestamp
+          nullable: true
+          example: null
+        laborCost:
+          type: number
+          format: double
+          description: Labor cost in USD
+          minimum: 0
+          example: 0.0
+        partsCost:
+          type: number
+          format: double
+          description: Parts cost in USD
+          minimum: 0
+          example: 0.0
+        resolution:
+          type: string
+          description: Resolution notes upon completion
+          nullable: true
+          example: null
+
+    MaintenanceSchedule:
+      type: object
+      description: Scheduled maintenance item
+      properties:
+        scheduleId:
+          type: string
+          description: Schedule ID
+          readOnly: true
+          example: "mnt_p1q2r3s4t5u6"
+        assetId:
+          type: string
+          description: Asset ID
+          example: "ast_1a2b3c4d5e6f"
+        type:
+          $ref: '#/components/schemas/MaintenanceType'
+        scheduledDate:
+          type: string
+          format: date-time
+          description: Scheduled date/time for maintenance
+          example: "2024-11-05T08:00:00Z"
+        intervalDays:
+          type: integer
+          description: Recurrence interval in days (0 = one-time)
+          minimum: 0
+          example: 90
+        description:
+          type: string
+          description: Maintenance description
+          example: "Quarterly maintenance: fluid checks, filter replacement, general inspection"
+        assignedTo:
+          type: string
+          description: Assigned technician/team
+          example: "maintenance-team-a@paklog.com"
+        completed:
+          type: boolean
+          description: Completion status
+          example: false
+        completedDate:
+          type: string
+          format: date-time
+          description: Completion timestamp
+          nullable: true
+          example: null
+
+    FailurePrediction:
+      type: object
+      description: AI-generated failure prediction for an asset
+      properties:
+        predictionId:
+          type: string
+          description: Prediction ID
+          readOnly: true
+          example: "pred_m7n8o9p0q1r2"
+        assetId:
+          type: string
+          description: Asset ID
+          example: "ast_1a2b3c4d5e6f"
+        failureType:
+          type: string
+          description: Type of predicted failure
+          example: "Hydraulic Pump Failure"
+        probability:
+          type: number
+          format: double
+          description: Failure probability (0.0-1.0)
+          minimum: 0
+          maximum: 1
+          example: 0.87
+        predictedFailureDate:
+          type: string
+          format: date-time
+          description: Estimated failure date
+          example: "2024-11-15T00:00:00Z"
+        recommendation:
+          type: string
+          description: Recommended action based on prediction
+          example: "URGENT: Replace hydraulic pump within 14 days."
+        generatedAt:
+          type: string
+          format: date-time
+          description: Prediction generation timestamp
+          readOnly: true
+          example: "2024-11-01T12:00:00Z"
+        actionTaken:
+          type: boolean
+          description: Whether corrective action has been initiated
+          example: false
+
+    AssetType:
+      type: string
+      description: |
+        Equipment type classification:
+        - FORKLIFT: Material handling forklifts
+        - CONVEYOR: Belt conveyor systems
+        - PALLET_JACK: Manual or electric pallet jacks
+        - ROBOT: Robotic systems
+        - PACKAGING_MACHINE: Automated packaging equipment
+        - SCANNER: Barcode/RFID scanning equipment
+        - PRINTER: Label and document printers
+        - SORTING_SYSTEM: Automated sorting systems
+        - AGV: Autonomous Guided Vehicles
+      enum:
+        - FORKLIFT
+        - CONVEYOR
+        - PALLET_JACK
+        - ROBOT
+        - PACKAGING_MACHINE
+        - SCANNER
+        - PRINTER
+        - SORTING_SYSTEM
+        - AGV
+      example: "FORKLIFT"
+
+    AssetStatus:
+      type: string
+      description: |
+        Current asset operational status:
+        - ACTIVE: In service and available for use
+        - INACTIVE: Not currently in use but operational
+        - MAINTENANCE: Undergoing scheduled maintenance
+        - RETIRED: Permanently removed from service
+        - UNDER_REPAIR: Being repaired due to failure
+      enum:
+        - ACTIVE
+        - INACTIVE
+        - MAINTENANCE
+        - RETIRED
+        - UNDER_REPAIR
+      example: "ACTIVE"
+
+    MaintenanceType:
+      type: string
+      description: |
+        Type of maintenance activity:
+        - PREVENTIVE: Scheduled routine maintenance
+        - CORRECTIVE: Fixing identified issues
+        - PREDICTIVE: AI-recommended proactive maintenance
+        - EMERGENCY: Urgent unplanned repairs
+      enum:
+        - PREVENTIVE
+        - CORRECTIVE
+        - PREDICTIVE
+        - EMERGENCY
+      example: "PREVENTIVE"
+
+    ErrorResponse:
+      type: object
+      description: Standard error response format
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Error occurrence timestamp
+          example: "2024-11-01T10:30:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: Error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Asset with serial number 'FKL-2024-001' already exists"
+        path:
+          type: string
+          description: Request path that caused the error
+          example: "/api/v1/equipment/assets"
+
+  responses:
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2024-11-01T12:00:00Z"
+            status: 500
+            error: "Internal Server Error"
+            message: "An unexpected error occurred. Please try again later."
+            path: "/api/v1/equipment/assets"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT-based authentication. Include the JWT token in the Authorization header:
+        `Authorization: Bearer <token>`
+
+        Tokens expire after 24 hours and must be refreshed.
+
+security:
+  - bearerAuth: []

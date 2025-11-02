@@ -1,0 +1,16 @@
+{
+  "schemaName": "dp_inventory_stock_level_v1",
+  "dimensionFieldSpecs": [
+    {"name": "sku", "dataType": "STRING"}
+  ],
+  "metricFieldSpecs": [
+    {"name": "quantity_on_hand", "dataType": "INT"},
+    {"name": "quantity_allocated", "dataType": "INT"},
+    {"name": "available_to_promise", "dataType": "INT"}
+  ],
+  "dateTimeFieldSpecs": [
+    {"name": "event_time", "dataType": "LONG", "format": "1:MILLISECONDS:EPOCH", "granularity": "1:MILLISECONDS"}
+  ],
+  "primaryKeyColumns": ["sku"]
+}
+

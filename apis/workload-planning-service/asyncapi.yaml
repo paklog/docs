@@ -1,0 +1,647 @@
+asyncapi: 2.6.0
+info:
+  title: Workload Planning Service Events
+  version: 1.0.0
+  description: |
+    Event-driven API for Workload Planning Service using Apache Kafka.
+    This service publishes and subscribes to events related to demand forecasting,
+    workload planning, worker assignments, and staffing recommendations.
+  contact:
+    name: WMS Team
+    email: wms-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  development:
+    url: localhost:9092
+    protocol: kafka
+    description: Local Kafka broker
+  production:
+    url: kafka-cluster.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+
+defaultContentType: application/json
+
+channels:
+  forecast.generated:
+    description: Published when a demand forecast is generated
+    publish:
+      operationId: publishForecastGenerated
+      summary: Forecast generated event
+      message:
+        $ref: '#/components/messages/ForecastGenerated'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Forecast ID
+
+  plan.created:
+    description: Published when a workload plan is created
+    publish:
+      operationId: publishPlanCreated
+      summary: Plan created event
+      message:
+        $ref: '#/components/messages/PlanCreated'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Plan ID
+
+  plan.approved:
+    description: Published when a workload plan is approved
+    publish:
+      operationId: publishPlanApproved
+      summary: Plan approved event
+      message:
+        $ref: '#/components/messages/PlanApproved'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Plan ID
+
+  plan.published:
+    description: Published when a workload plan is published
+    publish:
+      operationId: publishPlanPublished
+      summary: Plan published event
+      message:
+        $ref: '#/components/messages/PlanPublished'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Plan ID
+
+  plan.cancelled:
+    description: Published when a workload plan is cancelled
+    publish:
+      operationId: publishPlanCancelled
+      summary: Plan cancelled event
+      message:
+        $ref: '#/components/messages/PlanCancelled'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Plan ID
+
+  worker.assigned:
+    description: Published when a worker is assigned to a plan
+    publish:
+      operationId: publishWorkerAssigned
+      summary: Worker assigned event
+      message:
+        $ref: '#/components/messages/WorkerAssigned'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Plan ID
+
+  worker.removed:
+    description: Published when a worker is removed from a plan
+    publish:
+      operationId: publishWorkerRemoved
+      summary: Worker removed event
+      message:
+        $ref: '#/components/messages/WorkerRemoved'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Plan ID
+
+  plan.optimized:
+    description: Published when a workload plan is optimized
+    publish:
+      operationId: publishPlanOptimized
+      summary: Plan optimized event
+      message:
+        $ref: '#/components/messages/PlanOptimized'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Plan ID
+
+  staffing.recommendation:
+    description: Published when staffing recommendations are generated
+    publish:
+      operationId: publishStaffingRecommendation
+      summary: Staffing recommendation event
+      message:
+        $ref: '#/components/messages/StaffingRecommendation'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Warehouse ID
+
+  wave.released:
+    description: Subscribe to wave releases for demand signals
+    subscribe:
+      operationId: onWaveReleased
+      summary: Track wave volumes for forecasting
+      message:
+        $ref: '#/components/messages/WaveReleased'
+
+  task.completed:
+    description: Subscribe to task completions for productivity data
+    subscribe:
+      operationId: onTaskCompleted
+      summary: Track worker productivity metrics
+      message:
+        $ref: '#/components/messages/TaskCompleted'
+
+  worker.availability.changed:
+    description: Subscribe to worker availability changes
+    subscribe:
+      operationId: onWorkerAvailabilityChanged
+      summary: Update worker availability for planning
+      message:
+        $ref: '#/components/messages/WorkerAvailabilityChanged'
+
+components:
+  messages:
+    ForecastGenerated:
+      name: ForecastGenerated
+      title: Forecast Generated Event
+      summary: Emitted when demand forecast is generated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ForecastGeneratedPayload'
+
+    PlanCreated:
+      name: PlanCreated
+      title: Plan Created Event
+      summary: Emitted when workload plan is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PlanCreatedPayload'
+
+    PlanApproved:
+      name: PlanApproved
+      title: Plan Approved Event
+      summary: Emitted when workload plan is approved
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PlanApprovedPayload'
+
+    PlanPublished:
+      name: PlanPublished
+      title: Plan Published Event
+      summary: Emitted when workload plan is published
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PlanPublishedPayload'
+
+    PlanCancelled:
+      name: PlanCancelled
+      title: Plan Cancelled Event
+      summary: Emitted when workload plan is cancelled
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PlanCancelledPayload'
+
+    WorkerAssigned:
+      name: WorkerAssigned
+      title: Worker Assigned Event
+      summary: Emitted when worker is assigned to plan
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WorkerAssignedPayload'
+
+    WorkerRemoved:
+      name: WorkerRemoved
+      title: Worker Removed Event
+      summary: Emitted when worker is removed from plan
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WorkerRemovedPayload'
+
+    PlanOptimized:
+      name: PlanOptimized
+      title: Plan Optimized Event
+      summary: Emitted when workload plan is optimized
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PlanOptimizedPayload'
+
+    StaffingRecommendation:
+      name: StaffingRecommendation
+      title: Staffing Recommendation Event
+      summary: Emitted when staffing recommendations are generated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/StaffingRecommendationPayload'
+
+    WaveReleased:
+      name: WaveReleased
+      title: Wave Released Event
+      summary: Received when wave is released
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveReleasedPayload'
+
+    TaskCompleted:
+      name: TaskCompleted
+      title: Task Completed Event
+      summary: Received when task is completed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskCompletedPayload'
+
+    WorkerAvailabilityChanged:
+      name: WorkerAvailabilityChanged
+      title: Worker Availability Changed Event
+      summary: Received when worker availability changes
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WorkerAvailabilityChangedPayload'
+
+  schemas:
+    ForecastGeneratedPayload:
+      type: object
+      required:
+        - forecastId
+        - warehouseId
+        - period
+        - forecastDate
+        - generatedAt
+      properties:
+        forecastId:
+          type: string
+        warehouseId:
+          type: string
+        period:
+          type: string
+          enum: [HOURLY, DAILY, WEEKLY, MONTHLY]
+        forecastDate:
+          type: string
+          format: date
+        model:
+          type: string
+          enum: [MOVING_AVERAGE, EXPONENTIAL_SMOOTHING, ARIMA, SEASONAL]
+        accuracy:
+          type: number
+          format: percentage
+        predictions:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+                enum: [RECEIVING, PUTAWAY, PICKING, PACKING, SHIPPING, REPLENISHMENT, CYCLE_COUNTING, RETURNS]
+              predictedVolume:
+                type: integer
+              requiredWorkers:
+                type: integer
+        generatedAt:
+          type: string
+          format: date-time
+        generatedBy:
+          type: string
+
+    PlanCreatedPayload:
+      type: object
+      required:
+        - planId
+        - warehouseId
+        - planDate
+        - createdAt
+      properties:
+        planId:
+          type: string
+        warehouseId:
+          type: string
+        planDate:
+          type: string
+          format: date
+        forecastId:
+          type: string
+        plannedVolumes:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              volume:
+                type: integer
+        status:
+          type: string
+          enum: [DRAFT]
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+
+    PlanApprovedPayload:
+      type: object
+      required:
+        - planId
+        - approvedAt
+        - approvedBy
+      properties:
+        planId:
+          type: string
+        warehouseId:
+          type: string
+        planDate:
+          type: string
+          format: date
+        totalWorkers:
+          type: integer
+        totalHours:
+          type: number
+        estimatedCost:
+          type: number
+        approvedAt:
+          type: string
+          format: date-time
+        approvedBy:
+          type: string
+        notes:
+          type: string
+
+    PlanPublishedPayload:
+      type: object
+      required:
+        - planId
+        - publishedAt
+      properties:
+        planId:
+          type: string
+        warehouseId:
+          type: string
+        planDate:
+          type: string
+          format: date
+        totalWorkers:
+          type: integer
+        assignedWorkers:
+          type: array
+          items:
+            type: object
+            properties:
+              workerId:
+                type: string
+              workerName:
+                type: string
+              shiftType:
+                type: string
+              workloadCategory:
+                type: string
+        publishedAt:
+          type: string
+          format: date-time
+
+    PlanCancelledPayload:
+      type: object
+      required:
+        - planId
+        - reason
+        - cancelledAt
+      properties:
+        planId:
+          type: string
+        warehouseId:
+          type: string
+        planDate:
+          type: string
+          format: date
+        reason:
+          type: string
+        cancelledAt:
+          type: string
+          format: date-time
+        cancelledBy:
+          type: string
+
+    WorkerAssignedPayload:
+      type: object
+      required:
+        - planId
+        - workerId
+        - shiftType
+        - workloadCategory
+        - assignedAt
+      properties:
+        planId:
+          type: string
+        planDate:
+          type: string
+          format: date
+        workerId:
+          type: string
+        workerName:
+          type: string
+        shiftType:
+          type: string
+          enum: [DAY_SHIFT, EVENING_SHIFT, NIGHT_SHIFT, WEEKEND_SHIFT]
+        workloadCategory:
+          type: string
+          enum: [RECEIVING, PUTAWAY, PICKING, PACKING, SHIPPING, REPLENISHMENT, CYCLE_COUNTING, RETURNS]
+        skillLevel:
+          type: string
+          enum: [NOVICE, INTERMEDIATE, ADVANCED, EXPERT]
+        plannedHours:
+          type: number
+        assignedAt:
+          type: string
+          format: date-time
+
+    WorkerRemovedPayload:
+      type: object
+      required:
+        - planId
+        - workerId
+        - removedAt
+      properties:
+        planId:
+          type: string
+        workerId:
+          type: string
+        shiftType:
+          type: string
+        removedAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+
+    PlanOptimizedPayload:
+      type: object
+      required:
+        - planId
+        - optimizedAt
+      properties:
+        planId:
+          type: string
+        warehouseId:
+          type: string
+        planDate:
+          type: string
+          format: date
+        optimizedAt:
+          type: string
+          format: date-time
+        previousCost:
+          type: number
+        newCost:
+          type: number
+        costReduction:
+          type: number
+          format: percentage
+        previousUtilization:
+          type: number
+        newUtilization:
+          type: number
+        changes:
+          type: array
+          items:
+            type: string
+
+    StaffingRecommendationPayload:
+      type: object
+      required:
+        - warehouseId
+        - date
+        - status
+        - generatedAt
+      properties:
+        warehouseId:
+          type: string
+        date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [UNDERSTAFFED, OPTIMAL, OVERSTAFFED]
+        recommendations:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              shiftType:
+                type: string
+              currentWorkers:
+                type: integer
+              recommendedWorkers:
+                type: integer
+              reason:
+                type: string
+              priority:
+                type: string
+                enum: [LOW, MEDIUM, HIGH, URGENT]
+        generatedAt:
+          type: string
+          format: date-time
+
+    WaveReleasedPayload:
+      type: object
+      required:
+        - waveId
+        - warehouseId
+        - orderIds
+        - releaseTime
+      properties:
+        waveId:
+          type: string
+        warehouseId:
+          type: string
+        orderIds:
+          type: array
+          items:
+            type: string
+        totalPicks:
+          type: integer
+        estimatedDuration:
+          type: integer
+        releaseTime:
+          type: string
+          format: date-time
+
+    TaskCompletedPayload:
+      type: object
+      required:
+        - taskId
+        - taskType
+        - workerId
+        - completedAt
+        - duration
+      properties:
+        taskId:
+          type: string
+        taskType:
+          type: string
+          enum: [PICK, PACK, PUTAWAY, REPLENISH, COUNT, MOVE, SHIP, RECEIVE]
+        workerId:
+          type: string
+        warehouseId:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          description: Duration in minutes
+        actualQuantity:
+          type: integer
+        expectedQuantity:
+          type: integer
+        productivity:
+          type: number
+          description: Units per hour
+
+    WorkerAvailabilityChangedPayload:
+      type: object
+      required:
+        - workerId
+        - changedAt
+      properties:
+        workerId:
+          type: string
+        workerName:
+          type: string
+        warehouseId:
+          type: string
+        availableShifts:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              shiftType:
+                type: string
+                enum: [DAY_SHIFT, EVENING_SHIFT, NIGHT_SHIFT, WEEKEND_SHIFT]
+              available:
+                type: boolean
+        skills:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              level:
+                type: string
+                enum: [NOVICE, INTERMEDIATE, ADVANCED, EXPERT]
+        changedAt:
+          type: string
+          format: date-time

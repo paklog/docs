@@ -1,33 +1,36 @@
-# Warehouse Operations Service - Domain Architecture & Business Capabilities
+# Warehouse Operations Integration Context - Domain Architecture
+
+## ⚠️ IMPORTANT NOTE
+**This document describes the integration and coordination patterns between the warehouse operations microservices. Each operation area is implemented as a separate microservice, not as contexts within a single service.**
 
 ## Service Overview
 
-The Warehouse Operations Service manages all warehouse fulfillment activities from order release through packing completion. It orchestrates wave planning, pick list generation, picking execution, quality control, put wall operations, packing, and work assignment across multiple sub-domains in a complex, event-driven architecture.
+The Warehouse Operations Integration Context coordinates activities between multiple independent microservices that handle warehouse fulfillment. This documentation describes how these services work together through event-driven patterns and shared concepts.
 
-**Architecture Pattern**: Hexagonal Architecture with Multi-Domain DDD
+**Architecture Pattern**: Microservices with Event-Driven Coordination
 **Technology Stack**: Spring Boot, Spring Data MongoDB, Spring Kafka, CloudEvents
-**Integration Pattern**: Event-Driven Architecture with Multiple Bounded Contexts
+**Integration Pattern**: Choreographed Event-Driven Architecture
 
 ---
 
-## Multi-Domain Architecture
+## Microservices Architecture
 
 ### Overview
 
-The Warehouse Operations service is unique in the PakLog ecosystem as it encompasses **multiple bounded contexts** within a single deployment unit. This design reflects the complexity and interconnected nature of warehouse operations.
+Warehouse operations are implemented as **separate microservices** that communicate through events and APIs. This provides better scalability, independent deployment, and team autonomy.
 
-### Bounded Contexts within Warehouse Operations
+### Independent Warehouse Operations Microservices
 
-1. **Wave Planning Context** - Order batching and wave management
-2. **Picking Context** - Pick list generation and execution
-3. **Quality Context** - Quality inspection and control
-4. **Packing Context** - Order packing operations
-5. **Put Wall Context** - Batch picking sortation
-6. **Location Context** - Warehouse location management
-7. **License Plate Context** - Unit load tracking
-8. **Work Management Context** - Work assignment and tracking
-9. **Workload Context** - Capacity planning and load balancing
-10. **Shared Kernel** - Common domain concepts
+1. **Wave Planning Service** - Order batching and wave management (separate service)
+2. **Pick Execution Service** - Pick list generation and execution (separate service)
+3. **Quality Compliance Service** - Quality inspection and control (separate service)
+4. **Pack & Ship Service** - Order packing operations (separate service)
+5. **Cross-Docking Operations** - Flow-through operations (separate service)
+6. **Location Master Service** - Warehouse location management (separate service)
+7. **Physical Tracking Service** - License plate tracking (separate service)
+8. **Task Execution Service** - Work assignment and tracking (separate service)
+9. **Workload Planning Service** - Capacity planning and load balancing (separate service)
+10. **Shared Libraries** - Common domain concepts and utilities
 
 ---
 

@@ -275,7 +275,7 @@ mindmap
 ### Local Development Setup
 ```bash
 # Clone repository
-git clone https://github.com/paklog/warehouse-operations.git
+git clone https://github.com/paklog/paklog.git
 
 # Start infrastructure
 docker-compose up -d mongodb postgresql redis kafka

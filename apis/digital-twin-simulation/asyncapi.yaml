@@ -1,0 +1,933 @@
+asyncapi: 3.0.0
+info:
+  title: Digital Twin & Simulation Events API
+  version: 1.0.0
+  description: |
+    # Digital Twin & Simulation Event-Driven Architecture
+
+    This AsyncAPI specification documents all event streams published by the Digital Twin & Simulation service
+    using Apache Kafka and CloudEvents format.
+
+    ## Overview
+
+    The service implements a comprehensive event-driven architecture for real-time warehouse simulation monitoring,
+    optimization notifications, and digital twin state synchronization.
+
+    ## Event Architecture
+
+    ### CloudEvents Standard
+
+    All events are published using the [CloudEvents](https://cloudevents.io/) specification v1.0, providing:
+    - Consistent event metadata structure
+    - Cross-platform interoperability
+    - Version management and schema evolution
+    - Distributed tracing correlation
+
+    ### Kafka Topics
+
+    Events are published to the following Kafka topics:
+    - **digital-twin.events**: All simulation and digital twin domain events
+
+    ### Event Types
+
+    The service publishes four primary event types:
+
+    1. **SimulationStarted**: Published when a simulation run begins execution
+    2. **SimulationCompleted**: Published when a simulation run finishes successfully
+    3. **OptimizationFound**: Published when AI identifies an optimization opportunity
+    4. **ModelUpdated**: Published when a warehouse digital twin model is modified
+
+    ## Use Cases
+
+    ### Real-Time Monitoring
+    Subscribe to simulation events to build real-time dashboards showing:
+    - Active simulation progress
+    - Performance metrics as they're calculated
+    - Bottleneck detection alerts
+    - Resource utilization trends
+
+    ### Automated Workflows
+    Trigger automated actions based on events:
+    - Auto-apply high-confidence optimization recommendations
+    - Send notifications when simulations complete
+    - Update external systems when models change
+    - Archive completed simulation data
+
+    ### Analytics & ML
+    Stream events to analytics platforms for:
+    - Historical trend analysis
+    - Machine learning model training
+    - Predictive capacity planning
+    - Performance benchmarking
+
+    ### Integration Patterns
+    - **Event Sourcing**: Reconstruct simulation state from event log
+    - **CQRS**: Separate read models for different consumer needs
+    - **Saga Orchestration**: Coordinate multi-step optimization workflows
+    - **Change Data Capture**: Sync digital twins with physical warehouse state
+
+  contact:
+    name: Paklog Engineering Team
+    email: engineering@paklog.com
+  license:
+    name: Proprietary
+
+servers:
+  production:
+    host: kafka.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    tags:
+      - name: environment
+        description: Production environment
+    bindings:
+      kafka:
+        schemaRegistryUrl: https://schema-registry.paklog.com
+        schemaRegistryVendor: confluent
+
+  staging:
+    host: kafka.staging.paklog.com:9092
+    protocol: kafka
+    description: Staging Kafka cluster
+    tags:
+      - name: environment
+        description: Staging environment
+    bindings:
+      kafka:
+        schemaRegistryUrl: https://schema-registry.staging.paklog.com
+        schemaRegistryVendor: confluent
+
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka
+    tags:
+      - name: environment
+        description: Local development
+
+defaultContentType: application/json
+
+channels:
+  digitalTwinEvents:
+    address: digital-twin.events
+    description: |
+      Primary event channel for all digital twin and simulation domain events.
+
+      This channel carries four types of events:
+      - Simulation lifecycle events (started, completed)
+      - Optimization recommendation events
+      - Model update events
+
+      **Partitioning Strategy**: Events are partitioned by aggregate ID (modelId, runId, etc.)
+      to ensure ordering within each simulation or model context.
+
+      **Retention**: 7 days (configurable)
+      **Replication Factor**: 3
+      **Cleanup Policy**: delete
+
+    messages:
+      simulationStarted:
+        $ref: '#/components/messages/SimulationStartedEvent'
+      simulationCompleted:
+        $ref: '#/components/messages/SimulationCompletedEvent'
+      optimizationFound:
+        $ref: '#/components/messages/OptimizationFoundEvent'
+      modelUpdated:
+        $ref: '#/components/messages/ModelUpdatedEvent'
+
+    bindings:
+      kafka:
+        topic: digital-twin.events
+        partitions: 12
+        replicas: 3
+        topicConfiguration:
+          cleanup.policy: delete
+          retention.ms: 604800000
+          compression.type: snappy
+          max.message.bytes: 1048576
+
+operations:
+  onSimulationStarted:
+    action: receive
+    channel:
+      $ref: '#/channels/digitalTwinEvents'
+    summary: Receive simulation started events
+    description: |
+      Triggered when a new simulation run begins execution.
+
+      **Use Cases**:
+      - Update monitoring dashboards with new active simulations
+      - Initialize real-time metric collection
+      - Send notifications to interested parties
+      - Start performance tracking timers
+
+      **Event Ordering**: Events for the same runId are guaranteed to be ordered.
+
+      **Consumer Groups**: Multiple consumer groups can subscribe independently:
+      - **monitoring-service**: Real-time dashboard updates
+      - **notification-service**: User notifications
+      - **analytics-service**: Historical analysis
+      - **audit-service**: Compliance logging
+
+    messages:
+      - $ref: '#/components/messages/SimulationStartedEvent'
+
+    bindings:
+      kafka:
+        groupId: digital-twin-consumers
+        clientId: digital-twin-service
+
+  onSimulationCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/digitalTwinEvents'
+    summary: Receive simulation completed events
+    description: |
+      Triggered when a simulation run completes successfully.
+
+      **Use Cases**:
+      - Generate completion reports
+      - Trigger recommendation generation workflows
+      - Archive simulation results
+      - Send completion notifications
+      - Update capacity planning models
+      - Trigger follow-up what-if scenarios
+
+      **Final Metrics**: The event includes comprehensive final metrics from the entire simulation run.
+
+      **Processing Patterns**:
+      - Idempotent processing recommended (events may be redelivered)
+      - Consider archiving raw event data for audit trails
+      - Correlate with SimulationStarted event using runId for duration calculation
+
+    messages:
+      - $ref: '#/components/messages/SimulationCompletedEvent'
+
+    bindings:
+      kafka:
+        groupId: digital-twin-consumers
+
+  onOptimizationFound:
+    action: receive
+    channel:
+      $ref: '#/channels/digitalTwinEvents'
+    summary: Receive optimization recommendation events
+    description: |
+      Triggered when AI analysis identifies an optimization opportunity during or after simulation.
+
+      **Use Cases**:
+      - Auto-apply high-confidence recommendations (confidence > 0.95)
+      - Queue recommendations for manual review
+      - Alert warehouse managers to high-impact opportunities
+      - Track optimization suggestion patterns
+      - Build recommendation effectiveness analytics
+
+      **Confidence Scoring**:
+      - 0.95-1.0: Very high confidence - consider auto-implementation
+      - 0.85-0.94: High confidence - priority review
+      - 0.70-0.84: Medium confidence - evaluate cost/benefit
+      - < 0.70: Low confidence - requires careful analysis
+
+      **Expected Improvement**: Represents projected percentage improvement in the optimization goal metric.
+
+      **Processing Recommendations**:
+      - Deduplicate similar recommendations across multiple runs
+      - Track implementation outcomes to improve ML models
+      - Consider A/B testing recommendations before full deployment
+
+    messages:
+      - $ref: '#/components/messages/OptimizationFoundEvent'
+
+    bindings:
+      kafka:
+        groupId: optimization-consumers
+
+  onModelUpdated:
+    action: receive
+    channel:
+      $ref: '#/channels/digitalTwinEvents'
+    summary: Receive model update events
+    description: |
+      Triggered when a warehouse digital twin model is modified.
+
+      **Use Cases**:
+      - Synchronize model changes to downstream systems
+      - Invalidate cached model data
+      - Re-run affected simulations
+      - Audit model change history
+      - Trigger model validation workflows
+
+      **Update Types**:
+      - **ZONE_ADDED**: New zone created in warehouse model
+      - **ZONE_MODIFIED**: Existing zone configuration changed
+      - **ZONE_REMOVED**: Zone deleted from model
+      - **DIMENSIONS_CHANGED**: Warehouse dimensions updated
+      - **SYNC_COMPLETED**: Model synchronized with actual warehouse state
+      - **CONFIGURATION_UPDATED**: General model configuration change
+
+      **Change Management**:
+      - Consider versioning models for rollback capability
+      - Validate model integrity after updates
+      - Notify active simulations using the model
+      - Update dependent scenarios
+
+    messages:
+      - $ref: '#/components/messages/ModelUpdatedEvent'
+
+    bindings:
+      kafka:
+        groupId: model-sync-consumers
+
+components:
+  messages:
+    SimulationStartedEvent:
+      name: SimulationStarted
+      title: Simulation Started Event
+      summary: Published when a new simulation run begins execution
+      contentType: application/cloudevents+json
+      tags:
+        - name: lifecycle
+          description: Simulation lifecycle event
+        - name: monitoring
+          description: Used for real-time monitoring
+      payload:
+        $ref: '#/components/schemas/SimulationStartedEventPayload'
+      examples:
+        - name: peakSeasonSimulationStarted
+          summary: Peak season capacity simulation started
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.SimulationStarted
+            source: digital-twin-simulation
+            id: evt-7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d
+            time: "2025-01-15T16:00:00Z"
+            datacontenttype: application/json
+            data:
+              runId: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+              scenarioId: scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d
+              modelId: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+              accelerationFactor: 100
+              eventId: evt-7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d
+              timestamp: "2025-01-15T16:00:00Z"
+              aggregateId: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+              eventType: SimulationStarted
+
+        - name: stressTestSimulationStarted
+          summary: Stress test simulation with extreme acceleration
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.SimulationStarted
+            source: digital-twin-simulation
+            id: evt-1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e
+            time: "2025-01-15T14:30:00Z"
+            datacontenttype: application/json
+            data:
+              runId: run-5d6e7f8a-9b0c-1d2e-3f4a-5b6c7d8e9f0a
+              scenarioId: scenario-stress-test-001
+              modelId: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+              accelerationFactor: 1000
+              eventId: evt-1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e
+              timestamp: "2025-01-15T14:30:00Z"
+              aggregateId: run-5d6e7f8a-9b0c-1d2e-3f4a-5b6c7d8e9f0a
+              eventType: SimulationStarted
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Partition key is the runId to ensure event ordering
+            example: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+
+    SimulationCompletedEvent:
+      name: SimulationCompleted
+      title: Simulation Completed Event
+      summary: Published when a simulation run completes successfully
+      contentType: application/cloudevents+json
+      tags:
+        - name: lifecycle
+          description: Simulation lifecycle event
+        - name: analytics
+          description: Used for performance analytics
+      payload:
+        $ref: '#/components/schemas/SimulationCompletedEventPayload'
+      examples:
+        - name: peakSeasonSimulationCompleted
+          summary: Peak season simulation completed with comprehensive metrics
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.SimulationCompleted
+            source: digital-twin-simulation
+            id: evt-9a0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d
+            time: "2025-01-15T16:45:00Z"
+            datacontenttype: application/json
+            data:
+              runId: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+              totalEventsProcessed: 72451
+              finalMetrics:
+                throughput: 1250.5
+                utilization: 0.87
+                avgCycleTime: 245.3
+                peakQueueLength: 45
+                resourceUsage: 0.91
+                costPerOrder: 3.45
+                efficiency: 0.88
+              durationSeconds: 2700
+              eventId: evt-9a0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d
+              timestamp: "2025-01-15T16:45:00Z"
+              aggregateId: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+              eventType: SimulationCompleted
+
+        - name: optimizationSimulationCompleted
+          summary: Layout optimization simulation completed
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.SimulationCompleted
+            source: digital-twin-simulation
+            id: evt-2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e
+            time: "2025-01-14T09:28:00Z"
+            datacontenttype: application/json
+            data:
+              runId: run-1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+              totalEventsProcessed: 38920
+              finalMetrics:
+                throughput: 980.2
+                utilization: 0.92
+                avgCycleTime: 198.7
+                peakQueueLength: 28
+                resourceUsage: 0.85
+                costPerOrder: 2.98
+                efficiency: 0.93
+              durationSeconds: 1680
+              eventId: evt-2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e
+              timestamp: "2025-01-14T09:28:00Z"
+              aggregateId: run-1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+              eventType: SimulationCompleted
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Partition key is the runId
+            example: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+
+    OptimizationFoundEvent:
+      name: OptimizationFound
+      title: Optimization Found Event
+      summary: Published when AI identifies an optimization opportunity
+      contentType: application/cloudevents+json
+      tags:
+        - name: optimization
+          description: AI-generated optimization recommendation
+        - name: actionable
+          description: May trigger automated workflows
+      payload:
+        $ref: '#/components/schemas/OptimizationFoundEventPayload'
+      examples:
+        - name: highConfidenceLayoutOptimization
+          summary: High-confidence layout optimization recommendation
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.OptimizationFound
+            source: digital-twin-simulation
+            id: evt-3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f
+            time: "2025-01-15T17:45:00Z"
+            datacontenttype: application/json
+            data:
+              recommendationId: rec-layout-001
+              runId: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+              expectedImprovement: 18.5
+              confidence: 0.89
+              eventId: evt-3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f
+              timestamp: "2025-01-15T17:45:00Z"
+              aggregateId: rec-layout-001
+              eventType: OptimizationFound
+
+        - name: staffingOptimization
+          summary: Very high confidence staffing recommendation
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.OptimizationFound
+            source: digital-twin-simulation
+            id: evt-4d5e6f7a-8b9c-0d1e-2f3a-4b5c6d7e8f9a
+            time: "2025-01-15T17:45:30Z"
+            datacontenttype: application/json
+            data:
+              recommendationId: rec-staffing-001
+              runId: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+              expectedImprovement: 12.3
+              confidence: 0.92
+              eventId: evt-4d5e6f7a-8b9c-0d1e-2f3a-4b5c6d7e8f9a
+              timestamp: "2025-01-15T17:45:30Z"
+              aggregateId: rec-staffing-001
+              eventType: OptimizationFound
+
+        - name: equipmentOptimization
+          summary: Equipment addition recommendation
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.OptimizationFound
+            source: digital-twin-simulation
+            id: evt-5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b
+            time: "2025-01-15T17:46:00Z"
+            datacontenttype: application/json
+            data:
+              recommendationId: rec-equipment-001
+              runId: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+              expectedImprovement: 8.7
+              confidence: 0.85
+              eventId: evt-5e6f7a8b-9c0d-1e2f-3a4b-5c6d7e8f9a0b
+              timestamp: "2025-01-15T17:46:00Z"
+              aggregateId: rec-equipment-001
+              eventType: OptimizationFound
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Partition key is the recommendationId
+            example: rec-layout-001
+
+    ModelUpdatedEvent:
+      name: ModelUpdated
+      title: Model Updated Event
+      summary: Published when a warehouse digital twin model is modified
+      contentType: application/cloudevents+json
+      tags:
+        - name: model-management
+          description: Model lifecycle event
+        - name: synchronization
+          description: Triggers sync workflows
+      payload:
+        $ref: '#/components/schemas/ModelUpdatedEventPayload'
+      examples:
+        - name: zoneAddedToModel
+          summary: New picking zone added to warehouse model
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.ModelUpdated
+            source: digital-twin-simulation
+            id: evt-6f7a8b9c-0d1e-2f3a-4b5c-6d7e8f9a0b1c
+            time: "2025-01-15T10:30:00Z"
+            datacontenttype: application/json
+            data:
+              modelId: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+              updateType: ZONE_ADDED
+              description: "Added new high-velocity picking zone Z-HV-01 with 500 locations for fast-moving SKUs"
+              eventId: evt-6f7a8b9c-0d1e-2f3a-4b5c-6d7e8f9a0b1c
+              timestamp: "2025-01-15T10:30:00Z"
+              aggregateId: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+              eventType: ModelUpdated
+
+        - name: modelSyncCompleted
+          summary: Model synchronized with actual warehouse state
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.ModelUpdated
+            source: digital-twin-simulation
+            id: evt-7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d
+            time: "2025-01-15T14:00:00Z"
+            datacontenttype: application/json
+            data:
+              modelId: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+              updateType: SYNC_COMPLETED
+              description: "Digital twin synchronized with WMS - updated 1,247 location occupancies and 8 resource assignments"
+              eventId: evt-7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d
+              timestamp: "2025-01-15T14:00:00Z"
+              aggregateId: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+              eventType: ModelUpdated
+
+        - name: dimensionsChanged
+          summary: Warehouse physical dimensions updated
+          payload:
+            specversion: "1.0"
+            type: com.paklog.digitaltwin.ModelUpdated
+            source: digital-twin-simulation
+            id: evt-8b9c0d1e-2f3a-4b5c-6d7e-8f9a0b1c2d3e
+            time: "2025-01-10T16:15:00Z"
+            datacontenttype: application/json
+            data:
+              modelId: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+              updateType: DIMENSIONS_CHANGED
+              description: "Warehouse expansion completed - updated dimensions from 200x150x12m to 250x150x12m, adding 7,500 sqm"
+              eventId: evt-8b9c0d1e-2f3a-4b5c-6d7e-8f9a0b1c2d3e
+              timestamp: "2025-01-10T16:15:00Z"
+              aggregateId: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+              eventType: ModelUpdated
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Partition key is the modelId
+            example: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+
+  schemas:
+    SimulationStartedEventPayload:
+      type: object
+      description: CloudEvents envelope containing SimulationStarted event data
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - data
+      properties:
+        specversion:
+          type: string
+          description: CloudEvents specification version
+          const: "1.0"
+          example: "1.0"
+        type:
+          type: string
+          description: Event type identifier
+          const: com.paklog.digitaltwin.SimulationStarted
+          example: com.paklog.digitaltwin.SimulationStarted
+        source:
+          type: string
+          description: Event source URI
+          const: digital-twin-simulation
+          example: digital-twin-simulation
+        id:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: evt-7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d
+        time:
+          type: string
+          format: date-time
+          description: Event timestamp
+          example: "2025-01-15T16:00:00Z"
+        datacontenttype:
+          type: string
+          description: Content type of the data attribute
+          const: application/json
+          example: application/json
+        data:
+          type: object
+          description: Simulation started event data
+          required:
+            - runId
+            - scenarioId
+            - modelId
+            - accelerationFactor
+            - eventId
+            - timestamp
+            - aggregateId
+            - eventType
+          properties:
+            runId:
+              type: string
+              format: uuid
+              description: Unique identifier of the simulation run that started
+              example: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+            scenarioId:
+              type: string
+              format: uuid
+              description: Scenario being executed
+              example: scenario-9a8b7c6d-5e4f-3a2b-1c0d-9e8f7a6b5c4d
+            modelId:
+              type: string
+              format: uuid
+              description: Warehouse model being simulated
+              example: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+            accelerationFactor:
+              type: integer
+              description: Time acceleration multiplier (1x = real-time, 100x = 100 simulated hours per actual hour)
+              minimum: 1
+              maximum: 10000
+              example: 100
+            eventId:
+              type: string
+              format: uuid
+              description: Unique event identifier (same as CloudEvent id)
+              example: evt-7a8b9c0d-1e2f-3a4b-5c6d-7e8f9a0b1c2d
+            timestamp:
+              type: string
+              format: date-time
+              description: Event generation timestamp (same as CloudEvent time)
+              example: "2025-01-15T16:00:00Z"
+            aggregateId:
+              type: string
+              description: Aggregate root identifier (runId)
+              example: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+            eventType:
+              type: string
+              description: Domain event type
+              const: SimulationStarted
+              example: SimulationStarted
+
+    SimulationCompletedEventPayload:
+      type: object
+      description: CloudEvents envelope containing SimulationCompleted event data
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+          example: "1.0"
+        type:
+          type: string
+          const: com.paklog.digitaltwin.SimulationCompleted
+          example: com.paklog.digitaltwin.SimulationCompleted
+        source:
+          type: string
+          const: digital-twin-simulation
+          example: digital-twin-simulation
+        id:
+          type: string
+          format: uuid
+          example: evt-9a0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d
+        time:
+          type: string
+          format: date-time
+          example: "2025-01-15T16:45:00Z"
+        datacontenttype:
+          type: string
+          const: application/json
+          example: application/json
+        data:
+          type: object
+          description: Simulation completed event data
+          required:
+            - runId
+            - totalEventsProcessed
+            - finalMetrics
+            - durationSeconds
+            - eventId
+            - timestamp
+            - aggregateId
+            - eventType
+          properties:
+            runId:
+              type: string
+              format: uuid
+              description: Simulation run that completed
+              example: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+            totalEventsProcessed:
+              type: integer
+              description: Total number of simulation events processed during the run
+              minimum: 0
+              example: 72451
+            finalMetrics:
+              type: object
+              description: Final performance metrics from the completed simulation
+              additionalProperties:
+                type: number
+              example:
+                throughput: 1250.5
+                utilization: 0.87
+                avgCycleTime: 245.3
+                peakQueueLength: 45
+                resourceUsage: 0.91
+                costPerOrder: 3.45
+                efficiency: 0.88
+            durationSeconds:
+              type: integer
+              description: Actual wall-clock duration in seconds
+              minimum: 0
+              example: 2700
+            eventId:
+              type: string
+              format: uuid
+              example: evt-9a0b1c2d-3e4f-5a6b-7c8d-9e0f1a2b3c4d
+            timestamp:
+              type: string
+              format: date-time
+              example: "2025-01-15T16:45:00Z"
+            aggregateId:
+              type: string
+              example: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+            eventType:
+              type: string
+              const: SimulationCompleted
+              example: SimulationCompleted
+
+    OptimizationFoundEventPayload:
+      type: object
+      description: CloudEvents envelope containing OptimizationFound event data
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+          example: "1.0"
+        type:
+          type: string
+          const: com.paklog.digitaltwin.OptimizationFound
+          example: com.paklog.digitaltwin.OptimizationFound
+        source:
+          type: string
+          const: digital-twin-simulation
+          example: digital-twin-simulation
+        id:
+          type: string
+          format: uuid
+          example: evt-3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f
+        time:
+          type: string
+          format: date-time
+          example: "2025-01-15T17:45:00Z"
+        datacontenttype:
+          type: string
+          const: application/json
+          example: application/json
+        data:
+          type: object
+          description: Optimization found event data
+          required:
+            - recommendationId
+            - runId
+            - expectedImprovement
+            - confidence
+            - eventId
+            - timestamp
+            - aggregateId
+            - eventType
+          properties:
+            recommendationId:
+              type: string
+              format: uuid
+              description: Unique identifier of the optimization recommendation
+              example: rec-layout-001
+            runId:
+              type: string
+              format: uuid
+              description: Simulation run that generated this recommendation
+              example: run-4c5d6e7f-8a9b-0c1d-2e3f-4a5b6c7d8e9f
+            expectedImprovement:
+              type: number
+              format: double
+              description: |
+                Expected improvement percentage in the target optimization goal.
+                For example, 18.5 means 18.5% improvement in throughput, cycle time reduction, etc.
+              minimum: 0
+              example: 18.5
+            confidence:
+              type: number
+              format: double
+              description: |
+                AI confidence score for this recommendation (0-1 scale):
+                - 0.95-1.0: Very high confidence - consider auto-implementation
+                - 0.85-0.94: High confidence - priority review
+                - 0.70-0.84: Medium confidence - evaluate cost/benefit
+                - < 0.70: Low confidence - careful analysis required
+              minimum: 0
+              maximum: 1
+              example: 0.89
+            eventId:
+              type: string
+              format: uuid
+              example: evt-3c4d5e6f-7a8b-9c0d-1e2f-3a4b5c6d7e8f
+            timestamp:
+              type: string
+              format: date-time
+              example: "2025-01-15T17:45:00Z"
+            aggregateId:
+              type: string
+              description: Aggregate identifier (recommendationId)
+              example: rec-layout-001
+            eventType:
+              type: string
+              const: OptimizationFound
+              example: OptimizationFound
+
+    ModelUpdatedEventPayload:
+      type: object
+      description: CloudEvents envelope containing ModelUpdated event data
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+          example: "1.0"
+        type:
+          type: string
+          const: com.paklog.digitaltwin.ModelUpdated
+          example: com.paklog.digitaltwin.ModelUpdated
+        source:
+          type: string
+          const: digital-twin-simulation
+          example: digital-twin-simulation
+        id:
+          type: string
+          format: uuid
+          example: evt-6f7a8b9c-0d1e-2f3a-4b5c-6d7e8f9a0b1c
+        time:
+          type: string
+          format: date-time
+          example: "2025-01-15T10:30:00Z"
+        datacontenttype:
+          type: string
+          const: application/json
+          example: application/json
+        data:
+          type: object
+          description: Model updated event data
+          required:
+            - modelId
+            - updateType
+            - description
+            - eventId
+            - timestamp
+            - aggregateId
+            - eventType
+          properties:
+            modelId:
+              type: string
+              format: uuid
+              description: Warehouse model that was updated
+              example: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+            updateType:
+              type: string
+              description: |
+                Type of update performed on the model:
+                - ZONE_ADDED: New zone created
+                - ZONE_MODIFIED: Existing zone changed
+                - ZONE_REMOVED: Zone deleted
+                - DIMENSIONS_CHANGED: Warehouse dimensions updated
+                - SYNC_COMPLETED: Synchronized with actual warehouse
+                - CONFIGURATION_UPDATED: General configuration change
+              enum:
+                - ZONE_ADDED
+                - ZONE_MODIFIED
+                - ZONE_REMOVED
+                - DIMENSIONS_CHANGED
+                - SYNC_COMPLETED
+                - CONFIGURATION_UPDATED
+              example: ZONE_ADDED
+            description:
+              type: string
+              description: Human-readable description of the change
+              maxLength: 2000
+              example: "Added new high-velocity picking zone Z-HV-01 with 500 locations for fast-moving SKUs"
+            eventId:
+              type: string
+              format: uuid
+              example: evt-6f7a8b9c-0d1e-2f3a-4b5c-6d7e8f9a0b1c
+            timestamp:
+              type: string
+              format: date-time
+              example: "2025-01-15T10:30:00Z"
+            aggregateId:
+              type: string
+              description: Aggregate identifier (modelId)
+              example: model-7f8a9b2c-1e3d-4a5b-8c9d-0e1f2a3b4c5d
+            eventType:
+              type: string
+              const: ModelUpdated
+              example: ModelUpdated

@@ -1,0 +1,20 @@
+name: dp_sustainability_management_events_v1
+service: sustainability-management
+domain: sustainability
+kind: source-aligned
+description: Sustainability emissions calculated events for ESG analytics.
+owner: sustainability-team@paklog.com
+kafka_topics:
+  - sustainability.emissions.calculated
+pinot_table: dp_sustainability_management_events_v1
+schema_file: pinot/schemas/sustainability-management/dp_sustainability_management_events_v1.schema.json
+table_files:
+  dev: pinot/tables/sustainability-management/dp_sustainability_management_events_v1.table.dev.json
+  staging: pinot/tables/sustainability-management/dp_sustainability_management_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, sustainability]
+

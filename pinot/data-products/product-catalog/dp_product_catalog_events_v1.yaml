@@ -1,0 +1,20 @@
+name: dp_product_catalog_events_v1
+service: product-catalog
+domain: catalog
+kind: source-aligned
+description: Product catalog domain events for product lifecycle.
+owner: catalog-team@paklog.com
+kafka_topics:
+  - product.events
+pinot_table: dp_product_catalog_events_v1
+schema_file: pinot/schemas/product-catalog/dp_product_catalog_events_v1.schema.json
+table_files:
+  dev: pinot/tables/product-catalog/dp_product_catalog_events_v1.table.dev.json
+  staging: pinot/tables/product-catalog/dp_product_catalog_events_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, catalog]
+

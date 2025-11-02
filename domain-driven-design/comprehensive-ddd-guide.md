@@ -2,87 +2,81 @@
 
 ## Overview
 
-This guide provides a complete overview of the Domain-Driven Design implementation across all 22 PakLog microservices, organized by strategic business capabilities and bounded contexts.
+This guide provides a complete overview of the Domain-Driven Design implementation across all 27 PakLog microservices, organized by strategic business capabilities and bounded contexts.
 
 ## Service Categories & DDD Documentation Links
 
 ### Phase 1: Foundation Services (Core WMS)
 
-#### 1. [Cartonization Service](cartonization/ddd)
+#### 1. [Cartonization Service](cartonization-service/ddd)
 - **Bounded Context**: 3D Bin-Packing Optimization
 - **Key Aggregates**: Carton, PackingSolution
 - **Core Pattern**: Algorithm-driven optimization
 - **Integration**: Downstream from Order Management
 
-#### 2. [Inventory Service](inventory/ddd)
+#### 2. [Inventory Service](inventory-service/ddd)
 - **Bounded Context**: Stock Management & Tracking
 - **Key Aggregates**: InventoryItem, InventoryMovement
 - **Core Pattern**: Event sourcing for audit trail
 - **Integration**: Shared kernel with Order Management
 
-#### 3. [Order Management Service](order-management/ddd)
+#### 3. [Order Management Service](order-management-service/ddd)
 - **Bounded Context**: Order Lifecycle Management
 - **Key Aggregates**: FulfillmentOrder, OrderLine, AllocationResult
 - **Core Pattern**: State machine for order lifecycle
 - **Integration**: Upstream to most services
 
-#### 4. [Product Catalog Service](product-catalog/ddd)
+#### 4. [Product Catalog Service](product-catalog-service/ddd)
 - **Bounded Context**: SKU Master Data Management
 - **Key Aggregates**: Product, ProductCategory, ProductAttributes
 - **Core Pattern**: Published language for product data
 - **Integration**: Reference data for all services
 
-#### 5. [Shipment Transportation Service](shipment-transportation/ddd)
+#### 5. [Shipment Transportation Service](shipment-transportation-service/ddd)
 - **Bounded Context**: Carrier Integration & Tracking
 - **Key Aggregates**: Shipment, Carrier, TrackingInfo
 - **Core Pattern**: Anti-corruption layer for carriers
 - **Integration**: Downstream from Pack & Ship
 
-#### 6. [Warehouse Operations Service](warehouse-operations/ddd)
-- **Bounded Context**: Core Warehouse Coordination
-- **Key Aggregates**: WarehouseOrder, WorkAssignment, OperationalZone
-- **Core Pattern**: Central coordinator pattern
-- **Integration**: Hub for warehouse activities
-
 ### Phase 2: Execution Services (Operational Layer)
 
-#### 7. [Wave Planning Service](wave-planning/ddd)
+#### 6. [Wave Planning Service](wave-planning-service/ddd)
 - **Bounded Context**: Wave Optimization & Strategy
 - **Key Aggregates**: Wave, WaveStrategy, WavePlan
 - **Core Algorithms**: Multi-strategy optimization
 - **Integration**: Upstream to Task Execution
 
-#### 8. [Task Execution Service](task-execution/ddd)
+#### 7. [Task Execution Service](task-execution-service/ddd)
 - **Bounded Context**: Universal Task Orchestration
 - **Key Aggregates**: WorkTask, TaskQueue, WorkerAssignment
 - **Core Pattern**: Priority queue with polymorphic contexts
 - **Integration**: Central hub for all work
 
-#### 9. [Pick Execution Service](pick-execution/ddd)
+#### 8. [Pick Execution Service](pick-execution-service/ddd)
 - **Bounded Context**: Mobile Picking & Path Optimization
 - **Key Aggregates**: PickList, PickRoute, PickBatch
 - **Core Algorithms**: TSP with 2-opt optimization
 - **Integration**: Mobile device real-time sync
 
-#### 10. Pack & Ship Service
+#### 9. [Pack & Ship Service](pack-ship-service/ddd)
 - **Bounded Context**: Packing Station Operations
 - **Key Aggregates**: Package, PackingStation, ShippingLabel
 - **Core Pattern**: Workflow orchestration
 - **Integration**: Between Pick and Shipment
 
-#### 11. Physical Tracking Service
+#### 10. [Physical Tracking Service](physical-tracking-service/ddd)
 - **Bounded Context**: License Plate & Asset Tracking
 - **Key Aggregates**: LicensePlate, AssetLocation, MovementHistory
 - **Core Pattern**: Event-driven tracking
 - **Integration**: Shared kernel with Inventory
 
-#### 12. Location Master Service
+#### 11. [Location Master Service](location-master-service/ddd)
 - **Bounded Context**: Slotting & Location Management
 - **Key Aggregates**: Location, LocationType, SlottingStrategy
 - **Core Algorithms**: ABC velocity analysis
 - **Integration**: Reference data for all services
 
-#### 13. Workload Planning Service
+#### 12. [Workload Planning Service](workload-planning-service/ddd)
 - **Bounded Context**: Labor Forecasting & Planning
 - **Key Aggregates**: WorkloadForecast, StaffingPlan, ShiftSchedule
 - **Core Pattern**: Predictive analytics integration
@@ -90,19 +84,19 @@ This guide provides a complete overview of the Domain-Driven Design implementati
 
 ### Phase 3: Advanced Operations
 
-#### 14. [Returns Management Service](returns-management/ddd)
+#### 13. [Returns Management Service](returns-management-service/ddd)
 - **Bounded Context**: RMA & Reverse Logistics
 - **Key Aggregates**: Return, ReturnInspection, DispositionDecision
 - **Core Algorithms**: Multi-factor fraud scoring
 - **Integration**: Upstream to Order Management
 
-#### 15. [Robotics Fleet Management Service](robotics-fleet/ddd)
+#### 14. [Robotics Fleet Management Service](robotics-fleet-management/ddd)
 - **Bounded Context**: AMR/AGV Orchestration
 - **Key Aggregates**: Robot, RobotMission, FleetCoordination
 - **Core Algorithms**: A* pathfinding, collision avoidance
 - **Integration**: Hardware abstraction layer
 
-#### 16. [WES Orchestration Engine](wes-orchestration/ddd)
+#### 15. [WES Orchestration Engine](wes-orchestration-engine/ddd)
 - **Bounded Context**: Complex Workflow Management
 - **Key Aggregates**: WorkflowInstance, StepExecution, SagaCoordinator
 - **Core Pattern**: Saga pattern with compensation
@@ -110,19 +104,25 @@ This guide provides a complete overview of the Domain-Driven Design implementati
 
 ### Phase 4: Optimization & Intelligence
 
-#### 17. Predictive Analytics Platform
+#### 16. [Predictive Analytics Platform](predictive-analytics-platform/ddd)
 - **Bounded Context**: ML-Based Forecasting
 - **Key Aggregates**: Forecast, PredictionModel, AnalyticsJob
 - **Core Pattern**: Published language for predictions
 - **Integration**: Publishes to multiple consumers
 
-#### 18. Yard Management System
+#### 17. [Performance Intelligence](performance-intelligence/ddd)
+- **Bounded Context**: Advanced Analytics & KPIs
+- **Key Aggregates**: PerformanceMetric, AnalyticsDashboard, OperationalInsight
+- **Core Pattern**: Real-time stream processing
+- **Integration**: Data lake and ML platform
+
+#### 18. [Yard Management System](yard-management-system/ddd)
 - **Bounded Context**: Dock & Trailer Management
 - **Key Aggregates**: YardLocation, Trailer, DockAppointment
 - **Core Pattern**: Scheduling optimization
 - **Integration**: Partnership with Transportation
 
-#### 19. Cross-Docking Operations
+#### 19. [Cross-Docking Operations](cross-docking-operations/ddd)
 - **Bounded Context**: Flow-Through Operations
 - **Key Aggregates**: CrossDockOperation, TransferOrder, ConsolidationPlan
 - **Core Pattern**: Time-constrained routing
@@ -130,23 +130,55 @@ This guide provides a complete overview of the Domain-Driven Design implementati
 
 ### Phase 5: Customer & Value Services
 
-#### 20. Last-Mile Delivery Coordination
+#### 20. [Last-Mile Delivery Coordination](last-mile-delivery-service/ddd)
 - **Bounded Context**: Route Optimization & Delivery
 - **Key Aggregates**: DeliveryRoute, DeliveryStop, ProofOfDelivery
 - **Core Algorithms**: VRP with time windows
 - **Integration**: Downstream from Shipment
 
-#### 21. Value-Added Services
+#### 21. [Value-Added Services](value-added-services/ddd)
 - **Bounded Context**: Kitting & Customization
 - **Key Aggregates**: VASOrder, WorkflowStep, QualityCheckpoint
 - **Core Pattern**: Configurable workflows
 - **Integration**: Within Warehouse Operations
 
-#### 22. Quality Control & Compliance
+#### 22. [Quality Control & Compliance](quality-compliance-service/ddd)
 - **Bounded Context**: Inspection & Compliance
 - **Key Aggregates**: InspectionRecord, ComplianceRule, Defect
 - **Core Algorithms**: Statistical Process Control (SPC)
 - **Integration**: Cross-cutting quality assurance
+
+### Phase 6: Support Services
+
+#### 23. [Digital Twin Simulation](digital-twin-simulation/ddd)
+- **Bounded Context**: Virtual Warehouse Modeling
+- **Key Aggregates**: DigitalTwin, SimulationScenario, VirtualAgent
+- **Core Pattern**: Discrete event simulation
+- **Integration**: Real-time synchronization
+
+#### 24. [Equipment Asset Management](equipment-asset-management/ddd)
+- **Bounded Context**: Equipment Lifecycle Management
+- **Key Aggregates**: Equipment, MaintenanceWork, AssetUtilization
+- **Core Pattern**: Predictive maintenance
+- **Integration**: IoT sensor integration
+
+#### 25. [Financial Settlement](financial-settlement/ddd)
+- **Bounded Context**: Billing & Invoicing
+- **Key Aggregates**: BillingAccount, Invoice, ChargeTransaction, Payment
+- **Core Pattern**: Financial reconciliation
+- **Integration**: ERP system connector
+
+#### 26. [Sustainability Management](sustainability-management/ddd)
+- **Bounded Context**: Environmental Impact Tracking
+- **Key Aggregates**: CarbonFootprint, EnergyConsumption, WasteManagement
+- **Core Pattern**: ESG metrics tracking
+- **Integration**: IoT and utility APIs
+
+#### 27. [Customer Experience Hub](customer-experience-hub/ddd)
+- **Bounded Context**: Customer Engagement Platform
+- **Key Aggregates**: CustomerProfile, OrderVisibility, NotificationHub
+- **Core Pattern**: Omnichannel communication
+- **Integration**: Real-time event streaming
 
 ## Strategic Design Patterns
 
@@ -379,7 +411,7 @@ GET    /api/v1/{resource}/search - Search
 
 ## Conclusion
 
-The PakLog WMS/WES system demonstrates comprehensive Domain-Driven Design across 22 microservices, each with:
+The PakLog WMS/WES system demonstrates comprehensive Domain-Driven Design across 27 microservices, each with:
 - Clear bounded contexts
 - Rich domain models
 - Well-defined aggregates

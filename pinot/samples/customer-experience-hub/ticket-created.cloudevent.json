@@ -1,0 +1,22 @@
+{
+  "specversion": "1.0",
+  "type": "com.paklog.customerx.ticket.created",
+  "source": "/customer-experience-hub",
+  "subject": "TICKET-123",
+  "id": "0e488d1b-8a1a-42a2-9d64-5f1b1a28f3f7",
+  "time": "2024-11-01T10:33:20Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "ticket": {
+      "id": "TICKET-123",
+      "customerId": "CUST-789",
+      "status": "OPEN",
+      "priority": "HIGH"
+    }
+  },
+  "extensions": {
+    "correlationId": "corr-456",
+    "traceparent": "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01"
+  }
+}
+

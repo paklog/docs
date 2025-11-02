@@ -1,0 +1,143 @@
+{
+  "info": {
+    "_postman_id": "f6a1b2c3-d4e5-4f3g-9h7i-6d1e2f3a4b5c",
+    "name": "Financial Settlement API",
+    "description": "API for managing 3PL billing, invoicing, cost allocation, and financial reconciliation.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Invoicing",
+      "item": [
+        {
+          "name": "Generate Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices"
+              ]
+            },
+            "description": "**Summary**: Generates a new invoice for a customer based on billable activities within a specified date range.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"CUST-XYZ\",\n  \"startDate\": \"2025-10-01\",\n  \"endDate\": \"2025-10-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": null,
+              "status": "Invoice generated successfully.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"invoiceId\": \"INV-2025-10-001\",\n  \"status\": \"DRAFT\",\n  \"totalAmount\": 12543.50,\n  \"currency\": \"USD\",\n  \"dueDate\": \"2025-11-30\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get Invoice Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/invoices/{{invoiceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "invoices",
+                "{{invoiceId}}"
+              ]
+            },
+            "description": "**Summary**: Retrieves the details of a specific invoice, including line items for all billable activities."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Successful operation.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"invoiceId\": \"INV-2025-10-001\",\n  \"status\": \"SENT\",\n  \"totalAmount\": 12543.50,\n  \"lineItems\": [\n    {\n      \"activity\": \"STORAGE\",\n      \"description\": \"Storage for 50 pallets\",\n      \"amount\": 5000.00\n    },\n    {\n      \"activity\": \"PICK_AND_PACK\",\n      \"description\": \"1200 orders picked and packed\",\n      \"amount\": 7543.50\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chargebacks",
+      "item": [
+        {
+          "name": "Create Chargeback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chargebacks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "chargebacks"
+              ]
+            },
+            "description": "**Summary**: Creates a chargeback against a customer account for issues like damaged goods or penalties.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerId\": \"CUST-XYZ\",\n  \"orderId\": \"ORD-555444\",\n  \"reason\": \"DAMAGED_GOODS\",\n  \"amount\": 150.75,\n  \"notes\": \"Customer reported 3 units damaged upon receipt.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": null,
+              "status": "Chargeback created.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"chargebackId\": \"CB-2025-456\",\n  \"status\": \"PENDING_APPROVAL\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1/finance"
+    },
+    {
+      "key": "invoiceId",
+      "value": "INV-2025-10-001"
+    }
+  ]
+}

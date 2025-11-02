@@ -1,0 +1,88 @@
+name: Pinot Deploy (Staging)
+
+on:
+  push:
+    tags:
+      - 'pinot-staging-*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy (dev|staging)'
+        required: true
+        default: 'staging'
+
+jobs:
+  validate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Ensure jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      - name: Validate JSON
+        run: make -C pinot validate-json
+
+      - name: Validate transforms (samples)
+        run: make -C pinot validate-transforms
+
+      - name: Deploy to Pinot (staging)
+        if: github.event_name == 'push' || github.event.inputs.environment == 'staging'
+        env:
+          ENV: staging
+          PINOT_CONTROLLER: ${{ secrets.PINOT_CONTROLLER_URL_STAGING }}
+          AUTH_TOKEN: ${{ secrets.PINOT_AUTH_TOKEN_STAGING }}
+        run: bash pinot/scripts/apply_env_rest.sh
+
+      - name: Deploy to Pinot (dev)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev'
+        env:
+          ENV: dev
+          PINOT_CONTROLLER: ${{ secrets.PINOT_CONTROLLER_URL_DEV }}
+          AUTH_TOKEN: ${{ secrets.PINOT_AUTH_TOKEN_DEV }}
+        run: bash pinot/scripts/apply_env_rest.sh
+
+  ingest-datahub:
+    needs: validate-and-deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install DataHub CLI
+        run: pip install 'acryl-datahub>=0.12.3'
+
+      - name: Ingest Kafka + Pinot to DataHub (staging)
+        if: github.event_name == 'push' || github.event.inputs.environment == 'staging'
+        env:
+          DATAHUB_GMS_STAGING: ${{ secrets.DATAHUB_GMS_STAGING }}
+          DATAHUB_TOKEN_STAGING: ${{ secrets.DATAHUB_TOKEN_STAGING }}
+          KAFKA_BOOTSTRAP_STAGING: ${{ secrets.KAFKA_BOOTSTRAP_STAGING }}
+          SCHEMA_REGISTRY_STAGING: ${{ secrets.SCHEMA_REGISTRY_STAGING }}
+          PINOT_BROKER_URL_STAGING: ${{ secrets.PINOT_BROKER_URL_STAGING }}
+        run: |
+          datahub ingest -c datahub/recipes/staging/kafka.yml
+          datahub ingest -c datahub/recipes/staging/pinot.yml
+
+      - name: Ingest Kafka + Pinot to DataHub (dev)
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'dev'
+        env:
+          DATAHUB_GMS_DEV: ${{ secrets.DATAHUB_GMS_DEV }}
+          DATAHUB_TOKEN_DEV: ${{ secrets.DATAHUB_TOKEN_DEV }}
+          KAFKA_BOOTSTRAP_DEV: ${{ secrets.KAFKA_BOOTSTRAP_DEV }}
+          SCHEMA_REGISTRY_DEV: ${{ secrets.SCHEMA_REGISTRY_DEV }}
+          PINOT_BROKER_URL_DEV: ${{ secrets.PINOT_BROKER_URL_DEV }}
+        run: |
+          datahub ingest -c datahub/recipes/dev/kafka.yml
+          datahub ingest -c datahub/recipes/dev/pinot.yml

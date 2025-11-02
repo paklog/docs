@@ -1,0 +1,117 @@
+{
+  "info": {
+    "_postman_id": "e5f6a1b2-c3d4-4e3f-9g7h-5c6d1e2f3a4b",
+    "name": "Robotics Fleet Management API",
+    "description": "API for orchestrating and optimizing autonomous mobile robots (AMRs) and automated guided vehicles (AGVs).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Robots",
+      "item": [
+        {
+          "name": "List Robots",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/robots?status=IDLE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "robots"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "IDLE"
+                }
+              ]
+            },
+            "description": "**Summary**: Retrieves a list of all robots in the fleet, with optional filtering by status."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Successful operation.",
+              "code": 200,
+              "header": [],
+              "body": "[
+  {
+    "robotId": "AMR-007",
+    "status": "IDLE",
+    "batteryLevel": 0.88,
+    "currentLocation": {\"x\": 10, \"y\": 25}
+  }
+]",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "Assign Task to Robot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tasks"
+              ]
+            },
+            "description": "**Summary**: Assigns a new task (e.g., move a pallet) to the most suitable available robot.",
+            "body": {
+              "mode": "raw",
+              "raw": "{
+  "taskType": "MOVE_PALLET",
+  "startLocation": {\"x\": 10, \"y\": 25},
+  "endLocation": {\"x\": 80, \"y\": 15}
+}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "originalRequest": null,
+              "status": "Task accepted and assigned to a robot.",
+              "code": 202,
+              "header": [],
+              "body": "{
+  "taskId": "TASK-ROBOT-555",
+  "assignedRobotId": "AMR-007",
+  "status": "ASSIGNED"
+}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1/robotics"
+    }
+  ]
+}

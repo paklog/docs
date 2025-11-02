@@ -1,0 +1,1003 @@
+openapi: 3.0.3
+info:
+  title: Physical Tracking Service API
+  description: |
+    The Physical Tracking Service provides real-time tracking of physical inventory movements, license plates,
+    and location states in the warehouse. It manages the entire license plate lifecycle, tracks all physical
+    movements, maintains location occupancy status, and integrates with RTLS (Real-Time Location Systems)
+    for asset tracking. The service provides complete movement history and audit trails for inventory traceability.
+  version: 1.0.0
+  contact:
+    name: WES Team
+    email: wes-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8085
+    description: Local development
+  - url: https://physical-tracking.paklog.com
+    description: Production
+
+tags:
+  - name: License Plates
+    description: License plate lifecycle management
+  - name: Movements
+    description: Physical movement tracking
+  - name: Location State
+    description: Real-time location state management
+  - name: RTLS
+    description: Real-time location system integration
+  - name: Audit
+    description: Movement history and audit trails
+
+paths:
+  /license-plates:
+    get:
+      tags:
+        - License Plates
+      summary: List license plates
+      description: Retrieve list of license plates with filtering
+      operationId: listLicensePlates
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/LicensePlateStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/LicensePlateType'
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Current location
+        - name: productId
+          in: query
+          schema:
+            type: string
+          description: Contains this product
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: List of license plates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  licensePlates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LicensePlate'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags:
+        - License Plates
+      summary: Create license plate
+      description: Create a new license plate
+      operationId: createLicensePlate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLicensePlateRequest'
+            examples:
+              pallet:
+                summary: Create pallet LP
+                value:
+                  lpn: LPN-P-001234
+                  type: PALLET
+                  warehouseId: WH-001
+                  currentLocation: RECV-DOCK-01
+                  items:
+                    - productId: PROD-12345
+                      sku: SKU-98765
+                      quantity: 100
+                      lotNumber: LOT-2025-001
+              tote:
+                summary: Create tote LP
+                value:
+                  lpn: LPN-T-567890
+                  type: TOTE
+                  warehouseId: WH-001
+                  currentLocation: PICK-STAGE-05
+      responses:
+        '201':
+          description: License plate created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicensePlateDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /license-plates/{lpn}:
+    get:
+      tags:
+        - License Plates
+      summary: Get license plate
+      description: Retrieve detailed information about a license plate
+      operationId: getLicensePlate
+      parameters:
+        - $ref: '#/components/parameters/LPN'
+      responses:
+        '200':
+          description: License plate details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicensePlateDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - License Plates
+      summary: Delete license plate
+      description: Delete/consume a license plate (must be empty)
+      operationId: deleteLicensePlate
+      parameters:
+        - $ref: '#/components/parameters/LPN'
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: License plate deleted
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: License plate not empty
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /license-plates/{lpn}/items:
+    post:
+      tags:
+        - License Plates
+      summary: Add item to license plate
+      description: Add an item to a license plate
+      operationId: addItemToLicensePlate
+      parameters:
+        - $ref: '#/components/parameters/LPN'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddItemRequest'
+      responses:
+        '200':
+          description: Item added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicensePlateDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - License Plates
+      summary: Remove item from license plate
+      description: Remove an item from a license plate
+      operationId: removeItemFromLicensePlate
+      parameters:
+        - $ref: '#/components/parameters/LPN'
+        - name: itemId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: quantity
+          in: query
+          schema:
+            type: integer
+          description: Quantity to remove (all if not specified)
+      responses:
+        '200':
+          description: Item removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LicensePlateDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /license-plates/{lpn}/move:
+    post:
+      tags:
+        - Movements
+      summary: Move license plate
+      description: Record physical movement of a license plate
+      operationId: moveLicensePlate
+      parameters:
+        - $ref: '#/components/parameters/LPN'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveLicensePlateRequest'
+      responses:
+        '200':
+          description: Movement recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Location occupied or blocked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /license-plates/{lpn}/movements:
+    get:
+      tags:
+        - Movements
+      summary: Get movement history
+      description: Get movement history for a license plate
+      operationId: getLicensePlateMovements
+      parameters:
+        - $ref: '#/components/parameters/LPN'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Movement history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  movements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Movement'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /license-plates/search:
+    post:
+      tags:
+        - License Plates
+      summary: Search license plates
+      description: Advanced search for license plates
+      operationId: searchLicensePlates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lpn:
+                  type: string
+                  description: Partial LPN match
+                productId:
+                  type: string
+                sku:
+                  type: string
+                lotNumber:
+                  type: string
+                location:
+                  type: string
+                zone:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/LicensePlateStatus'
+                createdAfter:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LicensePlate'
+                  totalResults:
+                    type: integer
+
+  /locations/{locationId}/state:
+    get:
+      tags:
+        - Location State
+      summary: Get location state
+      description: Get real-time state of a location
+      operationId: getLocationState
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationState'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Location State
+      summary: Update location state
+      description: Update location occupancy status
+      operationId: updateLocationState
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                occupancyStatus:
+                  $ref: '#/components/schemas/OccupancyStatus'
+                blocked:
+                  type: boolean
+                blockReason:
+                  type: string
+      responses:
+        '200':
+          description: Location state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationState'
+
+  /locations/{locationId}/contents:
+    get:
+      tags:
+        - Location State
+      summary: Get location contents
+      description: Get all license plates in a location
+      operationId: getLocationContents
+      parameters:
+        - name: locationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location contents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  locationId:
+                    type: string
+                  licensePlates:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/LicensePlate'
+                  totalCount:
+                    type: integer
+                  utilization:
+                    type: number
+                    format: percentage
+
+  /movements:
+    get:
+      tags:
+        - Movements
+      summary: List movements
+      description: Get list of all movements with filtering
+      operationId: listMovements
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: movementType
+          in: query
+          schema:
+            $ref: '#/components/schemas/MovementType'
+        - name: fromLocation
+          in: query
+          schema:
+            type: string
+        - name: toLocation
+          in: query
+          schema:
+            type: string
+        - name: movedBy
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: List of movements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  movements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Movement'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /rtls/positions:
+    post:
+      tags:
+        - RTLS
+      summary: Update RTLS position
+      description: Record real-time location from RTLS system
+      operationId: updateRTLSPosition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RTLSPositionUpdate'
+      responses:
+        '200':
+          description: Position updated
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /rtls/assets/{assetId}/position:
+    get:
+      tags:
+        - RTLS
+      summary: Get asset position
+      description: Get current RTLS position of an asset
+      operationId: getAssetPosition
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Asset position
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetPosition'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /audit/movements/by-product:
+    get:
+      tags:
+        - Audit
+      summary: Product movement audit
+      description: Get movement audit trail for a product
+      operationId: getProductMovementAudit
+      parameters:
+        - name: productId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: lotNumber
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Product movement audit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  productId:
+                    type: string
+                  movements:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AuditMovement'
+
+  /metrics/location-utilization:
+    get:
+      tags:
+        - Location State
+      summary: Get location utilization metrics
+      description: Get utilization metrics for warehouse locations
+      operationId: getLocationUtilization
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - name: zone
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Location utilization metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocationUtilizationMetrics'
+
+components:
+  parameters:
+    LPN:
+      name: lpn
+      in: path
+      required: true
+      schema:
+        type: string
+      description: License Plate Number
+
+    WarehouseId:
+      name: warehouseId
+      in: query
+      schema:
+        type: string
+
+    DateFrom:
+      name: dateFrom
+      in: query
+      schema:
+        type: string
+        format: date-time
+
+    DateTo:
+      name: dateTo
+      in: query
+      schema:
+        type: string
+        format: date-time
+
+    PageNumber:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+
+    PageSize:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+
+  schemas:
+    LicensePlate:
+      type: object
+      required:
+        - lpn
+        - type
+        - status
+        - warehouseId
+        - currentLocation
+        - createdAt
+      properties:
+        lpn:
+          type: string
+          description: License Plate Number
+        type:
+          $ref: '#/components/schemas/LicensePlateType'
+        status:
+          $ref: '#/components/schemas/LicensePlateStatus'
+        warehouseId:
+          type: string
+        currentLocation:
+          type: string
+        zone:
+          type: string
+        itemCount:
+          type: integer
+        totalWeight:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+        lastMovedAt:
+          type: string
+          format: date-time
+
+    LicensePlateDetails:
+      allOf:
+        - $ref: '#/components/schemas/LicensePlate'
+        - type: object
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/LPItem'
+            movements:
+              type: array
+              items:
+                $ref: '#/components/schemas/Movement'
+              description: Recent movements
+            rtlsPosition:
+              $ref: '#/components/schemas/AssetPosition'
+
+    LicensePlateType:
+      type: string
+      enum:
+        - PALLET
+        - TOTE
+        - CART
+        - CASE
+        - CONTAINER
+      description: Type of license plate
+
+    LicensePlateStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - IN_TRANSIT
+        - RESERVED
+        - STAGED
+        - CONSUMED
+        - DAMAGED
+      description: Status of license plate
+
+    LPItem:
+      type: object
+      properties:
+        itemId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        lotNumber:
+          type: string
+        serialNumber:
+          type: string
+        expirationDate:
+          type: string
+          format: date-time
+        addedAt:
+          type: string
+          format: date-time
+
+    CreateLicensePlateRequest:
+      type: object
+      required:
+        - lpn
+        - type
+        - warehouseId
+        - currentLocation
+      properties:
+        lpn:
+          type: string
+        type:
+          $ref: '#/components/schemas/LicensePlateType'
+        warehouseId:
+          type: string
+        currentLocation:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddItemRequest'
+
+    AddItemRequest:
+      type: object
+      required:
+        - productId
+        - quantity
+      properties:
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        lotNumber:
+          type: string
+        serialNumber:
+          type: string
+        expirationDate:
+          type: string
+          format: date-time
+
+    MoveLicensePlateRequest:
+      type: object
+      required:
+        - toLocation
+        - movementType
+      properties:
+        toLocation:
+          type: string
+        movementType:
+          $ref: '#/components/schemas/MovementType'
+        movedBy:
+          type: string
+        taskId:
+          type: string
+        reason:
+          type: string
+
+    MovementType:
+      type: string
+      enum:
+        - PUTAWAY
+        - PICK
+        - REPLENISHMENT
+        - TRANSFER
+        - CYCLE_COUNT
+        - RETURN
+      description: Type of movement
+
+    Movement:
+      type: object
+      properties:
+        movementId:
+          type: string
+        lpn:
+          type: string
+        fromLocation:
+          type: string
+        toLocation:
+          type: string
+        movementType:
+          $ref: '#/components/schemas/MovementType'
+        movedBy:
+          type: string
+        movedAt:
+          type: string
+          format: date-time
+        taskId:
+          type: string
+        reason:
+          type: string
+
+    MovementResult:
+      type: object
+      properties:
+        movement:
+          $ref: '#/components/schemas/Movement'
+        licensePlate:
+          $ref: '#/components/schemas/LicensePlate'
+        fromLocationState:
+          $ref: '#/components/schemas/LocationState'
+        toLocationState:
+          $ref: '#/components/schemas/LocationState'
+
+    LocationState:
+      type: object
+      properties:
+        locationId:
+          type: string
+        occupancyStatus:
+          $ref: '#/components/schemas/OccupancyStatus'
+        licensePlateCount:
+          type: integer
+        capacity:
+          type: integer
+        utilization:
+          type: number
+          format: percentage
+        blocked:
+          type: boolean
+        blockReason:
+          type: string
+        lastUpdated:
+          type: string
+          format: date-time
+
+    OccupancyStatus:
+      type: string
+      enum:
+        - EMPTY
+        - PARTIALLY_OCCUPIED
+        - FULL
+        - BLOCKED
+      description: Occupancy status of location
+
+    RTLSPositionUpdate:
+      type: object
+      required:
+        - assetId
+        - x
+        - y
+        - timestamp
+      properties:
+        assetId:
+          type: string
+          description: Asset identifier (LPN or equipment ID)
+        assetType:
+          type: string
+          enum: [LICENSE_PLATE, FORKLIFT, CART, WORKER]
+        x:
+          type: number
+          description: X coordinate
+        y:
+          type: number
+          description: Y coordinate
+        z:
+          type: number
+          description: Z coordinate (floor level)
+        zone:
+          type: string
+        accuracy:
+          type: number
+          description: Position accuracy in meters
+        timestamp:
+          type: string
+          format: date-time
+
+    AssetPosition:
+      type: object
+      properties:
+        assetId:
+          type: string
+        assetType:
+          type: string
+        x:
+          type: number
+        y:
+          type: number
+        z:
+          type: number
+        zone:
+          type: string
+        estimatedLocation:
+          type: string
+        accuracy:
+          type: number
+        lastUpdated:
+          type: string
+          format: date-time
+        velocity:
+          type: number
+          description: Movement speed in m/s
+
+    AuditMovement:
+      allOf:
+        - $ref: '#/components/schemas/Movement'
+        - type: object
+          properties:
+            productId:
+              type: string
+            quantity:
+              type: integer
+            lotNumber:
+              type: string
+
+    LocationUtilizationMetrics:
+      type: object
+      properties:
+        totalLocations:
+          type: integer
+        emptyLocations:
+          type: integer
+        partiallyOccupied:
+          type: integer
+        fullLocations:
+          type: integer
+        blockedLocations:
+          type: integer
+        overallUtilization:
+          type: number
+          format: percentage
+        utilizationByZone:
+          type: object
+          additionalProperties:
+            type: number
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - bearerAuth: []
+  - apiKey: []

@@ -1,0 +1,110 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-4a3b-8c7d-1e2f3a4b5c6d",
+    "name": "Value-Added Services (VAS) API",
+    "description": "API for managing specialized warehouse operations such as kitting, bundling, gift wrapping, and product customization.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Kitting",
+      "item": [
+        {
+          "name": "Request a Kitting Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/kitting-jobs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "kitting-jobs"
+              ]
+            },
+            "description": "**Summary**: Creates a new job to assemble a kit from multiple component SKUs.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"kitSku\": \"KIT-HOLIDAY-2025\",\n  \"quantity\": 200,\n  \"components\": [\n    {\n      \"sku\": \"PROD-A\",\n      \"quantityPerKit\": 1\n    },\n    {\n      \"sku\": \"PROD-B\",\n      \"quantityPerKit\": 2\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "originalRequest": null,
+              "status": "Kitting job accepted.",
+              "code": 202,
+              "header": [],
+              "body": "{\n  \"jobId\": \"VAS-JOB-112233\",\n  \"status\": \"QUEUED\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Customization",
+      "item": [
+        {
+          "name": "Request Customization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/customization-jobs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "customization-jobs"
+              ]
+            },
+            "description": "**Summary**: Requests a customization service for a specific order or item, such as gift wrapping or monogramming.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ORD-XYZ\",\n  \"sku\": \"SKU-LEATHER-WALLET\",\n  \"serviceType\": \"MONOGRAMMING\",\n  \"options\": {\n    \"initials\": \"J.D.\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "originalRequest": null,
+              "status": "Customization job accepted.",
+              "code": 202,
+              "header": [],
+              "body": "{\n  \"jobId\": \"VAS-JOB-445566\",\n  \"status\": \"QUEUED\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1/vas"
+    }
+  ]
+}

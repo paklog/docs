@@ -1,0 +1,16 @@
+{
+  "tableName": "dp_workload_planning_service_events_v1",
+  "tableType": "REALTIME",
+  "tenants": {"server": "domain-ops", "broker": "domain-ops"},
+  "segmentsConfig": {"timeColumnName": "event_time", "replication": "2", "retentionTimeUnit": "DAYS", "retentionTimeValue": "30"},
+  "tableIndexConfig": {"invertedIndexColumns": ["event_type"], "rangeIndexColumns": ["event_time"]},
+  "ingestionConfig": {"transformConfigs": [
+    {"columnName": "event_id", "transformFunction": "jsonPathString($, '$.id')"},
+    {"columnName": "event_type", "transformFunction": "jsonPathString($, '$.type')"},
+    {"columnName": "event_source", "transformFunction": "jsonPathString($, '$.source')"},
+    {"columnName": "event_subject", "transformFunction": "jsonPathString($, '$.subject')"},
+    {"columnName": "event_time", "transformFunction": "fromDateTime(jsonPathString($, '$.time'), 'yyyy-MM-dd''T''HH:mm:ss[.SSS]XXX')"}
+  ]},
+  "streamConfigs": {"streamType": "kafka", "stream.kafka.topic.name": "plan.created", "stream.kafka.consumer.type": "lowlevel", "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder", "stream.kafka.broker.list": "localhost:9092", "realtime.segment.flush.threshold.time": "1h", "realtime.segment.flush.threshold.rows": "500000"}
+}
+

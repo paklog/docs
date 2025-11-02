@@ -28,19 +28,17 @@ Welcome to the PakLog Warehouse Management System (WMS) and Warehouse Execution 
 <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px;">
 <h3>💼 Business Capabilities</h3>
 <ul style="list-style: none; padding: 0;">
-<li><a href="business-capababilities/warehouse-operations/">Warehouse Operations</a></li>
-<li><a href="business-capababilities/inventory/">Inventory Management</a></li>
-<li><a href="business-capababilities/order-management/">Order Management</a></li>
-<li><a href="business-capababilities/cartonization/">Cartonization</a></li>
-<li><a href="business-capababilities/product-catalog/">Product Catalog</a></li>
-<li><a href="business-capababilities/shipment-transportation/">Shipment & Transport</a></li>
+<li><a href="business-capabilities/inventory/">Inventory Management</a></li>
+<li><a href="business-capabilities/order-management/">Order Management</a></li>
+<li><a href="business-capabilities/cartonization/">Cartonization</a></li>
+<li><a href="business-capabilities/product-catalog/">Product Catalog</a></li>
+<li><a href="business-capabilities/shipment-transportation/">Shipment & Transport</a></li>
 </ul>
 </div>
 
 <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px;">
 <h3>🎯 Domain-Driven Design</h3>
 <ul style="list-style: none; padding: 0;">
-<li><a href="domain-driven-design/warehouse-operations/ddd">Warehouse DDD</a></li>
 <li><a href="domain-driven-design/inventory/ddd">Inventory DDD</a></li>
 <li><a href="domain-driven-design/order-management/ddd">Order DDD</a></li>
 <li><a href="domain-driven-design/cartonization/ddd">Cartonization DDD</a></li>
@@ -135,7 +133,6 @@ Comprehensive technical diagrams covering:
 
 ### 2. Business Capabilities
 Detailed documentation of business domains:
-- **Warehouse Operations**: Wave planning, picking, packing workflows
 - **Inventory Management**: Stock control, adjustments, cycle counting
 - **Order Management**: Order processing, allocation, fulfillment
 - **Cartonization**: Packing optimization and container selection
@@ -164,13 +161,13 @@ DDD implementation for each bounded context:
 4. Follow the [Implementation Plan](detailed_plan)
 
 ### For Business Analysts
-1. Start with [Business Capabilities](business-capababilities/warehouse-operations/)
+1. Start with [Business Capabilities](business-capabilities/)
 2. Review [Sequence Diagrams](diagrams/02-SEQUENCE-DIAGRAMS)
 3. Understand [State Machines](diagrams/04-STATE-MACHINE-DIAGRAMS)
 
 ### For Architects
 1. Study the [Decoupling Strategy](decoupling_wes_wms)
-2. Review [Domain-Driven Design](domain-driven-design/warehouse-operations/ddd)
+2. Review [Domain-Driven Design](domain-driven-design/)
 3. Examine [Infrastructure Design](diagrams/05-DEPLOYMENT-INFRASTRUCTURE)
 
 ## Contributing

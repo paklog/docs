@@ -1,0 +1,845 @@
+asyncapi: 3.0.0
+info:
+  title: Quality Control & Compliance Events API
+  version: 1.0.0
+  description: |
+    # Quality Control & Compliance Event-Driven Architecture
+
+    This AsyncAPI specification describes all domain events published by the Quality Control & Compliance microservice
+    using Apache Kafka. These events enable real-time integration with other systems in the PakLog ecosystem.
+
+    ## Event Architecture
+
+    The service follows an event-driven architecture where significant business events are published to Kafka topics
+    as CloudEvents. This enables:
+    - **Decoupled Integration**: Other services can subscribe to quality events without direct coupling
+    - **Real-Time Processing**: Immediate notification of quality issues and compliance violations
+    - **Event Sourcing**: Complete audit trail of all quality-related activities
+    - **Scalability**: Asynchronous processing for high-volume operations
+
+    ## Event Format
+
+    All events are published as CloudEvents (https://cloudevents.io/) with the following standard attributes:
+    - `id`: Unique event identifier (UUID)
+    - `source`: Service that produced the event (quality-compliance)
+    - `type`: Event type (e.g., InspectionCompleted, DefectDetected)
+    - `datacontenttype`: application/json
+    - `time`: Timestamp when event occurred (ISO 8601)
+    - `data`: Event payload with business data
+
+    ## Event Types
+
+    ### Quality Inspection Events
+    - **InspectionCompletedEvent**: Published when an inspection is finalized
+    - **DefectDetectedEvent**: Published when critical defects are found
+
+    ### Compliance Events
+    - **ComplianceViolationEvent**: Published when compliance rules are violated
+    - **NonConformanceCreatedEvent**: Published when non-conformance is recorded
+    - **CorrectiveActionTakenEvent**: Published when corrective actions are applied
+
+    ### Audit Events
+    - **AuditPerformedEvent**: Published when compliance audits are completed
+
+    ## Consumer Use Cases
+
+    ### Warehouse Management System
+    - Subscribe to InspectionCompletedEvent to update inventory status
+    - Subscribe to DefectDetectedEvent to quarantine affected items
+    - Subscribe to ComplianceViolationEvent to block shipments
+
+    ### Inventory Service
+    - Subscribe to InspectionCompletedEvent to release/hold stock
+    - Subscribe to DefectDetectedEvent to adjust available quantities
+
+    ### Analytics & Reporting
+    - Subscribe to all events for quality metrics and dashboards
+    - Track defect trends and compliance rates
+    - Generate supplier quality scorecards
+
+    ### Notification Service
+    - Subscribe to ComplianceViolationEvent to alert stakeholders
+    - Subscribe to DefectDetectedEvent for critical issue notifications
+
+    ### Compliance Management
+    - Subscribe to all compliance and audit events for regulatory reporting
+    - Track corrective actions and non-conformances
+
+  contact:
+    name: PakLog Quality Team
+    email: quality@paklog.com
+  license:
+    name: Proprietary
+
+servers:
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka broker
+    tags:
+      - name: env
+        description: Development environment
+  staging:
+    host: kafka-staging.paklog.internal:9092
+    protocol: kafka
+    description: Staging environment Kafka cluster
+    tags:
+      - name: env
+        description: Staging environment
+  production:
+    host: kafka.paklog.internal:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: env
+        description: Production environment
+
+channels:
+  qualityComplianceEvents:
+    address: support-intelligence.quality-compliance.events
+    description: |
+      Main topic for all quality control and compliance domain events.
+
+      ## Topic Configuration
+      - **Partitions**: 12 (for parallel processing)
+      - **Replication Factor**: 3 (high availability)
+      - **Retention**: 30 days
+      - **Cleanup Policy**: delete
+
+      ## Partitioning Strategy
+      Events are partitioned by `inspectionId` to ensure ordering of events
+      for the same inspection.
+
+      ## Consumer Groups
+      Different services subscribe with different consumer groups:
+      - `warehouse-management` - WMS integration
+      - `inventory-service` - Inventory updates
+      - `analytics-service` - Metrics and reporting
+      - `notification-service` - Alert processing
+      - `compliance-service` - Compliance tracking
+    messages:
+      inspectionCompleted:
+        $ref: '#/components/messages/InspectionCompletedEvent'
+      defectDetected:
+        $ref: '#/components/messages/DefectDetectedEvent'
+      complianceViolation:
+        $ref: '#/components/messages/ComplianceViolationEvent'
+      nonConformanceCreated:
+        $ref: '#/components/messages/NonConformanceCreatedEvent'
+      correctiveActionTaken:
+        $ref: '#/components/messages/CorrectiveActionTakenEvent'
+      auditPerformed:
+        $ref: '#/components/messages/AuditPerformedEvent'
+
+operations:
+  publishInspectionCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/qualityComplianceEvents'
+    summary: Publish inspection completed event
+    description: |
+      Published when a quality inspection is finalized. This is the primary event that triggers
+      downstream processing in inventory and warehouse systems.
+
+      ## Triggered By
+      - POST /api/v1/quality/inspections/{id}/complete
+
+      ## Consumed By
+      - Warehouse Management System (update inventory status)
+      - Inventory Service (release/hold stock)
+      - Analytics Service (quality metrics)
+      - Reporting Service (inspection reports)
+
+      ## Event Ordering
+      This event is published AFTER all defect events for the same inspection.
+    messages:
+      - $ref: '#/components/messages/InspectionCompletedEvent'
+
+  publishDefectDetected:
+    action: send
+    channel:
+      $ref: '#/channels/qualityComplianceEvents'
+    summary: Publish defect detected event
+    description: |
+      Published when CRITICAL severity defects are detected during inspection.
+      This event triggers immediate actions in connected systems.
+
+      ## Triggered By
+      - POST /api/v1/quality/inspections/{id}/defects (when severity=CRITICAL)
+
+      ## Consumed By
+      - Warehouse Management System (quarantine items)
+      - Notification Service (alert quality managers)
+      - Supplier Management (track supplier quality)
+      - Analytics Service (defect tracking)
+
+      ## Business Impact
+      - May trigger automatic inventory holds
+      - May block shipments
+      - May initiate supplier notifications
+    messages:
+      - $ref: '#/components/messages/DefectDetectedEvent'
+
+  publishComplianceViolation:
+    action: send
+    channel:
+      $ref: '#/channels/qualityComplianceEvents'
+    summary: Publish compliance violation event
+    description: |
+      Published when inspection results indicate compliance violations (QUARANTINE status).
+      This is a high-priority event requiring immediate action.
+
+      ## Triggered By
+      - POST /api/v1/quality/inspections/{id}/complete (when result=QUARANTINE)
+
+      ## Consumed By
+      - Compliance Management System (regulatory tracking)
+      - Warehouse Management System (quarantine inventory)
+      - Notification Service (alert compliance team)
+      - Audit System (compliance audit trail)
+
+      ## Regulatory Impact
+      - Must be logged for regulatory compliance
+      - May trigger mandatory reporting
+      - Requires documented corrective actions
+    messages:
+      - $ref: '#/components/messages/ComplianceViolationEvent'
+
+  publishNonConformanceCreated:
+    action: send
+    channel:
+      $ref: '#/channels/qualityComplianceEvents'
+    summary: Publish non-conformance created event
+    description: |
+      Published when a non-conformance report (NCR) is created for quality issues.
+
+      ## Triggered By
+      - Domain logic when defect threshold is exceeded
+      - Manual NCR creation by quality team
+
+      ## Consumed By
+      - Quality Management System (NCR tracking)
+      - Supplier Management (supplier performance)
+      - Analytics Service (quality trends)
+      - Compliance System (audit trail)
+    messages:
+      - $ref: '#/components/messages/NonConformanceCreatedEvent'
+
+  publishCorrectiveActionTaken:
+    action: send
+    channel:
+      $ref: '#/channels/qualityComplianceEvents'
+    summary: Publish corrective action taken event
+    description: |
+      Published when corrective actions are applied to resolve quality issues.
+
+      ## Triggered By
+      - Domain logic when corrections are applied
+      - Completion of CAPA (Corrective and Preventive Action) process
+
+      ## Consumed By
+      - Quality Management System (CAPA tracking)
+      - Compliance System (close-out verification)
+      - Analytics Service (effectiveness tracking)
+      - Notification Service (stakeholder updates)
+    messages:
+      - $ref: '#/components/messages/CorrectiveActionTakenEvent'
+
+  publishAuditPerformed:
+    action: send
+    channel:
+      $ref: '#/channels/qualityComplianceEvents'
+    summary: Publish audit performed event
+    description: |
+      Published when quality or compliance audits are completed.
+
+      ## Triggered By
+      - POST /api/v1/quality/inspections (when type=AUDIT)
+      - Periodic compliance audit completion
+
+      ## Consumed By
+      - Compliance Management System (audit tracking)
+      - Quality Management System (audit results)
+      - Reporting Service (audit reports)
+      - Analytics Service (compliance metrics)
+    messages:
+      - $ref: '#/components/messages/AuditPerformedEvent'
+
+components:
+  messages:
+    InspectionCompletedEvent:
+      name: InspectionCompletedEvent
+      title: Inspection Completed
+      summary: Published when a quality inspection is finalized
+      contentType: application/json
+      tags:
+        - name: event-type
+          description: Quality inspection event
+      payload:
+        $ref: '#/components/schemas/InspectionCompletedEventPayload'
+      examples:
+        - name: receivingInspectionPassed
+          summary: Receiving inspection passed
+          description: Example of a successful receiving inspection with no defects
+          payload:
+            eventId: "evt-123e4567-e89b-12d3-a456-426614174000"
+            eventType: "InspectionCompleted"
+            occurredAt: "2025-11-01T10:15:30Z"
+            inspectionId: "67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+            inspectionType: "RECEIVING"
+            result: "PASSED"
+            defectsFound: 0
+            itemsInspected: 50
+        - name: shippingInspectionFailed
+          summary: Shipping inspection failed
+          description: Shipping inspection failed due to defects found
+          payload:
+            eventId: "evt-223e4567-e89b-12d3-a456-426614174001"
+            eventType: "InspectionCompleted"
+            occurredAt: "2025-11-01T14:30:45Z"
+            inspectionId: "8a2b3c4d-5e6f-7g8h-9i0j-1k2l3m4n5o6p"
+            inspectionType: "SHIPPING"
+            result: "FAILED"
+            defectsFound: 17
+            itemsInspected: 25
+        - name: temperatureViolationQuarantine
+          summary: Temperature violation causing quarantine
+          description: Critical temperature violation requiring immediate quarantine
+          payload:
+            eventId: "evt-323e4567-e89b-12d3-a456-426614174002"
+            eventType: "InspectionCompleted"
+            occurredAt: "2025-11-01T16:45:00Z"
+            inspectionId: "9b8c7d6e-5f4a-3b2c-1d0e-f9a8b7c6d5e4"
+            inspectionType: "RECEIVING"
+            result: "QUARANTINE"
+            defectsFound: 550
+            itemsInspected: 500
+
+    DefectDetectedEvent:
+      name: DefectDetectedEvent
+      title: Defect Detected
+      summary: Published when CRITICAL severity defect is detected
+      contentType: application/json
+      tags:
+        - name: event-type
+          description: Quality defect event
+        - name: priority
+          description: High priority event
+      payload:
+        $ref: '#/components/schemas/DefectDetectedEventPayload'
+      examples:
+        - name: criticalTemperatureViolation
+          summary: Critical temperature violation
+          description: Refrigerated products stored at unsafe temperature
+          payload:
+            eventId: "evt-423e4567-e89b-12d3-a456-426614174003"
+            eventType: "DefectDetected"
+            occurredAt: "2025-11-01T16:42:15Z"
+            inspectionId: "9b8c7d6e-5f4a-3b2c-1d0e-f9a8b7c6d5e4"
+            defectType: "TEMPERATURE_VIOLATION"
+            severity: "CRITICAL"
+            description: "Temperature out of range: 12.5°C (allowed: -18.0-0.0)"
+        - name: contaminationDetected
+          summary: Product contamination detected
+          description: Foreign matter found in food products
+          payload:
+            eventId: "evt-523e4567-e89b-12d3-a456-426614174004"
+            eventType: "DefectDetected"
+            occurredAt: "2025-11-01T11:20:00Z"
+            inspectionId: "1c2d3e4f-5g6h-7i8j-9k0l-1m2n3o4p5q6r"
+            defectType: "CONTAMINATED"
+            severity: "CRITICAL"
+            description: "Foreign matter detected in sealed packages"
+        - name: expiredProducts
+          summary: Expired products detected
+          description: Products past expiration date found in inventory
+          payload:
+            eventId: "evt-623e4567-e89b-12d3-a456-426614174005"
+            eventType: "DefectDetected"
+            occurredAt: "2025-11-01T09:30:00Z"
+            inspectionId: "2d3e4f5g-6h7i-8j9k-0l1m-2n3o4p5q6r7s"
+            defectType: "EXPIRED"
+            severity: "CRITICAL"
+            description: "50 units expired on 2025-10-25 found in active inventory"
+
+    ComplianceViolationEvent:
+      name: ComplianceViolationEvent
+      title: Compliance Violation
+      summary: Published when compliance rules are violated
+      contentType: application/json
+      tags:
+        - name: event-type
+          description: Compliance event
+        - name: priority
+          description: High priority event
+        - name: regulatory
+          description: May require regulatory reporting
+      payload:
+        $ref: '#/components/schemas/ComplianceViolationEventPayload'
+      examples:
+        - name: criticalDefectQuarantine
+          summary: Critical defect requiring quarantine
+          description: Inspection found critical defects requiring immediate quarantine
+          payload:
+            eventId: "evt-723e4567-e89b-12d3-a456-426614174006"
+            eventType: "ComplianceViolation"
+            occurredAt: "2025-11-01T16:45:00Z"
+            inspectionId: "9b8c7d6e-5f4a-3b2c-1d0e-f9a8b7c6d5e4"
+            violationType: "CRITICAL_DEFECT"
+            description: "Critical defects found - item quarantined"
+        - name: temperatureSafetyViolation
+          summary: Food safety temperature violation
+          description: Cold chain broken - food safety compliance violation
+          payload:
+            eventId: "evt-823e4567-e89b-12d3-a456-426614174007"
+            eventType: "ComplianceViolation"
+            occurredAt: "2025-11-01T16:42:30Z"
+            inspectionId: "9b8c7d6e-5f4a-3b2c-1d0e-f9a8b7c6d5e4"
+            violationType: "FOOD_SAFETY_VIOLATION"
+            description: "Cold chain integrity compromised - temperature exceeded safe limits"
+        - name: regulatoryLabelingViolation
+          summary: Regulatory labeling violation
+          description: Required safety labels missing from pharmaceutical products
+          payload:
+            eventId: "evt-923e4567-e89b-12d3-a456-426614174008"
+            eventType: "ComplianceViolation"
+            occurredAt: "2025-11-01T13:15:00Z"
+            inspectionId: "3e4f5g6h-7i8j-9k0l-1m2n-3o4p5q6r7s8t"
+            violationType: "REGULATORY_LABELING"
+            description: "Required safety warnings missing from pharmaceutical packaging"
+
+    NonConformanceCreatedEvent:
+      name: NonConformanceCreatedEvent
+      title: Non-Conformance Created
+      summary: Published when non-conformance report is created
+      contentType: application/json
+      tags:
+        - name: event-type
+          description: Quality management event
+      payload:
+        $ref: '#/components/schemas/NonConformanceCreatedEventPayload'
+      examples:
+        - name: supplierQualityIssue
+          summary: Supplier quality non-conformance
+          description: NCR created for recurring supplier quality issues
+          payload:
+            eventId: "evt-a23e4567-e89b-12d3-a456-426614174009"
+            eventType: "NonConformanceCreated"
+            occurredAt: "2025-11-01T15:00:00Z"
+            inspectionId: "4f5g6h7i-8j9k-0l1m-2n3o-4p5q6r7s8t9u"
+            description: "Recurring packaging defects from Supplier ABC - 3rd occurrence this month"
+            defectCount: 45
+        - name: processDeviation
+          summary: Process deviation non-conformance
+          description: NCR for deviation from standard inspection procedures
+          payload:
+            eventId: "evt-b23e4567-e89b-12d3-a456-426614174010"
+            eventType: "NonConformanceCreated"
+            occurredAt: "2025-11-01T11:45:00Z"
+            inspectionId: "5g6h7i8j-9k0l-1m2n-3o4p-5q6r7s8t9u0v"
+            description: "Temperature checks not performed according to standard procedure"
+            defectCount: 1
+
+    CorrectiveActionTakenEvent:
+      name: CorrectiveActionTakenEvent
+      title: Corrective Action Taken
+      summary: Published when corrective action is applied
+      contentType: application/json
+      tags:
+        - name: event-type
+          description: Quality management event
+      payload:
+        $ref: '#/components/schemas/CorrectiveActionTakenEventPayload'
+      examples:
+        - name: repackagingComplete
+          summary: Repackaging corrective action completed
+          description: Defective items repackaged and re-inspected
+          payload:
+            eventId: "evt-c23e4567-e89b-12d3-a456-426614174011"
+            eventType: "CorrectiveActionTaken"
+            occurredAt: "2025-11-01T17:30:00Z"
+            inspectionId: "6h7i8j9k-0l1m-2n3o-4p5q-6r7s8t9u0v1w"
+            action: "Damaged items segregated and repackaged. Re-inspection passed."
+            completedAt: "2025-11-01T17:30:00Z"
+        - name: supplierNotification
+          summary: Supplier notification action
+          description: Supplier notified and corrective action plan requested
+          payload:
+            eventId: "evt-d23e4567-e89b-12d3-a456-426614174012"
+            eventType: "CorrectiveActionTaken"
+            occurredAt: "2025-11-01T18:00:00Z"
+            inspectionId: "7i8j9k0l-1m2n-3o4p-5q6r-7s8t9u0v1w2x"
+            action: "Supplier notified of quality issues. CAPA plan requested within 48 hours."
+            completedAt: "2025-11-01T18:00:00Z"
+        - name: equipmentCalibration
+          summary: Equipment calibration action
+          description: Temperature monitoring equipment recalibrated
+          payload:
+            eventId: "evt-e23e4567-e89b-12d3-a456-426614174013"
+            eventType: "CorrectiveActionTaken"
+            occurredAt: "2025-11-01T20:00:00Z"
+            inspectionId: "8j9k0l1m-2n3o-4p5q-6r7s-8t9u0v1w2x3y"
+            action: "Temperature monitoring equipment recalibrated. Verification test passed."
+            completedAt: "2025-11-01T20:00:00Z"
+
+    AuditPerformedEvent:
+      name: AuditPerformedEvent
+      title: Audit Performed
+      summary: Published when quality or compliance audit is completed
+      contentType: application/json
+      tags:
+        - name: event-type
+          description: Compliance audit event
+      payload:
+        $ref: '#/components/schemas/AuditPerformedEventPayload'
+      examples:
+        - name: monthlyQualityAudit
+          summary: Monthly quality audit
+          description: Routine monthly quality system audit
+          payload:
+            eventId: "evt-f23e4567-e89b-12d3-a456-426614174014"
+            eventType: "AuditPerformed"
+            occurredAt: "2025-11-01T16:00:00Z"
+            auditId: "AUDIT-2025-11-001"
+            auditType: "QUALITY_SYSTEM"
+            auditorId: "AUD-001"
+            scope: "Monthly quality system compliance audit - all processes"
+            findings: 2
+            nonConformances: 0
+        - name: supplierAudit
+          summary: Supplier quality audit
+          description: On-site supplier quality audit
+          payload:
+            eventId: "evt-g23e4567-e89b-12d3-a456-426614174015"
+            eventType: "AuditPerformed"
+            occurredAt: "2025-11-01T14:00:00Z"
+            auditId: "AUDIT-2025-11-002"
+            auditType: "SUPPLIER_AUDIT"
+            auditorId: "AUD-002"
+            scope: "Supplier XYZ quality management system audit"
+            findings: 5
+            nonConformances: 2
+        - name: regulatoryComplianceAudit
+          summary: Regulatory compliance audit
+          description: FDA compliance audit for pharmaceutical operations
+          payload:
+            eventId: "evt-h23e4567-e89b-12d3-a456-426614174016"
+            eventType: "AuditPerformed"
+            occurredAt: "2025-11-01T17:00:00Z"
+            auditId: "AUDIT-2025-11-003"
+            auditType: "REGULATORY_COMPLIANCE"
+            auditorId: "AUD-003"
+            scope: "FDA 21 CFR Part 211 compliance audit - pharmaceutical warehouse"
+            findings: 1
+            nonConformances: 0
+
+  schemas:
+    InspectionCompletedEventPayload:
+      type: object
+      description: Payload for inspection completed event
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - inspectionId
+        - inspectionType
+        - result
+        - defectsFound
+        - itemsInspected
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-123e4567-e89b-12d3-a456-426614174000"
+        eventType:
+          type: string
+          const: InspectionCompleted
+          description: Event type identifier
+          example: "InspectionCompleted"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+          example: "2025-11-01T10:15:30Z"
+        inspectionId:
+          type: string
+          format: uuid
+          description: ID of the completed inspection
+          example: "67f9a8e5-3c45-4d8f-9b12-8e7f4c2a1b3d"
+        inspectionType:
+          type: string
+          enum: [RECEIVING, PICKING, PACKING, SHIPPING, PERIODIC, AUDIT]
+          description: Type of inspection that was performed
+          example: "RECEIVING"
+        result:
+          type: string
+          enum: [PASSED, FAILED, CONDITIONAL, QUARANTINE]
+          description: Final inspection result
+          example: "PASSED"
+        defectsFound:
+          type: integer
+          minimum: 0
+          description: Total number of defects detected
+          example: 0
+        itemsInspected:
+          type: integer
+          minimum: 1
+          description: Number of items that were inspected
+          example: 50
+
+    DefectDetectedEventPayload:
+      type: object
+      description: Payload for defect detected event (CRITICAL severity only)
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - inspectionId
+        - defectType
+        - severity
+        - description
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-423e4567-e89b-12d3-a456-426614174003"
+        eventType:
+          type: string
+          const: DefectDetected
+          description: Event type identifier
+          example: "DefectDetected"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the defect was detected
+          example: "2025-11-01T16:42:15Z"
+        inspectionId:
+          type: string
+          format: uuid
+          description: ID of the inspection where defect was found
+          example: "9b8c7d6e-5f4a-3b2c-1d0e-f9a8b7c6d5e4"
+        defectType:
+          type: string
+          enum:
+            - DAMAGED
+            - INCORRECT_QUANTITY
+            - WRONG_ITEM
+            - MISSING_LABEL
+            - EXPIRED
+            - CONTAMINATED
+            - PACKAGING_DEFECT
+            - TEMPERATURE_VIOLATION
+            - WEIGHT_DISCREPANCY
+            - BARCODE_UNREADABLE
+            - OTHER
+          description: Category of defect detected
+          example: "TEMPERATURE_VIOLATION"
+        severity:
+          type: string
+          const: CRITICAL
+          description: Defect severity (always CRITICAL for this event)
+          example: "CRITICAL"
+        description:
+          type: string
+          description: Detailed description of the defect
+          example: "Temperature out of range: 12.5°C (allowed: -18.0-0.0)"
+
+    ComplianceViolationEventPayload:
+      type: object
+      description: Payload for compliance violation event
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - inspectionId
+        - violationType
+        - description
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-723e4567-e89b-12d3-a456-426614174006"
+        eventType:
+          type: string
+          const: ComplianceViolation
+          description: Event type identifier
+          example: "ComplianceViolation"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the violation occurred
+          example: "2025-11-01T16:45:00Z"
+        inspectionId:
+          type: string
+          format: uuid
+          description: ID of the inspection where violation was detected
+          example: "9b8c7d6e-5f4a-3b2c-1d0e-f9a8b7c6d5e4"
+        violationType:
+          type: string
+          description: Type of compliance violation
+          example: "CRITICAL_DEFECT"
+          enum:
+            - CRITICAL_DEFECT
+            - FOOD_SAFETY_VIOLATION
+            - TEMPERATURE_EXCURSION
+            - REGULATORY_LABELING
+            - HAZMAT_VIOLATION
+            - EXPIRY_VIOLATION
+        description:
+          type: string
+          description: Detailed description of the violation
+          example: "Critical defects found - item quarantined"
+
+    NonConformanceCreatedEventPayload:
+      type: object
+      description: Payload for non-conformance created event
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - inspectionId
+        - description
+        - defectCount
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-a23e4567-e89b-12d3-a456-426614174009"
+        eventType:
+          type: string
+          const: NonConformanceCreated
+          description: Event type identifier
+          example: "NonConformanceCreated"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the NCR was created
+          example: "2025-11-01T15:00:00Z"
+        inspectionId:
+          type: string
+          format: uuid
+          description: ID of the inspection that triggered the NCR
+          example: "4f5g6h7i-8j9k-0l1m-2n3o-4p5q6r7s8t9u"
+        description:
+          type: string
+          description: Description of the non-conformance
+          example: "Recurring packaging defects from Supplier ABC - 3rd occurrence this month"
+        defectCount:
+          type: integer
+          minimum: 1
+          description: Number of defects associated with this NCR
+          example: 45
+
+    CorrectiveActionTakenEventPayload:
+      type: object
+      description: Payload for corrective action taken event
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - inspectionId
+        - action
+        - completedAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-c23e4567-e89b-12d3-a456-426614174011"
+        eventType:
+          type: string
+          const: CorrectiveActionTaken
+          description: Event type identifier
+          example: "CorrectiveActionTaken"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+          example: "2025-11-01T17:30:00Z"
+        inspectionId:
+          type: string
+          format: uuid
+          description: ID of the inspection requiring corrective action
+          example: "6h7i8j9k-0l1m-2n3o-4p5q-6r7s8t9u0v1w"
+        action:
+          type: string
+          description: Description of the corrective action taken
+          example: "Damaged items segregated and repackaged. Re-inspection passed."
+        completedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the action was completed
+          example: "2025-11-01T17:30:00Z"
+
+    AuditPerformedEventPayload:
+      type: object
+      description: Payload for audit performed event
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - auditId
+        - auditType
+        - auditorId
+        - scope
+        - findings
+        - nonConformances
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-f23e4567-e89b-12d3-a456-426614174014"
+        eventType:
+          type: string
+          const: AuditPerformed
+          description: Event type identifier
+          example: "AuditPerformed"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the audit was completed
+          example: "2025-11-01T16:00:00Z"
+        auditId:
+          type: string
+          description: Unique audit identifier
+          example: "AUDIT-2025-11-001"
+        auditType:
+          type: string
+          description: Type of audit performed
+          enum:
+            - QUALITY_SYSTEM
+            - SUPPLIER_AUDIT
+            - REGULATORY_COMPLIANCE
+            - PROCESS_AUDIT
+            - INTERNAL_AUDIT
+          example: "QUALITY_SYSTEM"
+        auditorId:
+          type: string
+          description: ID of the auditor who performed the audit
+          example: "AUD-001"
+        scope:
+          type: string
+          description: Scope and description of the audit
+          example: "Monthly quality system compliance audit - all processes"
+        findings:
+          type: integer
+          minimum: 0
+          description: Number of findings identified during audit
+          example: 2
+        nonConformances:
+          type: integer
+          minimum: 0
+          description: Number of non-conformances identified
+          example: 0
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: SASL/SCRAM-SHA-256 authentication for Kafka

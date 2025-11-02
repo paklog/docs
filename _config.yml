@@ -46,7 +46,7 @@ include:
   - decoupling_wes_wms.md
   - detailed_plan.md
   - diagrams
-  - business-capababilities
+  - business-capabilities
   - domain-driven-design
 
 exclude:
@@ -84,7 +84,7 @@ defaults:
       layout: "default"
       category: "Architecture & Design"
   - scope:
-      path: "business-capababilities"
+      path: "business-capabilities"
       type: "pages"
     values:
       layout: "default"
@@ -103,7 +103,7 @@ navigation:
   - title: Architecture
     url: /diagrams/
   - title: Business Capabilities
-    url: /business-capababilities/
+    url: /business-capabilities/
   - title: Domain Design
     url: /domain-driven-design/
   - title: Decoupling Strategy

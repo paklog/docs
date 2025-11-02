@@ -1,0 +1,102 @@
+asyncapi: 2.5.0
+info:
+  title: Shipment & Transportation Async API
+  version: 1.0.0
+  description: |-
+    Event contracts implemented by the shipment transportation service.
+    The service consumes `package-packed` events to create shipments and emits persisted
+    outbox events to Kafka topics that match each event's type.
+defaultContentType: application/json
+servers:
+  local:
+    url: localhost:9092
+    protocol: kafka
+    description: Default Kafka bootstrap server used by the service during local development.
+channels:
+  fulfillment.warehouse.v1.events:
+    description: Upstream warehouse events consumed to trigger shipment creation.
+    subscribe:
+      summary: Consume package packed notifications.
+      operationId: consumePackagePacked
+      message:
+        $ref: '#/components/messages/PackagePackedEvent'
+  fulfillment.shipment.v1.events:
+    description: Shipment lifecycle events emitted by the transportation service.
+    publish:
+      summary: Publish CloudEvents representing shipment lifecycle changes.
+      operationId: publishShipmentDomainEvent
+      message:
+        $ref: '#/components/messages/ShipmentLifecycleEvent'
+components:
+  messages:
+    PackagePackedEvent:
+      name: packagePacked
+      title: Package Packed
+      payload:
+        $ref: '#/components/schemas/PackagePackedPayload'
+    ShipmentLifecycleEvent:
+      name: shipmentLifecycle
+      title: Shipment Lifecycle Event
+      payload:
+        $ref: '#/components/schemas/ShipmentCloudEvent'
+  schemas:
+    PackagePackedPayload:
+      type: object
+      properties:
+        packageId:
+          type: string
+          format: uuid
+        orderId:
+          type: string
+        packedAt:
+          type: string
+          format: date-time
+      required: [packageId, orderId, packedAt]
+    ShipmentCloudEvent:
+      description: CloudEvent envelope containing shipment lifecycle data.
+      type: object
+      properties:
+        specversion:
+          type: string
+          enum: ["1.0"]
+        type:
+          type: string
+          enum:
+            - com.paklog.shipment.dispatched.v1
+            - com.paklog.shipment.delivered.v1
+        source:
+          type: string
+          example: urn:paklog:shipment-transportation/shipment
+        subject:
+          type: string
+          description: Shipment identifier (UUID string).
+        id:
+          type: string
+          description: CloudEvent identifier.
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          enum: ["application/json"]
+        traceparent:
+          type: string
+          description: W3C traceparent used for distributed tracing.
+        data:
+          type: object
+          description: Payload containing shipment fields.
+          properties:
+            shipment_id:
+              type: string
+            order_id:
+              type: string
+            carrier_name:
+              type: string
+            tracking_number:
+              type: string
+            dispatched_at:
+              type: string
+              format: date-time
+            delivered_at:
+              type: string
+              format: date-time

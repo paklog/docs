@@ -1,0 +1,1079 @@
+asyncapi: 3.0.0
+
+info:
+  title: Paklog Yard Management System - Event-Driven API
+  version: 1.0.0
+  description: |
+    ## Overview
+
+    This AsyncAPI specification documents the event-driven architecture of the Paklog Yard Management System (YMS).
+    The YMS is a critical component of the Paklog WMS/WES platform that provides real-time management of yard operations,
+    dock assignments, and trailer tracking.
+
+    ## Event Architecture
+
+    The system uses Apache Kafka as the message broker and follows the CloudEvents specification (v1.0) for event formatting.
+    All events are published to a single topic with different event types to maintain ordering guarantees while allowing
+    for flexible consumption patterns.
+
+    ### Key Characteristics:
+    - **Protocol**: Apache Kafka
+    - **Event Format**: CloudEvents v1.0 (JSON)
+    - **Delivery Guarantee**: At-least-once delivery with idempotency
+    - **Ordering**: Guaranteed per trailer (using trailerId as partition key)
+    - **Schema Evolution**: Backward compatible changes only
+
+    ## Business Context
+
+    The Yard Management System orchestrates the flow of trailers through a warehouse yard:
+
+    1. **Check-in**: Trailers arrive at the gate and are registered in the system
+    2. **Dock Assignment**: Smart algorithms assign trailers to optimal dock doors
+    3. **Loading/Unloading**: Operations are tracked in real-time
+    4. **Check-out**: Trailers depart, and dwell time metrics are calculated
+    5. **Appointment Scheduling**: Pre-scheduling appointments for better yard utilization
+
+    ## Integration Patterns
+
+    ### Downstream Consumers
+    - **WMS/WES**: Warehouse Management System consumes events to coordinate internal operations
+    - **TMS**: Transportation Management System uses events for carrier coordination
+    - **Analytics Platform**: Real-time dashboards and KPI calculations
+    - **Notification Service**: Alerts and notifications to stakeholders
+    - **Billing System**: Automated billing based on dwell time and service usage
+
+    ### Event Ordering
+    Events for the same trailer are guaranteed to be processed in order because we use the `trailerId`
+    as the Kafka partition key. This ensures events like TrailerArrived → DockAssigned → LoadingCompleted → TrailerDeparted
+    maintain their causal relationship.
+
+  contact:
+    name: Paklog Engineering Team
+    email: engineering@paklog.com
+    url: https://paklog.com
+  license:
+    name: Proprietary
+    url: https://paklog.com/license
+
+servers:
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka broker
+    tags:
+      - name: environment
+        description: Development environment for local testing
+    bindings:
+      kafka:
+        schemaRegistryUrl: http://localhost:8081
+        schemaRegistryVendor: confluent
+
+  production:
+    host: kafka.paklog.com:9092
+    protocol: kafka-secure
+    description: Production Kafka cluster with SSL/SASL authentication
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: environment
+        description: Production environment
+      - name: region
+        description: us-east-1
+    bindings:
+      kafka:
+        schemaRegistryUrl: https://schema-registry.paklog.com
+        schemaRegistryVendor: confluent
+
+defaultContentType: application/cloudevents+json
+
+channels:
+  yardEvents:
+    address: transportation-logistics.yard-management.events
+    description: |
+      ## Primary Event Channel
+
+      This channel carries all domain events from the Yard Management System. Events follow the CloudEvents v1.0
+      specification and are serialized using the CloudEvents Kafka protocol binding.
+
+      ### Topic Configuration
+      - **Partitions**: 12 (allows for high parallelism)
+      - **Replication Factor**: 3 (ensures high availability)
+      - **Retention**: 7 days (configurable based on compliance requirements)
+      - **Cleanup Policy**: Delete (time-based retention)
+
+      ### Consumer Groups
+      - `wms-yard-events-consumer`: WMS coordination service
+      - `tms-yard-events-consumer`: TMS integration service
+      - `analytics-yard-events-consumer`: Real-time analytics
+      - `notification-yard-events-consumer`: Alert and notification service
+
+      ### Partitioning Strategy
+      Events are partitioned by `trailerId` to guarantee ordering for all events related to a specific trailer.
+      This ensures that state transitions (arrived → assigned → completed → departed) are processed in the correct sequence.
+
+      ### Message Key
+      The Kafka message key is set to the `eventId` (UUID) to enable idempotent processing and deduplication.
+
+    messages:
+      trailerArrived:
+        $ref: '#/components/messages/TrailerArrivedEvent'
+      dockAssigned:
+        $ref: '#/components/messages/DockAssignedEvent'
+      loadingCompleted:
+        $ref: '#/components/messages/LoadingCompletedEvent'
+      trailerDeparted:
+        $ref: '#/components/messages/TrailerDepartedEvent'
+      appointmentScheduled:
+        $ref: '#/components/messages/AppointmentScheduledEvent'
+
+    bindings:
+      kafka:
+        topic: transportation-logistics.yard-management.events
+        partitions: 12
+        replicas: 3
+        topicConfiguration:
+          cleanup.policy: delete
+          retention.ms: 604800000  # 7 days
+          compression.type: snappy
+          min.insync.replicas: 2
+          max.message.bytes: 1048576  # 1MB
+
+operations:
+  publishTrailerArrived:
+    action: send
+    channel:
+      $ref: '#/channels/yardEvents'
+    summary: Publish Trailer Arrived Event
+    description: |
+      ## Trailer Check-In Event
+
+      Published when a trailer successfully checks in at the yard gate. This is the first event in the trailer
+      lifecycle and triggers downstream processes including dock assignment algorithms and warehouse preparation.
+
+      ### Business Trigger
+      - Driver arrives at gate with trailer
+      - Gate operator or automated gate system scans trailer number
+      - System validates trailer information and creates check-in record
+
+      ### Downstream Effects
+      - WMS receives notification to prepare for inbound/outbound operations
+      - Dock assignment algorithm evaluates available docks
+      - Real-time yard occupancy metrics are updated
+      - Appointment system validates if trailer has scheduled appointment
+
+      ### SLA
+      Event must be published within 5 seconds of check-in action
+
+    messages:
+      - $ref: '#/components/messages/TrailerArrivedEvent'
+
+  publishDockAssigned:
+    action: send
+    channel:
+      $ref: '#/channels/yardEvents'
+    summary: Publish Dock Assignment Event
+    description: |
+      ## Dock Assignment Event
+
+      Published when the system assigns a specific dock door to a trailer. The assignment can be automatic
+      (via optimization algorithm) or manual (operator override).
+
+      ### Business Trigger
+      - Automatic: System algorithm selects optimal dock based on trailer type, cargo, and dock availability
+      - Manual: Yard operator manually assigns dock via UI
+
+      ### Downstream Effects
+      - WMS coordinates warehouse staff to prepare dock
+      - Gate system directs driver to assigned dock location
+      - Dock door equipment (lights, locks) may be controlled
+      - Real-time dock utilization metrics are updated
+
+      ### Assignment Algorithm Factors
+      - Trailer type (inbound/outbound)
+      - Cargo priority and urgency
+      - Dock equipment requirements (e.g., refrigeration)
+      - Current dock utilization and queue
+      - Proximity to warehouse zones
+
+      ### SLA
+      Assignment should occur within 2 minutes of trailer arrival
+
+    messages:
+      - $ref: '#/components/messages/DockAssignedEvent'
+
+  publishLoadingCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/yardEvents'
+    summary: Publish Loading Completed Event
+    description: |
+      ## Loading/Unloading Completion Event
+
+      Published when the loading or unloading operations for a trailer are marked as complete by warehouse operations.
+      This event signifies that the trailer is ready for departure.
+
+      ### Business Trigger
+      - Warehouse operator completes loading/unloading
+      - Quality checks pass
+      - Documentation (BOL, manifest) is finalized
+      - System automatically detects completion via sensor data
+
+      ### Downstream Effects
+      - Billing system calculates service charges
+      - Gate system notifies driver trailer is ready
+      - Dock is marked as available for next assignment
+      - Check-out process can be initiated
+      - Performance metrics (loading time) are calculated
+
+      ### Quality Gates
+      - All planned items loaded/unloaded
+      - Documentation complete and signed
+      - Equipment (pallet jacks, forklifts) cleared from dock
+
+      ### SLA
+      Event published immediately upon operator confirmation or within 30 seconds of automated detection
+
+    messages:
+      - $ref: '#/components/messages/LoadingCompletedEvent'
+
+  publishTrailerDeparted:
+    action: send
+    channel:
+      $ref: '#/channels/yardEvents'
+    summary: Publish Trailer Departed Event
+    description: |
+      ## Trailer Check-Out Event
+
+      Published when a trailer completes check-out and departs the yard. This is the final event in the
+      trailer lifecycle and includes important metrics like total dwell time.
+
+      ### Business Trigger
+      - Trailer passes through exit gate
+      - Gate operator confirms departure
+      - Automated gate system detects trailer exit
+
+      ### Downstream Effects
+      - Billing system finalizes charges based on dwell time
+      - Yard capacity metrics are updated
+      - TMS confirms completion to carrier
+      - Historical records are archived
+      - Performance reports include this trailer's metrics
+
+      ### Dwell Time Calculation
+      The dwell time represents total time trailer spent in yard, calculated as:
+      `departedAt - arrivedAt`
+
+      This metric is critical for:
+      - Yard efficiency KPIs
+      - Carrier performance tracking
+      - Detention/demurrage billing
+      - Process optimization analysis
+
+      ### SLA
+      Event published within 5 seconds of departure detection
+
+    messages:
+      - $ref: '#/components/messages/TrailerDepartedEvent'
+
+  publishAppointmentScheduled:
+    action: send
+    channel:
+      $ref: '#/channels/yardEvents'
+    summary: Publish Appointment Scheduled Event
+    description: |
+      ## Appointment Scheduling Event
+
+      Published when a new appointment is scheduled for a trailer. Appointments allow for better yard
+      planning and resource allocation by providing advance notice of trailer arrivals.
+
+      ### Business Trigger
+      - Carrier schedules appointment via web portal
+      - TMS automatically creates appointment via API
+      - Warehouse planner schedules appointment manually
+
+      ### Downstream Effects
+      - Dock reservation system holds dock slot
+      - WMS prepares inventory and staff allocation
+      - Gate system validates appointment during check-in
+      - Notification service sends confirmation to carrier
+
+      ### Appointment Types
+      - **Scheduled Delivery**: Inbound shipment with appointment
+      - **Scheduled Pickup**: Outbound shipment with appointment
+      - **Drop-Off**: Trailer dropped for later loading
+      - **Live Load**: Driver waits while loading occurs
+
+      ### Buffer Time
+      System includes configurable buffer time (default: 15 minutes) to account for early/late arrivals
+
+      ### SLA
+      Appointment must be scheduled at least 2 hours in advance for guaranteed dock availability
+
+    messages:
+      - $ref: '#/components/messages/AppointmentScheduledEvent'
+
+components:
+  messages:
+    TrailerArrivedEvent:
+      name: TrailerArrivedEvent
+      title: Trailer Arrived Event
+      summary: Event published when a trailer checks in at the yard gate
+      description: |
+        Represents the arrival of a trailer at the facility. This event contains critical information needed
+        to track the trailer throughout its lifecycle in the yard.
+
+        ### Event Characteristics
+        - **Idempotency**: Safe to replay; contains unique eventId for deduplication
+        - **Ordering**: Must be first event in trailer lifecycle
+        - **Causality**: Prerequisite for all subsequent trailer events
+
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventsTrait'
+      payload:
+        $ref: '#/components/schemas/TrailerArrivedPayload'
+      examples:
+        - name: InboundTrailerArrival
+          summary: Standard inbound trailer arriving for unloading
+          description: |
+            A typical scenario where a carrier delivers an inbound shipment. The trailer arrives at the gate,
+            driver provides documentation, and gate operator performs check-in. The trailer is now waiting
+            for dock assignment.
+          payload:
+            specversion: "1.0"
+            id: "a7f2c4e8-8b6d-4f3a-9c1e-7d2b5e3f8a9c"
+            type: "com.paklog.yard.TrailerArrivedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T14:30:00Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "a7f2c4e8-8b6d-4f3a-9c1e-7d2b5e3f8a9c"
+              eventType: "TrailerArrivedEvent"
+              occurredAt: "2025-11-01T14:30:00Z"
+              trailerId: "TRL-2025-001234"
+              trailerNumber: "ABC-12345"
+              arrivedAt: "2025-11-01T14:30:00Z"
+
+        - name: OutboundTrailerArrival
+          summary: Empty trailer arriving for loading
+          description: |
+            An outbound scenario where a carrier arrives with an empty trailer to pick up goods.
+            After check-in, the trailer will be assigned to a dock for loading operations.
+          payload:
+            specversion: "1.0"
+            id: "b3d9e7f1-4c2a-4e6b-8f3d-9a1c5b7e2d4f"
+            type: "com.paklog.yard.TrailerArrivedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T15:45:22Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "b3d9e7f1-4c2a-4e6b-8f3d-9a1c5b7e2d4f"
+              eventType: "TrailerArrivedEvent"
+              occurredAt: "2025-11-01T15:45:22Z"
+              trailerId: "TRL-2025-001235"
+              trailerNumber: "XYZ-67890"
+              arrivedAt: "2025-11-01T15:45:22Z"
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Event ID used for idempotent processing
+            example: "a7f2c4e8-8b6d-4f3a-9c1e-7d2b5e3f8a9c"
+          partitionKey:
+            type: string
+            description: Trailer ID used for consistent partitioning to guarantee event ordering
+            example: "TRL-2025-001234"
+
+    DockAssignedEvent:
+      name: DockAssignedEvent
+      title: Dock Assigned Event
+      summary: Event published when a dock is assigned to a trailer
+      description: |
+        Indicates that a specific dock door has been allocated to a trailer. The dock assignment process
+        considers multiple factors including dock availability, trailer type, cargo requirements, and
+        operational priorities.
+
+        ### Assignment Methods
+        - **Automatic**: System algorithm optimizes dock selection
+        - **Manual Override**: Operator assigns specific dock
+        - **Pre-assigned**: Dock reserved via appointment system
+
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventsTrait'
+      payload:
+        $ref: '#/components/schemas/DockAssignedPayload'
+      examples:
+        - name: AutomaticDockAssignment
+          summary: System automatically assigns optimal dock
+          description: |
+            The assignment algorithm analyzes current dock utilization, trailer characteristics, and
+            warehouse operations to select Dock-A12. This dock is closest to the warehouse zone where
+            the cargo needs to be stored, minimizing travel time for forklifts.
+          payload:
+            specversion: "1.0"
+            id: "c8e4f2a9-7b3d-4e1c-9f2a-6d8b4e9c3f7a"
+            type: "com.paklog.yard.DockAssignedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T14:32:15Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "c8e4f2a9-7b3d-4e1c-9f2a-6d8b4e9c3f7a"
+              eventType: "DockAssignedEvent"
+              occurredAt: "2025-11-01T14:32:15Z"
+              trailerId: "TRL-2025-001234"
+              dockId: "DOCK-A12"
+              assignedAt: "2025-11-01T14:32:15Z"
+
+        - name: ManualDockAssignment
+          summary: Operator manually overrides and assigns specific dock
+          description: |
+            Due to special handling requirements (refrigerated goods), the yard operator manually
+            assigns this trailer to Dock-B05, which has temperature-controlled capabilities.
+          payload:
+            specversion: "1.0"
+            id: "d5f8a3c1-9e2b-4d7f-8a6c-3b9e7d4f2c8a"
+            type: "com.paklog.yard.DockAssignedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T15:47:33Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "d5f8a3c1-9e2b-4d7f-8a6c-3b9e7d4f2c8a"
+              eventType: "DockAssignedEvent"
+              occurredAt: "2025-11-01T15:47:33Z"
+              trailerId: "TRL-2025-001235"
+              dockId: "DOCK-B05"
+              assignedAt: "2025-11-01T15:47:33Z"
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            example: "c8e4f2a9-7b3d-4e1c-9f2a-6d8b4e9c3f7a"
+          partitionKey:
+            type: string
+            example: "TRL-2025-001234"
+
+    LoadingCompletedEvent:
+      name: LoadingCompletedEvent
+      title: Loading Completed Event
+      summary: Event published when loading/unloading operations are completed
+      description: |
+        Signals the completion of all cargo operations for a trailer. This event indicates that the trailer
+        is ready for departure and triggers the check-out process.
+
+        ### Completion Criteria
+        - All planned items loaded/unloaded
+        - Quality inspection passed
+        - Documentation finalized (BOL, manifest, customs)
+        - Dock area cleared of equipment
+
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventsTrait'
+      payload:
+        $ref: '#/components/schemas/LoadingCompletedPayload'
+      examples:
+        - name: InboundUnloadingCompleted
+          summary: Inbound trailer fully unloaded
+          description: |
+            All items have been unloaded from the inbound trailer and received into warehouse inventory.
+            The dock is now clear, and the empty trailer is ready for the driver to take back.
+            Total unloading time was approximately 45 minutes.
+          payload:
+            specversion: "1.0"
+            id: "e9f3b7c2-8d4a-4f1e-9c3b-7e2d6a8f4c9b"
+            type: "com.paklog.yard.LoadingCompletedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T15:15:30Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "e9f3b7c2-8d4a-4f1e-9c3b-7e2d6a8f4c9b"
+              eventType: "LoadingCompletedEvent"
+              occurredAt: "2025-11-01T15:15:30Z"
+              trailerId: "TRL-2025-001234"
+              completedAt: "2025-11-01T15:15:30Z"
+
+        - name: OutboundLoadingCompleted
+          summary: Outbound trailer fully loaded
+          description: |
+            All outbound shipment items have been loaded onto the trailer. The load has been secured,
+            documentation provided to the driver, and the trailer is sealed. Driver can now proceed to
+            gate for check-out. Loading took approximately 1 hour and 20 minutes.
+          payload:
+            specversion: "1.0"
+            id: "f4c8e2d9-7b3a-4e9f-8c2d-6a9e3b7f4d8c"
+            type: "com.paklog.yard.LoadingCompletedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T17:05:45Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "f4c8e2d9-7b3a-4e9f-8c2d-6a9e3b7f4d8c"
+              eventType: "LoadingCompletedEvent"
+              occurredAt: "2025-11-01T17:05:45Z"
+              trailerId: "TRL-2025-001235"
+              completedAt: "2025-11-01T17:05:45Z"
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            example: "e9f3b7c2-8d4a-4f1e-9c3b-7e2d6a8f4c9b"
+          partitionKey:
+            type: string
+            example: "TRL-2025-001234"
+
+    TrailerDepartedEvent:
+      name: TrailerDepartedEvent
+      title: Trailer Departed Event
+      summary: Event published when a trailer checks out and leaves the yard
+      description: |
+        Represents the final event in a trailer's lifecycle at the facility. This event includes critical
+        metrics such as total dwell time, which is used for billing, performance analysis, and process optimization.
+
+        ### Dwell Time Importance
+        Dwell time is a key performance indicator that measures yard efficiency. Industry benchmarks:
+        - **Excellent**: < 2 hours
+        - **Good**: 2-4 hours
+        - **Acceptable**: 4-6 hours
+        - **Poor**: > 6 hours (may incur detention charges)
+
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventsTrait'
+      payload:
+        $ref: '#/components/schemas/TrailerDepartedPayload'
+      examples:
+        - name: EfficientTurnaround
+          summary: Trailer with excellent turnaround time
+          description: |
+            This inbound trailer completed its entire cycle in just 105 minutes (1 hour 45 minutes).
+            This includes check-in (5 min), waiting for dock (15 min), unloading (45 min), paperwork (10 min),
+            and check-out (30 min). This represents excellent yard efficiency.
+          payload:
+            specversion: "1.0"
+            id: "a2d7f9e4-6c3b-4e8a-9d2f-7b4e8c3a9f6d"
+            type: "com.paklog.yard.TrailerDepartedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T15:20:45Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "a2d7f9e4-6c3b-4e8a-9d2f-7b4e8c3a9f6d"
+              eventType: "TrailerDepartedEvent"
+              occurredAt: "2025-11-01T15:20:45Z"
+              trailerId: "TRL-2025-001234"
+              departedAt: "2025-11-01T15:20:45Z"
+              dwellTimeMinutes: 105
+
+        - name: LongerDwellTime
+          summary: Trailer with longer but acceptable dwell time
+          description: |
+            This outbound trailer spent 215 minutes (3 hours 35 minutes) in the yard. This is within
+            acceptable range but higher than optimal. Breakdown: check-in (10 min), dock assignment wait (45 min),
+            loading (120 min), quality check (25 min), check-out (15 min). The longer dwell time was due to
+            high volume of items to load.
+          payload:
+            specversion: "1.0"
+            id: "b8e3c9f2-7d4a-4f9e-8c3d-9a6f2e7c4b8d"
+            type: "com.paklog.yard.TrailerDepartedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T17:10:22Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "b8e3c9f2-7d4a-4f9e-8c3d-9a6f2e7c4b8d"
+              eventType: "TrailerDepartedEvent"
+              occurredAt: "2025-11-01T17:10:22Z"
+              trailerId: "TRL-2025-001235"
+              departedAt: "2025-11-01T17:10:22Z"
+              dwellTimeMinutes: 215
+
+        - name: ExtendedDwellTimeWithDetention
+          summary: Trailer exceeding detention-free time
+          description: |
+            This trailer spent 425 minutes (7 hours 5 minutes) in the yard, exceeding the 6-hour detention-free
+            threshold. This will trigger detention charges in the billing system. Extended time was due to
+            trailer arriving without appointment during peak hours, causing extended wait time for dock availability.
+          payload:
+            specversion: "1.0"
+            id: "c4f7e2d8-9a3b-4e6c-8f2d-7b9e4c8a3f6d"
+            type: "com.paklog.yard.TrailerDepartedEvent"
+            source: "//yard-management"
+            time: "2025-11-01T21:35:00Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "c4f7e2d8-9a3b-4e6c-8f2d-7b9e4c8a3f6d"
+              eventType: "TrailerDepartedEvent"
+              occurredAt: "2025-11-01T21:35:00Z"
+              trailerId: "TRL-2025-001236"
+              departedAt: "2025-11-01T21:35:00Z"
+              dwellTimeMinutes: 425
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            example: "a2d7f9e4-6c3b-4e8a-9d2f-7b4e8c3a9f6d"
+          partitionKey:
+            type: string
+            example: "TRL-2025-001234"
+
+    AppointmentScheduledEvent:
+      name: AppointmentScheduledEvent
+      title: Appointment Scheduled Event
+      summary: Event published when an appointment is scheduled for a trailer
+      description: |
+        Represents the scheduling of a future trailer arrival. Appointments are critical for yard planning,
+        allowing the facility to optimize dock utilization and prepare resources in advance.
+
+        ### Appointment Benefits
+        - **Guaranteed Dock**: Reserved dock slot at scheduled time
+        - **Reduced Wait Time**: Priority processing over walk-in trailers
+        - **Better Planning**: Warehouse can prepare staff and equipment
+        - **Load Balancing**: Spreads arrivals across the day to prevent congestion
+
+      contentType: application/cloudevents+json
+      traits:
+        - $ref: '#/components/messageTraits/cloudEventsTrait'
+      payload:
+        $ref: '#/components/schemas/AppointmentScheduledPayload'
+      examples:
+        - name: ScheduledInboundDelivery
+          summary: Carrier schedules appointment for inbound delivery
+          description: |
+            A carrier has scheduled an appointment for tomorrow at 9:00 AM to deliver an inbound shipment.
+            The system has reserved Dock-A15 for this appointment and will hold it open during the appointment
+            window (8:45 AM - 9:15 AM with 15-minute buffer). The warehouse has been notified to prepare
+            receiving resources.
+          payload:
+            specversion: "1.0"
+            id: "d7f2c9e8-4b3a-4e6d-9f2c-8a7e3b4f9c6d"
+            type: "com.paklog.yard.AppointmentScheduledEvent"
+            source: "//yard-management"
+            time: "2025-11-01T16:22:18Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "d7f2c9e8-4b3a-4e6d-9f2c-8a7e3b4f9c6d"
+              eventType: "AppointmentScheduledEvent"
+              occurredAt: "2025-11-01T16:22:18Z"
+              appointmentId: "APT-2025-00789"
+              trailerId: "TRL-2025-001240"
+              dockId: "DOCK-A15"
+              scheduledTime: "2025-11-02T09:00:00Z"
+
+        - name: ScheduledOutboundPickup
+          summary: TMS automatically creates appointment for outbound pickup
+          description: |
+            The Transportation Management System has automatically created an appointment for an outbound
+            pickup this afternoon at 2:30 PM. The shipment is already prepared in the warehouse staging area.
+            Dock-C08 has been pre-assigned for rapid loading. Expected loading time is 30 minutes.
+          payload:
+            specversion: "1.0"
+            id: "e3c7f9d2-8a4b-4e9c-9f3d-7b2e6c4f8a9d"
+            type: "com.paklog.yard.AppointmentScheduledEvent"
+            source: "//yard-management"
+            time: "2025-11-01T13:15:42Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "e3c7f9d2-8a4b-4e9c-9f3d-7b2e6c4f8a9d"
+              eventType: "AppointmentScheduledEvent"
+              occurredAt: "2025-11-01T13:15:42Z"
+              appointmentId: "APT-2025-00790"
+              trailerId: "TRL-2025-001241"
+              dockId: "DOCK-C08"
+              scheduledTime: "2025-11-01T14:30:00Z"
+
+        - name: BulkAppointmentScheduling
+          summary: Multiple appointments scheduled for next week's operations
+          description: |
+            During weekly planning, the logistics coordinator has scheduled appointments for the upcoming week.
+            This appointment is for a refrigerated trailer requiring specialized dock B-03 which has temperature
+            control capabilities. Scheduled for Tuesday morning during the less busy period.
+          payload:
+            specversion: "1.0"
+            id: "f8d2c4e9-7a3b-4e6f-9c2d-8b7e4c9a3f6d"
+            type: "com.paklog.yard.AppointmentScheduledEvent"
+            source: "//yard-management"
+            time: "2025-11-01T10:45:30Z"
+            datacontenttype: "application/json"
+            data:
+              eventId: "f8d2c4e9-7a3b-4e6f-9c2d-8b7e4c9a3f6d"
+              eventType: "AppointmentScheduledEvent"
+              occurredAt: "2025-11-01T10:45:30Z"
+              appointmentId: "APT-2025-00791"
+              trailerId: "TRL-2025-001242"
+              dockId: "DOCK-B03"
+              scheduledTime: "2025-11-05T08:00:00Z"
+
+      bindings:
+        kafka:
+          key:
+            type: string
+            example: "d7f2c9e8-4b3a-4e6d-9f2c-8a7e3b4f9c6d"
+          partitionKey:
+            type: string
+            description: For appointment events, we partition by appointmentId initially, switching to trailerId when trailer arrives
+            example: "APT-2025-00789"
+
+  schemas:
+    TrailerArrivedPayload:
+      type: object
+      description: |
+        Payload schema for TrailerArrivedEvent. Contains all information about a trailer's arrival at the facility.
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - trailerId
+        - trailerNumber
+        - arrivedAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: |
+            Unique identifier for this specific event instance. Used for idempotent processing and deduplication.
+            This ID is also used as the Kafka message key.
+          example: "a7f2c4e8-8b6d-4f3a-9c1e-7d2b5e3f8a9c"
+        eventType:
+          type: string
+          const: TrailerArrivedEvent
+          description: The type of domain event, always "TrailerArrivedEvent" for this payload
+          example: "TrailerArrivedEvent"
+        occurredAt:
+          type: string
+          format: date-time
+          description: |
+            Timestamp when the event occurred in the domain (ISO 8601 format with timezone).
+            This is the business timestamp, not to be confused with CloudEvents 'time' which is the publishing timestamp.
+          example: "2025-11-01T14:30:00Z"
+        trailerId:
+          type: string
+          description: |
+            Internal system identifier for the trailer. This is the primary key in the trailer aggregate.
+            Format: TRL-YYYY-NNNNNN where YYYY is year and NNNNNN is sequence number.
+          pattern: "^TRL-\\d{4}-\\d{6}$"
+          example: "TRL-2025-001234"
+        trailerNumber:
+          type: string
+          description: |
+            External trailer identification number (license plate or carrier-assigned number).
+            This is what drivers and carriers use to identify the trailer. May contain letters, numbers, and hyphens.
+          minLength: 3
+          maxLength: 20
+          example: "ABC-12345"
+        arrivedAt:
+          type: string
+          format: date-time
+          description: |
+            Precise timestamp when the trailer physically arrived at the gate (ISO 8601 format).
+            This timestamp is used to calculate dwell time when the trailer departs.
+          example: "2025-11-01T14:30:00Z"
+
+    DockAssignedPayload:
+      type: object
+      description: |
+        Payload schema for DockAssignedEvent. Contains information about dock assignment for a trailer.
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - trailerId
+        - dockId
+        - assignedAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique identifier for this event instance
+          example: "c8e4f2a9-7b3d-4e1c-9f2a-6d8b4e9c3f7a"
+        eventType:
+          type: string
+          const: DockAssignedEvent
+          description: The type of domain event
+          example: "DockAssignedEvent"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+          example: "2025-11-01T14:32:15Z"
+        trailerId:
+          type: string
+          description: |
+            Reference to the trailer that is being assigned. Must match a trailerId from a previous TrailerArrivedEvent.
+          pattern: "^TRL-\\d{4}-\\d{6}$"
+          example: "TRL-2025-001234"
+        dockId:
+          type: string
+          description: |
+            Identifier of the dock door being assigned. Format: DOCK-[ZONE][NUMBER] where ZONE is a letter (A-Z)
+            and NUMBER is a two-digit dock number. Example: DOCK-A12 is dock 12 in zone A.
+          pattern: "^DOCK-[A-Z]\\d{2}$"
+          example: "DOCK-A12"
+        assignedAt:
+          type: string
+          format: date-time
+          description: |
+            Timestamp when the dock was assigned. Used to track time between arrival and dock assignment
+            for performance metrics.
+          example: "2025-11-01T14:32:15Z"
+
+    LoadingCompletedPayload:
+      type: object
+      description: |
+        Payload schema for LoadingCompletedEvent. Indicates completion of all cargo operations for a trailer.
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - trailerId
+        - completedAt
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique identifier for this event instance
+          example: "e9f3b7c2-8d4a-4f1e-9c3b-7e2d6a8f4c9b"
+        eventType:
+          type: string
+          const: LoadingCompletedEvent
+          description: The type of domain event
+          example: "LoadingCompletedEvent"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+          example: "2025-11-01T15:15:30Z"
+        trailerId:
+          type: string
+          description: |
+            Reference to the trailer that completed loading. Must match a trailerId from previous events.
+          pattern: "^TRL-\\d{4}-\\d{6}$"
+          example: "TRL-2025-001234"
+        completedAt:
+          type: string
+          format: date-time
+          description: |
+            Timestamp when loading/unloading was completed. Used to calculate dock occupancy time and
+            loading efficiency metrics. Time between assignedAt (from DockAssignedEvent) and completedAt
+            represents the total dock utilization time.
+          example: "2025-11-01T15:15:30Z"
+
+    TrailerDepartedPayload:
+      type: object
+      description: |
+        Payload schema for TrailerDepartedEvent. Contains information about trailer departure including dwell time metrics.
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - trailerId
+        - departedAt
+        - dwellTimeMinutes
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique identifier for this event instance
+          example: "a2d7f9e4-6c3b-4e8a-9d2f-7b4e8c3a9f6d"
+        eventType:
+          type: string
+          const: TrailerDepartedEvent
+          description: The type of domain event
+          example: "TrailerDepartedEvent"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred
+          example: "2025-11-01T15:20:45Z"
+        trailerId:
+          type: string
+          description: Reference to the trailer that is departing
+          pattern: "^TRL-\\d{4}-\\d{6}$"
+          example: "TRL-2025-001234"
+        departedAt:
+          type: string
+          format: date-time
+          description: |
+            Precise timestamp when the trailer left the facility through the exit gate.
+            This is the end point for dwell time calculation.
+          example: "2025-11-01T15:20:45Z"
+        dwellTimeMinutes:
+          type: integer
+          format: int64
+          description: |
+            Total time the trailer spent in the yard, measured in minutes. Calculated as:
+            (departedAt - arrivedAt) in minutes.
+
+            This is a critical KPI for:
+            - Yard efficiency analysis
+            - Carrier performance evaluation
+            - Detention/demurrage billing (typically free time is 4-6 hours)
+            - Process bottleneck identification
+            - Capacity planning
+
+            Typical values:
+            - Express: 60-90 minutes
+            - Standard: 120-240 minutes
+            - Extended: 240+ minutes (may incur charges)
+          minimum: 0
+          example: 105
+
+    AppointmentScheduledPayload:
+      type: object
+      description: |
+        Payload schema for AppointmentScheduledEvent. Contains information about scheduled appointments for future trailer arrivals.
+      required:
+        - eventId
+        - eventType
+        - occurredAt
+        - appointmentId
+        - trailerId
+        - dockId
+        - scheduledTime
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique identifier for this event instance
+          example: "d7f2c9e8-4b3a-4e6d-9f2c-8a7e3b4f9c6d"
+        eventType:
+          type: string
+          const: AppointmentScheduledEvent
+          description: The type of domain event
+          example: "AppointmentScheduledEvent"
+        occurredAt:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred (when appointment was created)
+          example: "2025-11-01T16:22:18Z"
+        appointmentId:
+          type: string
+          description: |
+            Unique identifier for the appointment. Format: APT-YYYY-NNNNN where YYYY is year and NNNNN is sequence.
+            This ID is used to track the appointment through its lifecycle and link it to the trailer when it arrives.
+          pattern: "^APT-\\d{4}-\\d{5}$"
+          example: "APT-2025-00789"
+        trailerId:
+          type: string
+          description: |
+            Identifier for the trailer that will arrive. This may be a placeholder ID if the exact trailer
+            is not yet known (e.g., carrier hasn't assigned specific equipment). When the trailer actually arrives,
+            the appointment will be linked to the real trailer ID.
+          pattern: "^TRL-\\d{4}-\\d{6}$"
+          example: "TRL-2025-001240"
+        dockId:
+          type: string
+          description: |
+            Pre-assigned dock for the appointment. The dock assignment system reserves this dock for the
+            appointment time window. If the trailer arrives outside the window, the system may reassign to a different dock.
+          pattern: "^DOCK-[A-Z]\\d{2}$"
+          example: "DOCK-A15"
+        scheduledTime:
+          type: string
+          format: date-time
+          description: |
+            Scheduled arrival time for the trailer. The system creates a time window around this time using
+            the configured buffer (default: +/- 15 minutes). The trailer should arrive within this window
+            to guarantee the dock assignment. Early or late arrivals may need to wait for dock availability.
+          example: "2025-11-02T09:00:00Z"
+
+  messageTraits:
+    cloudEventsTrait:
+      description: |
+        Common CloudEvents v1.0 properties that all events must include. This ensures consistent event structure
+        across the entire system and enables interoperability with CloudEvents-aware tools and platforms.
+
+        ### CloudEvents Benefits
+        - **Standardization**: Industry-standard format for event metadata
+        - **Interoperability**: Works with CloudEvents-compatible tools (Knative, Azure Event Grid, etc.)
+        - **Tracing**: Built-in support for distributed tracing
+        - **Routing**: Events can be routed based on standardized attributes
+
+      headers:
+        type: object
+        required:
+          - specversion
+          - id
+          - type
+          - source
+          - time
+        properties:
+          specversion:
+            type: string
+            const: "1.0"
+            description: CloudEvents specification version (always "1.0")
+            example: "1.0"
+          id:
+            type: string
+            format: uuid
+            description: |
+              Unique identifier for this event. Maps to the domain event's eventId.
+              Used by consumers for idempotent processing and deduplication.
+            example: "a7f2c4e8-8b6d-4f3a-9c1e-7d2b5e3f8a9c"
+          type:
+            type: string
+            description: |
+              Event type in reverse-DNS format. Format: com.paklog.yard.{EventName}
+              Examples: com.paklog.yard.TrailerArrivedEvent, com.paklog.yard.DockAssignedEvent
+            pattern: "^com\\.paklog\\.yard\\.[A-Z][a-zA-Z]+Event$"
+            example: "com.paklog.yard.TrailerArrivedEvent"
+          source:
+            type: string
+            format: uri-reference
+            description: |
+              Source of the event in URI format. Always "//yard-management" for events from this service.
+              This helps consumers identify which microservice produced the event.
+            const: "//yard-management"
+            example: "//yard-management"
+          time:
+            type: string
+            format: date-time
+            description: |
+              Timestamp when the event was published to Kafka (ISO 8601 format).
+              Note: This is the publishing time, which may differ slightly from occurredAt (domain event time).
+              The difference helps track event processing latency.
+            example: "2025-11-01T14:30:00Z"
+          datacontenttype:
+            type: string
+            const: "application/json"
+            description: MIME type of the data payload, always JSON for our events
+            example: "application/json"
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: |
+        SASL/SCRAM-SHA-256 authentication for production Kafka cluster.
+
+        ### Configuration
+        Consumers must configure their Kafka clients with:
+        - security.protocol: SASL_SSL
+        - sasl.mechanism: SCRAM-SHA-256
+        - sasl.jaas.config: org.apache.kafka.common.security.scram.ScramLoginModule required username="<username>" password="<password>";
+
+        ### Credential Management
+        Credentials are managed via HashiCorp Vault and rotated every 90 days.
+        Contact the platform team to obtain credentials for your consumer group.
+
+tags:
+  - name: yard-operations
+    description: Core yard and dock management operations
+  - name: trailer-lifecycle
+    description: Events tracking trailer lifecycle from arrival to departure
+  - name: scheduling
+    description: Appointment and scheduling related events
+  - name: metrics
+    description: Events containing performance metrics and KPIs
+
+externalDocs:
+  description: |
+    ### Additional Documentation
+
+    - **Architecture Documentation**: Detailed system architecture and integration patterns
+    - **Developer Guide**: Step-by-step guide for consuming these events
+    - **CloudEvents Spec**: Official CloudEvents v1.0 specification
+    - **Kafka Best Practices**: Guidelines for consuming events reliably
+    - **Data Dictionary**: Complete glossary of business terms and concepts
+
+  url: https://docs.paklog.com/yard-management-system

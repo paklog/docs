@@ -1,0 +1,18 @@
+{
+  "schemaName": "dp_order_management_events_v1",
+  "dimensionFieldSpecs": [
+    {"name": "event_id", "dataType": "STRING"},
+    {"name": "event_type", "dataType": "STRING"},
+    {"name": "event_source", "dataType": "STRING"},
+    {"name": "event_subject", "dataType": "STRING"},
+    {"name": "order_id", "dataType": "STRING"},
+    {"name": "seller_fulfillment_order_id", "dataType": "STRING"},
+    {"name": "correlation_id", "dataType": "STRING"},
+    {"name": "trace_id", "dataType": "STRING"}
+  ],
+  "dateTimeFieldSpecs": [
+    {"name": "event_time", "dataType": "LONG", "format": "1:MILLISECONDS:EPOCH", "granularity": "1:MILLISECONDS"}
+  ],
+  "primaryKeyColumns": ["event_id"]
+}
+

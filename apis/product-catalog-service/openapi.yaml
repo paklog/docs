@@ -1,0 +1,436 @@
+openapi: 3.0.3
+info:
+  title: Product Catalog API
+  description: |-
+    A RESTful API for managing product catalog data, including dimensions and compliance attributes.
+    This API is designed using Domain-Driven Design principles, with the Product as the central Aggregate.
+  version: 1.1.0
+servers:
+  - url: http://localhost:8082
+    description: Local development server
+  - url: https://api.example.com/v1
+    description: Example production server
+tags:
+  - name: Products
+    description: Operations related to the Product Catalog
+paths:
+  /products:
+    post:
+      tags:
+        - Products
+      summary: Create a new product
+      description: Adds a new product with its dimensions and attributes to the catalog. The SKU must be unique.
+      operationId: createProduct
+      requestBody:
+        description: Product that needs to be added to the catalog.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+            example:
+              sku: EXAMPLE-SKU-123
+              title: Industrial Grade Widget
+              dimensions:
+                item:
+                  length:
+                    value: 10.5
+                    unit: INCHES
+                  width:
+                    value: 8.0
+                    unit: INCHES
+                  height:
+                    value: 3.2
+                    unit: INCHES
+                  weight:
+                    value: 5.0
+                    unit: POUNDS
+                package:
+                  length:
+                    value: 12.0
+                    unit: INCHES
+                  width:
+                    value: 9.5
+                    unit: INCHES
+                  height:
+                    value: 4.0
+                    unit: INCHES
+                  weight:
+                    value: 5.8
+                    unit: POUNDS
+              attributes:
+                hazmat_info:
+                  is_hazmat: true
+                  un_number: UN1950
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Validation failed for the provided product data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Product with the given SKU already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags:
+        - Products
+      summary: List all products
+      description: Retrieves a paginated list of all products in the catalog.
+      operationId: listProducts
+      parameters:
+        - name: offset
+          in: query
+          description: The number of items to skip for pagination.
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - name: limit
+          in: query
+          description: The number of items to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: A paged response containing products.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+              example:
+                content:
+                  - sku: EXAMPLE-SKU-123
+                    title: Industrial Grade Widget
+                    dimensions:
+                      item:
+                        length:
+                          value: 10.5
+                          unit: INCHES
+                        width:
+                          value: 8.0
+                          unit: INCHES
+                        height:
+                          value: 3.2
+                          unit: INCHES
+                        weight:
+                          value: 5.0
+                          unit: POUNDS
+                      package:
+                        length:
+                          value: 12.0
+                          unit: INCHES
+                        width:
+                          value: 9.5
+                          unit: INCHES
+                        height:
+                          value: 4.0
+                          unit: INCHES
+                        weight:
+                          value: 5.8
+                          unit: POUNDS
+                    attributes:
+                      hazmat_info:
+                        is_hazmat: true
+                        un_number: UN1950
+                total_pages: 5
+                total_elements: 100
+                current_page: 1
+                page_size: 20
+                is_first: false
+                is_last: false
+  /products/{sku}:
+    parameters:
+      - name: sku
+        in: path
+        description: The unique SKU of the product.
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Products
+      summary: Get product by SKU
+      description: Retrieves a single product by its unique Stock Keeping Unit (SKU).
+      operationId: getProductBySku
+      responses:
+        '200':
+          description: Product retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags:
+        - Products
+      summary: Update a product (full replace)
+      description: Replaces the entire product resource with the provided data. All fields are required.
+      operationId: updateProduct
+      requestBody:
+        description: The full product object to replace the existing one.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Validation failed for the provided product data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    patch:
+      tags:
+        - Products
+      summary: Partially update a product
+      description: Updates one or more fields of an existing product. Fields not included in the request body will not be changed.
+      operationId: patchProduct
+      requestBody:
+        description: A product object with the fields to be updated.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Product'
+      responses:
+        '200':
+          description: Product partially updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Validation failed for the provided product data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags:
+        - Products
+      summary: Delete a product
+      description: Deletes a product from the catalog by its SKU.
+      operationId: deleteProduct
+      responses:
+        '204':
+          description: Product deleted successfully
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Product:
+      type: object
+      description: The core Product aggregate root, representing a unique item in the catalog.
+      required:
+        - sku
+        - title
+      properties:
+        sku:
+          type: string
+          description: The unique, seller-defined Stock Keeping Unit.
+          example: EXAMPLE-SKU-123
+        title:
+          type: string
+          description: The display name of the product.
+          example: Industrial Grade Widget
+        dimensions:
+          $ref: '#/components/schemas/Dimensions'
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+    ProductPage:
+      type: object
+      description: Paged response metadata and product entries.
+      required:
+        - content
+        - total_pages
+        - total_elements
+        - current_page
+        - page_size
+        - is_first
+        - is_last
+      properties:
+        content:
+          type: array
+          description: Products for the current page.
+          items:
+            $ref: '#/components/schemas/Product'
+        total_pages:
+          type: integer
+          description: Total number of pages available.
+          minimum: 0
+        total_elements:
+          type: integer
+          format: int64
+          description: Total number of products across all pages.
+          minimum: 0
+        current_page:
+          type: integer
+          description: Current page number (0-based).
+          minimum: 0
+        page_size:
+          type: integer
+          description: Number of items per page.
+          minimum: 1
+        is_first:
+          type: boolean
+          description: Indicates whether this is the first page.
+        is_last:
+          type: boolean
+          description: Indicates whether this is the last page.
+    Dimensions:
+      type: object
+      description: Physical dimensions of the item and its packaging.
+      required:
+        - item
+        - package
+      properties:
+        item:
+          $ref: '#/components/schemas/DimensionSet'
+        package:
+          $ref: '#/components/schemas/DimensionSet'
+    DimensionSet:
+      type: object
+      description: A complete set of measurements for an object.
+      required:
+        - length
+        - width
+        - height
+        - weight
+      properties:
+        length:
+          $ref: '#/components/schemas/DimensionMeasurement'
+        width:
+          $ref: '#/components/schemas/DimensionMeasurement'
+        height:
+          $ref: '#/components/schemas/DimensionMeasurement'
+        weight:
+          $ref: '#/components/schemas/WeightMeasurement'
+    DimensionMeasurement:
+      type: object
+      description: A measurement of length, width, or height.
+      required:
+        - value
+        - unit
+      properties:
+        value:
+          type: number
+          format: double
+          description: Numeric value of the measurement.
+          minimum: 0
+          exclusiveMinimum: true
+          example: 10.5
+        unit:
+          type: string
+          description: Unit of measurement for dimensions.
+          enum:
+            - INCHES
+            - CENTIMETERS
+            - MILLIMETERS
+            - FEET
+            - METERS
+          example: INCHES
+    WeightMeasurement:
+      type: object
+      description: A measurement of weight.
+      required:
+        - value
+        - unit
+      properties:
+        value:
+          type: number
+          format: double
+          description: Numeric value of the weight.
+          minimum: 0
+          exclusiveMinimum: true
+          example: 5.8
+        unit:
+          type: string
+          description: Unit of measurement for weight.
+          enum:
+            - POUNDS
+            - KILOGRAMS
+            - GRAMS
+            - OUNCES
+          example: POUNDS
+    Attributes:
+      type: object
+      description: Additional product characteristics and compliance data.
+      required:
+        - hazmat_info
+      properties:
+        hazmat_info:
+          $ref: '#/components/schemas/HazmatInfo'
+    HazmatInfo:
+      type: object
+      description: Information related to hazardous material classification.
+      required:
+        - is_hazmat
+      properties:
+        is_hazmat:
+          type: boolean
+          description: Indicates whether the product is hazardous material.
+          example: true
+        un_number:
+          type: string
+          description: UN number for the hazardous material (required when is_hazmat is true).
+          example: UN1950
+          nullable: true
+    Error:
+      type: object
+      description: Error response payload.
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: Numeric error code aligned with HTTP status.
+          example: 400
+        message:
+          type: string
+          description: Human-readable explanation of the error.
+          example: "Validation failed: sku must not be blank"

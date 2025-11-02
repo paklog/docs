@@ -1,0 +1,1250 @@
+openapi: 3.0.3
+info:
+  title: Task Execution Service API
+  description: |
+    The Task Execution Service provides unified task management and orchestration for all warehouse operations.
+    It handles task creation, assignment, prioritization, and execution tracking across multiple work types including
+    picking, packing, putaway, replenishment, counting, and shipping. The service integrates with Redis for
+    high-performance queue management and provides real-time task status updates.
+  version: 1.0.0
+  contact:
+    name: WES Team
+    email: wes-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8082
+    description: Local development
+  - url: https://task-execution.paklog.com
+    description: Production
+
+tags:
+  - name: Tasks
+    description: Task management operations
+  - name: Assignments
+    description: Task assignment and routing
+  - name: Queues
+    description: Task queue management
+  - name: Mobile
+    description: Mobile device API for task execution
+  - name: Monitoring
+    description: Task monitoring and metrics
+
+paths:
+  /tasks:
+    get:
+      tags:
+        - Tasks
+      summary: List all tasks
+      description: Retrieve a list of tasks with optional filtering
+      operationId: listTasks
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - $ref: '#/components/parameters/TaskType'
+        - $ref: '#/components/parameters/TaskStatus'
+        - $ref: '#/components/parameters/AssignedTo'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Tasks
+      summary: Create a new task
+      description: Create a new task with specified work type and details
+      operationId: createTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+            examples:
+              pickTask:
+                summary: Create a pick task
+                value:
+                  taskType: PICK
+                  warehouseId: WH-001
+                  priority: HIGH
+                  waveId: WAVE-12345
+                  orderId: ORDER-67890
+                  sourceLocation: A-01-02-03
+                  destinationLocation: PICK-STAGE-01
+                  productId: PROD-12345
+                  sku: SKU-98765
+                  quantity: 10
+                  dueDate: "2025-10-19T14:00:00Z"
+              putawayTask:
+                summary: Create a putaway task
+                value:
+                  taskType: PUTAWAY
+                  warehouseId: WH-001
+                  priority: MEDIUM
+                  lpn: LPN-54321
+                  sourceLocation: RECV-DOCK-01
+                  destinationLocation: A-05-10-15
+                  productId: PROD-88888
+                  quantity: 50
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /tasks/{taskId}:
+    get:
+      tags:
+        - Tasks
+      summary: Get task by ID
+      description: Retrieve detailed information about a specific task
+      operationId: getTaskById
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Tasks
+      summary: Update task
+      description: Update task properties (only for tasks in PENDING status)
+      operationId: updateTask
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags:
+        - Tasks
+      summary: Cancel task
+      description: Cancel a task and release its resources
+      operationId: cancelTask
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Reason for cancellation
+      responses:
+        '200':
+          description: Task cancelled successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /tasks/{taskId}/assign:
+    post:
+      tags:
+        - Assignments
+      summary: Assign task to worker
+      description: Assign a task to a specific worker
+      operationId: assignTask
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - workerId
+              properties:
+                workerId:
+                  type: string
+                  description: Worker ID to assign task to
+                notes:
+                  type: string
+                  description: Optional assignment notes
+      responses:
+        '200':
+          description: Task assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /tasks/{taskId}/start:
+    post:
+      tags:
+        - Tasks
+      summary: Start task execution
+      description: Mark task as started by the assigned worker
+      operationId: startTask
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startedAt:
+                  type: string
+                  format: date-time
+                  description: Start timestamp (defaults to current time)
+                deviceId:
+                  type: string
+                  description: Mobile device ID
+      responses:
+        '200':
+          description: Task started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /tasks/{taskId}/complete:
+    post:
+      tags:
+        - Tasks
+      summary: Complete task
+      description: Mark task as completed with actual quantities
+      operationId: completeTask
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTaskRequest'
+      responses:
+        '200':
+          description: Task completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /tasks/{taskId}/fail:
+    post:
+      tags:
+        - Tasks
+      summary: Fail task
+      description: Mark task as failed with reason
+      operationId: failTask
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: Failure reason
+                notes:
+                  type: string
+                  description: Additional failure details
+      responses:
+        '200':
+          description: Task marked as failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks/{taskId}/reject:
+    post:
+      tags:
+        - Assignments
+      summary: Reject task assignment
+      description: Worker rejects an assigned task
+      operationId: rejectTask
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  description: Rejection reason
+      responses:
+        '200':
+          description: Task rejected successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /tasks/batch:
+    post:
+      tags:
+        - Tasks
+      summary: Create tasks in batch
+      description: Create multiple tasks in a single operation
+      operationId: createTaskBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tasks
+              properties:
+                tasks:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Tasks created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        index:
+                          type: integer
+                        error:
+                          type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /assignments/recommend:
+    post:
+      tags:
+        - Assignments
+      summary: Get task recommendations
+      description: Get task recommendations for a worker based on location, skills, and priority
+      operationId: recommendTasks
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - workerId
+              properties:
+                workerId:
+                  type: string
+                currentLocation:
+                  type: string
+                skills:
+                  type: array
+                  items:
+                    type: string
+                maxTasks:
+                  type: integer
+                  default: 5
+      responses:
+        '200':
+          description: Task recommendations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TaskRecommendation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /assignments/auto-assign:
+    post:
+      tags:
+        - Assignments
+      summary: Auto-assign tasks
+      description: Automatically assign pending tasks to available workers
+      operationId: autoAssignTasks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                warehouseId:
+                  type: string
+                taskType:
+                  $ref: '#/components/schemas/TaskType'
+                maxAssignments:
+                  type: integer
+                  default: 100
+      responses:
+        '200':
+          description: Auto-assignment results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assigned:
+                    type: integer
+                  failed:
+                    type: integer
+                  assignments:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        taskId:
+                          type: string
+                        workerId:
+                          type: string
+                        score:
+                          type: number
+
+  /queues:
+    get:
+      tags:
+        - Queues
+      summary: List task queues
+      description: Get status of all task queues
+      operationId: listQueues
+      parameters:
+        - name: warehouseId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Queue status list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QueueStatus'
+
+  /queues/{queueId}/tasks:
+    get:
+      tags:
+        - Queues
+      summary: Get tasks in queue
+      description: Retrieve tasks from a specific queue
+      operationId: getQueueTasks
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: Tasks in queue
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Task'
+                  queueDepth:
+                    type: integer
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+
+  /queues/{queueId}/rebalance:
+    post:
+      tags:
+        - Queues
+      summary: Rebalance queue
+      description: Rebalance tasks in queue based on current priorities
+      operationId: rebalanceQueue
+      parameters:
+        - name: queueId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Queue rebalanced successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rebalanced:
+                    type: integer
+                  message:
+                    type: string
+
+  /mobile/tasks/next:
+    get:
+      tags:
+        - Mobile
+      summary: Get next task for worker
+      description: Retrieve the next task for a worker (mobile API)
+      operationId: getNextTask
+      parameters:
+        - name: workerId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: deviceId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Next task for worker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MobileTaskResponse'
+        '404':
+          description: No tasks available
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: No tasks available
+
+  /mobile/tasks/{taskId}/scan:
+    post:
+      tags:
+        - Mobile
+      summary: Scan barcode during task
+      description: Record a barcode scan during task execution
+      operationId: scanBarcode
+      parameters:
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - barcode
+                - scanType
+              properties:
+                barcode:
+                  type: string
+                  description: Scanned barcode value
+                scanType:
+                  type: string
+                  enum: [LOCATION, PRODUCT, LPN, CONTAINER]
+                  description: Type of barcode scanned
+                timestamp:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Scan validated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  message:
+                    type: string
+                  nextAction:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /mobile/tasks/assigned:
+    get:
+      tags:
+        - Mobile
+      summary: Get assigned tasks
+      description: Get all tasks assigned to a worker (mobile API)
+      operationId: getAssignedTasks
+      parameters:
+        - name: workerId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Assigned tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MobileTaskResponse'
+
+  /metrics/worker/{workerId}:
+    get:
+      tags:
+        - Monitoring
+      summary: Get worker metrics
+      description: Get productivity metrics for a specific worker
+      operationId: getWorkerMetrics
+      parameters:
+        - name: workerId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Worker metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkerMetrics'
+
+  /metrics/tasks:
+    get:
+      tags:
+        - Monitoring
+      summary: Get task metrics
+      description: Get aggregate task metrics
+      operationId: getTaskMetrics
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+      responses:
+        '200':
+          description: Task metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskMetrics'
+
+components:
+  parameters:
+    TaskId:
+      name: taskId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique identifier of the task
+
+    WarehouseId:
+      name: warehouseId
+      in: query
+      schema:
+        type: string
+      description: Filter by warehouse ID
+
+    TaskType:
+      name: taskType
+      in: query
+      schema:
+        $ref: '#/components/schemas/TaskType'
+      description: Filter by task type
+
+    TaskStatus:
+      name: status
+      in: query
+      schema:
+        $ref: '#/components/schemas/TaskStatus'
+      description: Filter by task status
+
+    AssignedTo:
+      name: assignedTo
+      in: query
+      schema:
+        type: string
+      description: Filter by assigned worker ID
+
+    DateFrom:
+      name: dateFrom
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Filter tasks created after this date
+
+    DateTo:
+      name: dateTo
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Filter tasks created before this date
+
+    PageNumber:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+      description: Page number for pagination
+
+    PageSize:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+      description: Number of items per page
+
+  schemas:
+    Task:
+      type: object
+      required:
+        - taskId
+        - taskType
+        - warehouseId
+        - status
+        - priority
+        - createdAt
+      properties:
+        taskId:
+          type: string
+          description: Unique task identifier
+        taskType:
+          $ref: '#/components/schemas/TaskType'
+        warehouseId:
+          type: string
+        status:
+          $ref: '#/components/schemas/TaskStatus'
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        assignedTo:
+          type: string
+          description: Worker ID
+        sourceLocation:
+          type: string
+        destinationLocation:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        actualQuantity:
+          type: integer
+          description: Actual quantity processed
+        lpn:
+          type: string
+          description: License Plate Number
+        waveId:
+          type: string
+        orderId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        assignedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+        estimatedDuration:
+          type: integer
+          description: Estimated duration in minutes
+        actualDuration:
+          type: integer
+          description: Actual duration in minutes
+        metadata:
+          type: object
+          additionalProperties: true
+
+    TaskDetails:
+      allOf:
+        - $ref: '#/components/schemas/Task'
+        - type: object
+          properties:
+            worker:
+              $ref: '#/components/schemas/Worker'
+            timeline:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaskEvent'
+            scans:
+              type: array
+              items:
+                $ref: '#/components/schemas/ScanRecord'
+
+    TaskType:
+      type: string
+      enum:
+        - PICK
+        - PACK
+        - PUTAWAY
+        - REPLENISH
+        - COUNT
+        - MOVE
+        - SHIP
+        - RECEIVE
+      description: Type of warehouse task
+
+    TaskStatus:
+      type: string
+      enum:
+        - PENDING
+        - ASSIGNED
+        - IN_PROGRESS
+        - COMPLETED
+        - FAILED
+        - CANCELLED
+      description: Current status of the task
+
+    CreateTaskRequest:
+      type: object
+      required:
+        - taskType
+        - warehouseId
+        - priority
+      properties:
+        taskType:
+          $ref: '#/components/schemas/TaskType'
+        warehouseId:
+          type: string
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        sourceLocation:
+          type: string
+        destinationLocation:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        lpn:
+          type: string
+        waveId:
+          type: string
+        orderId:
+          type: string
+        dueDate:
+          type: string
+          format: date-time
+        assignTo:
+          type: string
+          description: Optional direct assignment to worker
+        metadata:
+          type: object
+          additionalProperties: true
+
+    UpdateTaskRequest:
+      type: object
+      properties:
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        dueDate:
+          type: string
+          format: date-time
+        quantity:
+          type: integer
+        metadata:
+          type: object
+          additionalProperties: true
+
+    CompleteTaskRequest:
+      type: object
+      required:
+        - actualQuantity
+      properties:
+        actualQuantity:
+          type: integer
+          description: Actual quantity completed
+        notes:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        scans:
+          type: array
+          items:
+            type: object
+            properties:
+              barcode:
+                type: string
+              scanType:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+
+    TaskRecommendation:
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/Task'
+        score:
+          type: number
+          format: double
+          description: Recommendation score (0-100)
+        reasons:
+          type: array
+          items:
+            type: string
+          description: Reasons for recommendation
+        distanceMeters:
+          type: number
+          description: Distance from worker's current location
+        estimatedWalkTime:
+          type: integer
+          description: Estimated walk time in minutes
+
+    QueueStatus:
+      type: object
+      properties:
+        queueId:
+          type: string
+        queueName:
+          type: string
+        taskType:
+          $ref: '#/components/schemas/TaskType'
+        depth:
+          type: integer
+          description: Number of tasks in queue
+        oldestTaskAge:
+          type: integer
+          description: Age of oldest task in minutes
+        avgWaitTime:
+          type: integer
+          description: Average wait time in minutes
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+
+    MobileTaskResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+        taskType:
+          $ref: '#/components/schemas/TaskType'
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        sourceLocation:
+          type: string
+        destinationLocation:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        productName:
+          type: string
+        quantity:
+          type: integer
+        lpn:
+          type: string
+        orderId:
+          type: string
+        instructions:
+          type: array
+          items:
+            type: string
+          description: Step-by-step instructions
+        nextAction:
+          type: string
+          description: Next action for worker
+        estimatedDuration:
+          type: integer
+
+    Worker:
+      type: object
+      properties:
+        workerId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        skills:
+          type: array
+          items:
+            type: string
+        currentLocation:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, BUSY, OFFLINE]
+
+    TaskEvent:
+      type: object
+      properties:
+        eventType:
+          type: string
+          enum: [CREATED, ASSIGNED, STARTED, COMPLETED, FAILED, CANCELLED]
+        timestamp:
+          type: string
+          format: date-time
+        userId:
+          type: string
+        details:
+          type: string
+
+    ScanRecord:
+      type: object
+      properties:
+        barcode:
+          type: string
+        scanType:
+          type: string
+          enum: [LOCATION, PRODUCT, LPN, CONTAINER]
+        timestamp:
+          type: string
+          format: date-time
+        valid:
+          type: boolean
+
+    WorkerMetrics:
+      type: object
+      properties:
+        workerId:
+          type: string
+        totalTasks:
+          type: integer
+        completedTasks:
+          type: integer
+        failedTasks:
+          type: integer
+        avgCompletionTime:
+          type: number
+          description: Average completion time in minutes
+        productivity:
+          type: number
+          description: Units per hour
+        accuracy:
+          type: number
+          format: percentage
+        tasksByType:
+          type: object
+          additionalProperties:
+            type: integer
+
+    TaskMetrics:
+      type: object
+      properties:
+        totalTasks:
+          type: integer
+        completedTasks:
+          type: integer
+        pendingTasks:
+          type: integer
+        inProgressTasks:
+          type: integer
+        failedTasks:
+          type: integer
+        avgCompletionTime:
+          type: number
+          description: Average completion time in minutes
+        avgQueueTime:
+          type: number
+          description: Average queue time in minutes
+        tasksByType:
+          type: object
+          additionalProperties:
+            type: integer
+        tasksByPriority:
+          type: object
+          additionalProperties:
+            type: integer
+        completionRate:
+          type: number
+          format: percentage
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        first:
+          type: boolean
+        last:
+          type: boolean
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - bearerAuth: []
+  - apiKey: []

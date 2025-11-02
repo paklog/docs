@@ -1,0 +1,21 @@
+name: dp_inventory_stock_level_v1
+service: inventory
+domain: fulfillment
+kind: source-aligned
+description: >-
+  Latest stock levels by SKU (CloudEvents StockLevelChanged) with upsert by SKU.
+owner: inventory-platform@paklog.com
+kafka_topics:
+  - fulfillment.inventory.v1.events
+pinot_table: dp_inventory_stock_level_v1
+schema_file: pinot/schemas/inventory/dp_inventory_stock_level_v1.schema.json
+table_files:
+  dev: pinot/tables/inventory/dp_inventory_stock_level_v1.table.dev.json
+  staging: pinot/tables/inventory/dp_inventory_stock_level_v1.table.staging.json
+sla:
+  p95_query_latency: 2s
+  freshness: 5s
+  retention: 30d
+pii: false
+tags: [events, cloudevents, inventory]
+

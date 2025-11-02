@@ -1,0 +1,782 @@
+asyncapi: 3.0.0
+
+info:
+  title: Cartonization Service AsyncAPI
+  version: 1.0.0
+  description: |
+    AsyncAPI specification for the Cartonization Service event-driven architecture.
+    This service handles optimal package cartonization using Kafka messaging patterns.
+  contact:
+    name: Paklog Development Team
+    email: developers@paklog.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  production:
+    host: kafka:29092
+    protocol: kafka
+    description: Production Kafka cluster
+    tags:
+      - name: environment
+        description: production
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Development Kafka cluster
+    tags:
+      - name: environment
+        description: development
+
+defaultContentType: application/json
+
+channels:
+  cartonization.requests:
+    address: cartonization.requests
+    title: Cartonization Requests
+    description: Channel for receiving cartonization calculation requests
+    messages:
+      cartonizationRequest:
+        $ref: '#/components/messages/CartonizationRequest'
+    
+  cartonization.responses:
+    address: cartonization.responses
+    title: Cartonization Responses
+    description: Channel for publishing cartonization calculation results
+    messages:
+      cartonizationResponse:
+        $ref: '#/components/messages/CartonizationResponse'
+    
+  cartonization.solutions:
+    address: cartonization.solutions
+    title: Packing Solutions
+    description: Channel for publishing calculated packing solutions
+    messages:
+      packingSolutionCalculated:
+        $ref: '#/components/messages/PackingSolutionCalculated'
+    
+  cartonization.events:
+    address: cartonization.events
+    title: Domain Events
+    description: Channel for publishing domain events from the cartonization service
+    messages:
+      cartonCreated:
+        $ref: '#/components/messages/CartonCreated'
+      cartonUpdated:
+        $ref: '#/components/messages/CartonUpdated'
+      cartonDeactivated:
+        $ref: '#/components/messages/CartonDeactivated'
+    
+  carton.management.requests:
+    address: carton.management.requests
+    title: Carton Management Requests
+    description: Channel for carton lifecycle management operations
+    messages:
+      cartonManagementRequest:
+        $ref: '#/components/messages/CartonManagementRequest'
+    
+  cartonization.requests.dlq:
+    address: cartonization.requests.dlq
+    title: Dead Letter Queue
+    description: Channel for failed cartonization requests that couldn't be processed
+    messages:
+      failedCartonizationRequest:
+        $ref: '#/components/messages/CartonizationRequest'
+
+operations:
+  processCartonizationRequest:
+    action: receive
+    channel:
+      $ref: '#/channels/cartonization.requests'
+    title: Process Cartonization Request
+    summary: Consume and process cartonization requests
+    description: |
+      Receives cartonization requests from external systems and processes them
+      to calculate optimal packing solutions.
+    tags:
+      - name: cartonization
+      - name: consumer
+    messages:
+      - $ref: '#/channels/cartonization.requests/messages/cartonizationRequest'
+  
+  publishCartonizationResponse:
+    action: send
+    channel:
+      $ref: '#/channels/cartonization.responses'
+    title: Publish Cartonization Response
+    summary: Send cartonization calculation results
+    description: |
+      Publishes the results of cartonization calculations, including success responses
+      with packing solutions or error responses with failure details.
+    tags:
+      - name: cartonization
+      - name: producer
+    messages:
+      - $ref: '#/channels/cartonization.responses/messages/cartonizationResponse'
+  
+  publishPackingSolution:
+    action: send
+    channel:
+      $ref: '#/channels/cartonization.solutions'
+    title: Publish Packing Solution
+    summary: Send calculated packing solution events
+    description: |
+      Publishes domain events when packing solutions are successfully calculated,
+      providing metrics and solution details for downstream systems.
+    tags:
+      - name: domain-events
+      - name: producer
+    messages:
+      - $ref: '#/channels/cartonization.solutions/messages/packingSolutionCalculated'
+  
+  publishDomainEvents:
+    action: send
+    channel:
+      $ref: '#/channels/cartonization.events'
+    title: Publish Domain Events
+    summary: Send carton lifecycle domain events
+    description: |
+      Publishes domain events related to carton lifecycle management,
+      including creation, updates, and deactivation events.
+    tags:
+      - name: domain-events
+      - name: producer
+    messages:
+      - $ref: '#/channels/cartonization.events/messages/cartonCreated'
+      - $ref: '#/channels/cartonization.events/messages/cartonUpdated'
+      - $ref: '#/channels/cartonization.events/messages/cartonDeactivated'
+  
+  processCartonManagement:
+    action: receive
+    channel:
+      $ref: '#/channels/carton.management.requests'
+    title: Process Carton Management Requests
+    summary: Handle carton lifecycle management operations
+    description: |
+      Receives requests for carton management operations such as creating,
+      updating, or deactivating carton types.
+    tags:
+      - name: carton-management
+      - name: consumer
+    messages:
+      - $ref: '#/channels/carton.management.requests/messages/cartonManagementRequest'
+
+components:
+  messages:
+    CartonizationRequest:
+      name: CartonizationRequest
+      title: Cartonization Request
+      summary: Request for cartonization calculation
+      description: Event containing items to be packed and packing preferences
+      contentType: application/json
+      tags:
+        - name: request
+        - name: cartonization
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '#/components/schemas/CartonizationRequestPayload'
+      examples:
+        - name: Basic cartonization request
+          summary: Simple request with multiple items
+          payload:
+            requestId: req-12345
+            orderId: order-67890
+            customerId: customer-abc
+            items:
+              - sku: PRODUCT-001
+                quantity: 2
+                category: Electronics
+                fragile: true
+              - sku: PRODUCT-002
+                quantity: 1
+                category: Books
+                fragile: false
+            preferences:
+              optimizeForMinimumBoxes: true
+              allowMixedCategories: false
+              separateFragileItems: true
+              maxUtilizationThreshold: 0.85
+              preferredCartonSize: medium
+            priority: HIGH
+            requestedAt: '2024-01-15T10:30:00Z'
+            source: order-management-service
+
+    CartonizationResponse:
+      name: CartonizationResponse
+      title: Cartonization Response
+      summary: Response with cartonization calculation results
+      description: Event containing the calculated packing solution or error details
+      contentType: application/json
+      tags:
+        - name: response
+        - name: cartonization
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '#/components/schemas/CartonizationResponsePayload'
+      examples:
+        - name: Successful cartonization response
+          summary: Response with calculated packing solution
+          payload:
+            requestId: req-12345
+            orderId: order-67890
+            solutionId: sol-abc123
+            status: SUCCESS
+            packages:
+              - cartonId: medium-box-001
+                cartonName: Medium Box
+                itemSkus: [PRODUCT-001, PRODUCT-001]
+                totalItems: 2
+                utilization: 0.75
+                totalWeight: 2.5
+                usedVolume: 1500.0
+              - cartonId: small-box-001
+                cartonName: Small Box
+                itemSkus: [PRODUCT-002]
+                totalItems: 1
+                utilization: 0.60
+                totalWeight: 0.8
+                usedVolume: 600.0
+            metrics:
+              totalPackages: 2
+              totalItems: 3
+              averageUtilization: 0.675
+              totalVolume: 2100.0
+              totalWeight: 3.3
+            errorMessage: null
+            processedAt: '2024-01-15T10:30:05Z'
+            processingTimeMs: 5000
+
+    PackingSolutionCalculated:
+      name: PackingSolutionCalculated
+      title: Packing Solution Calculated
+      summary: Domain event for calculated packing solution
+      description: Event published when a packing solution is successfully calculated
+      contentType: application/json
+      tags:
+        - name: domain-event
+        - name: packing-solution
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/PackingSolutionCalculatedPayload'
+      examples:
+        - name: Packing solution calculated event
+          summary: Event for successful solution calculation
+          payload:
+            solutionId: sol-abc123
+            requestId: req-12345
+            orderId: order-67890
+            packageCount: 2
+            totalWeight: 3.3
+            averageUtilization: 0.675
+            timestamp: '2024-01-15T10:30:05Z'
+
+    CartonCreated:
+      name: CartonCreated
+      title: Carton Created
+      summary: Domain event for carton creation
+      description: Event published when a new carton type is created
+      contentType: application/json
+      tags:
+        - name: domain-event
+        - name: carton
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/CartonEventPayload'
+
+    CartonUpdated:
+      name: CartonUpdated
+      title: Carton Updated
+      summary: Domain event for carton updates
+      description: Event published when a carton type is updated
+      contentType: application/json
+      tags:
+        - name: domain-event
+        - name: carton
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/CartonEventPayload'
+
+    CartonDeactivated:
+      name: CartonDeactivated
+      title: Carton Deactivated
+      summary: Domain event for carton deactivation
+      description: Event published when a carton type is deactivated
+      contentType: application/json
+      tags:
+        - name: domain-event
+        - name: carton
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/CartonEventPayload'
+
+    CartonManagementRequest:
+      name: CartonManagementRequest
+      title: Carton Management Request
+      summary: Request for carton management operations
+      description: Event for managing carton lifecycle operations
+      contentType: application/json
+      tags:
+        - name: request
+        - name: carton-management
+      headers:
+        $ref: '#/components/schemas/KafkaHeaders'
+      payload:
+        $ref: '#/components/schemas/CartonManagementRequestPayload'
+
+  schemas:
+    KafkaHeaders:
+      type: object
+      description: Standard Kafka message headers
+      properties:
+        kafka_messageKey:
+          type: string
+          description: Kafka message key
+        kafka_topic:
+          type: string
+          description: Topic name
+        kafka_partition:
+          type: integer
+          description: Partition number
+        kafka_offset:
+          type: integer
+          description: Message offset
+        kafka_timestamp:
+          type: integer
+          format: int64
+          description: Message timestamp
+        correlationId:
+          type: string
+          description: Correlation ID for request tracking
+        messageId:
+          type: string
+          description: Unique message identifier
+
+    CloudEventHeaders:
+      type: object
+      description: CloudEvents specification headers
+      properties:
+        ce-specversion:
+          type: string
+          const: "1.0"
+          description: CloudEvents specification version
+        ce-type:
+          type: string
+          description: Event type
+          examples:
+            - com.paklog.cartonization.domain.packing-solution.calculated
+            - com.paklog.cartonization.domain.carton.created
+        ce-source:
+          type: string
+          format: uri
+          description: Event source
+          examples:
+            - /cartonization-service
+        ce-id:
+          type: string
+          description: Unique event identifier
+        ce-time:
+          type: string
+          format: date-time
+          description: Event timestamp
+        ce-subject:
+          type: string
+          description: Event subject
+
+    CartonizationRequestPayload:
+      type: object
+      description: Cartonization request event payload
+      required:
+        - requestId
+        - orderId
+        - items
+        - requestedAt
+      properties:
+        requestId:
+          type: string
+          description: Unique request identifier
+          example: req-12345
+        orderId:
+          type: string
+          description: Associated order identifier
+          example: order-67890
+        customerId:
+          type: string
+          description: Customer identifier
+          example: customer-abc
+        items:
+          type: array
+          description: Items to be packed
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ItemRequest'
+        preferences:
+          $ref: '#/components/schemas/PackingPreferences'
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+          description: Request processing priority
+          default: MEDIUM
+        requestedAt:
+          type: string
+          format: date-time
+          description: Request timestamp
+        source:
+          type: string
+          description: Source system that initiated the request
+          example: order-management-service
+
+    CartonizationResponsePayload:
+      type: object
+      description: Cartonization response event payload
+      required:
+        - requestId
+        - orderId
+        - status
+        - processedAt
+        - processingTimeMs
+      properties:
+        requestId:
+          type: string
+          description: Original request identifier
+        orderId:
+          type: string
+          description: Associated order identifier
+        solutionId:
+          type: string
+          description: Unique solution identifier (present on success)
+        status:
+          type: string
+          enum: [SUCCESS, FAILED, PARTIAL]
+          description: Processing status
+        packages:
+          type: array
+          description: Calculated packages (present on success)
+          items:
+            $ref: '#/components/schemas/PackageResponse'
+        metrics:
+          $ref: '#/components/schemas/SolutionMetrics'
+        errorMessage:
+          type: string
+          description: Error description (present on failure)
+        processedAt:
+          type: string
+          format: date-time
+          description: Processing completion timestamp
+        processingTimeMs:
+          type: integer
+          format: int64
+          description: Processing time in milliseconds
+
+    PackingSolutionCalculatedPayload:
+      type: object
+      description: Packing solution calculated domain event payload
+      required:
+        - solutionId
+        - requestId
+        - orderId
+        - packageCount
+        - timestamp
+      properties:
+        solutionId:
+          type: string
+          description: Unique solution identifier
+        requestId:
+          type: string
+          description: Original request identifier
+        orderId:
+          type: string
+          description: Associated order identifier
+        packageCount:
+          type: integer
+          minimum: 0
+          description: Number of packages in the solution
+        totalWeight:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Total weight of all packages
+        averageUtilization:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 1
+          description: Average utilization across all packages
+        timestamp:
+          type: string
+          format: date-time
+          description: Solution calculation timestamp
+
+    CartonEventPayload:
+      type: object
+      description: Carton domain event payload
+      required:
+        - cartonId
+        - name
+        - eventType
+        - timestamp
+      properties:
+        cartonId:
+          type: string
+          description: Unique carton identifier
+        name:
+          type: string
+          description: Carton name
+        eventType:
+          type: string
+          enum: [CREATED, UPDATED, DEACTIVATED]
+          description: Type of carton event
+        dimensions:
+          $ref: '#/components/schemas/Dimensions'
+        maxWeight:
+          $ref: '#/components/schemas/Weight'
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+          description: Carton status
+        timestamp:
+          type: string
+          format: date-time
+          description: Event timestamp
+
+    CartonManagementRequestPayload:
+      type: object
+      description: Carton management request payload
+      required:
+        - requestId
+        - operation
+        - timestamp
+      properties:
+        requestId:
+          type: string
+          description: Unique request identifier
+        operation:
+          type: string
+          enum: [CREATE, UPDATE, DEACTIVATE, BULK_CREATE, BULK_UPDATE]
+          description: Management operation type
+        cartonData:
+          $ref: '#/components/schemas/CartonData'
+        cartonId:
+          type: string
+          description: Target carton ID (for update/deactivate operations)
+        timestamp:
+          type: string
+          format: date-time
+          description: Request timestamp
+
+    ItemRequest:
+      type: object
+      description: Item to be packed
+      required:
+        - sku
+        - quantity
+      properties:
+        sku:
+          type: string
+          description: Stock Keeping Unit identifier
+          example: PRODUCT-001
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity of items
+          example: 2
+        category:
+          type: string
+          description: Item category
+          example: Electronics
+        fragile:
+          type: boolean
+          description: Whether the item is fragile
+          default: false
+
+    PackingPreferences:
+      type: object
+      description: Packing optimization preferences
+      properties:
+        optimizeForMinimumBoxes:
+          type: boolean
+          description: Optimize for minimum number of packages
+          default: true
+        allowMixedCategories:
+          type: boolean
+          description: Allow mixing different item categories
+          default: true
+        separateFragileItems:
+          type: boolean
+          description: Keep fragile items in separate packages
+          default: true
+        maxUtilizationThreshold:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 1
+          description: Maximum package utilization threshold
+          default: 0.85
+        preferredCartonSize:
+          type: string
+          enum: [small, medium, large, extra-large]
+          description: Preferred carton size when multiple options available
+
+    PackageResponse:
+      type: object
+      description: Calculated package in the solution
+      required:
+        - cartonId
+        - cartonName
+        - itemSkus
+        - totalItems
+      properties:
+        cartonId:
+          type: string
+          description: Selected carton identifier
+        cartonName:
+          type: string
+          description: Carton display name
+        itemSkus:
+          type: array
+          items:
+            type: string
+          description: SKUs of items in this package
+        totalItems:
+          type: integer
+          minimum: 0
+          description: Total number of items in package
+        utilization:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 1
+          description: Package space utilization ratio
+        totalWeight:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Total weight of package contents
+        usedVolume:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Used volume in the package
+
+    SolutionMetrics:
+      type: object
+      description: Overall solution metrics
+      required:
+        - totalPackages
+        - totalItems
+      properties:
+        totalPackages:
+          type: integer
+          minimum: 0
+          description: Total number of packages in solution
+        totalItems:
+          type: integer
+          minimum: 0
+          description: Total number of items across all packages
+        averageUtilization:
+          type: number
+          format: decimal
+          minimum: 0
+          maximum: 1
+          description: Average utilization across all packages
+        totalVolume:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Total volume of all packages
+        totalWeight:
+          type: number
+          format: decimal
+          minimum: 0
+          description: Total weight of all packages
+
+    Dimensions:
+      type: object
+      description: Physical dimensions
+      required:
+        - length
+        - width
+        - height
+        - unit
+      properties:
+        length:
+          type: number
+          format: decimal
+          minimum: 0.1
+          description: Length measurement
+        width:
+          type: number
+          format: decimal
+          minimum: 0.1
+          description: Width measurement
+        height:
+          type: number
+          format: decimal
+          minimum: 0.1
+          description: Height measurement
+        unit:
+          type: string
+          enum: [CENTIMETERS, INCHES]
+          description: Unit of measurement
+
+    Weight:
+      type: object
+      description: Weight measurement
+      required:
+        - value
+        - unit
+      properties:
+        value:
+          type: number
+          format: decimal
+          minimum: 0.01
+          description: Weight value
+        unit:
+          type: string
+          enum: [KILOGRAMS, POUNDS]
+          description: Weight unit
+
+    CartonData:
+      type: object
+      description: Carton definition data
+      required:
+        - name
+        - dimensions
+        - maxWeight
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Carton name
+        dimensions:
+          $ref: '#/components/schemas/Dimensions'
+        maxWeight:
+          $ref: '#/components/schemas/Weight'
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+          default: ACTIVE
+          description: Carton status
+
+tags:
+  - name: cartonization
+    description: Core cartonization processing operations
+  - name: carton-management
+    description: Carton lifecycle management operations
+  - name: domain-events
+    description: Domain events for system integration
+  - name: consumer
+    description: Message consuming operations
+  - name: producer
+    description: Message publishing operations
+  - name: request
+    description: Request type messages
+  - name: response
+    description: Response type messages

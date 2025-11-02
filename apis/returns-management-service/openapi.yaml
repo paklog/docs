@@ -1,0 +1,1192 @@
+openapi: 3.1.0
+info:
+  title: Returns Management API
+  version: 1.0.0
+  description: |
+    # Returns Management Microservice API
+
+    This API provides comprehensive returns management functionality for e-commerce operations,
+    including RMA (Return Merchandise Authorization) processing, fraud detection, condition
+    assessment, and refund calculation.
+
+    ## Key Features
+    - **RMA Management**: Create, approve, and deny return requests
+    - **Fraud Detection**: Automated fraud scoring and risk assessment
+    - **Condition Assessment**: Physical inspection and grading of returned items
+    - **Refund Processing**: Calculate and process refunds with restocking fees
+    - **Disposition Management**: Determine item disposition (resale, refurbish, liquidate, etc.)
+
+    ## Return Lifecycle
+    1. **PENDING** - Customer initiates return request
+    2. **APPROVED** - RMA approved, return label generated
+    3. **DENIED** - RMA denied due to policy violation or fraud
+    4. **RECEIVED** - Item received at warehouse
+    5. **COMPLETED** - Inspection complete, refund processed
+    6. **CANCELLED** - Customer cancelled before shipping
+
+    ## Base URL
+    - Development: `http://localhost:8080`
+    - Production: `https://api.paklog.com`
+
+  contact:
+    name: Paklog Team
+    email: support@paklog.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+  - url: https://api-staging.paklog.com
+    description: Staging server
+  - url: https://api.paklog.com
+    description: Production server
+
+tags:
+  - name: Returns
+    description: RMA and return processing operations
+  - name: Search
+    description: Search and query operations
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/v1/returns:
+    post:
+      tags:
+        - Returns
+      summary: Initiate a new return
+      description: |
+        Creates a new return request and generates an RMA (Return Merchandise Authorization) number.
+
+        **Business Rules:**
+        - At least one line item must be included
+        - All line items must have valid product IDs and quantities > 0
+        - Return must be initiated within the return window policy
+        - Fraud detection is automatically performed
+
+        **Fraud Detection:**
+        The system automatically calculates a fraud score based on:
+        - Customer's return history (last 90 days)
+        - Item value and type
+        - Address discrepancies
+        - Missing serial numbers for serialized products
+        - Time since delivery
+
+      operationId: initiateReturn
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiateReturnRequest'
+            examples:
+              electronics-return:
+                summary: Electronics return - defective item
+                value:
+                  customerId: "CUST-123456"
+                  orderId: "ORD-789012"
+                  customerEmail: "john.doe@example.com"
+                  customerName: "John Doe"
+                  lineItems:
+                    - lineItemId: "LINE-001"
+                      productId: "PROD-LAPTOP-001"
+                      sku: "LAPTOP-HP-SPEC15"
+                      productName: "HP Spectre x360 15"
+                      quantity: 1
+                      unitPrice: 1299.99
+                      returnReasonCategory: "DEFECTIVE"
+                      returnReasonDescription: "Screen flickering, keyboard backlight not working"
+                      serialNumber: "SN-LAPTOP-789456"
+                  primaryReturnReasonCategory: "DEFECTIVE"
+                  primaryReturnReasonDescription: "Laptop has hardware defects"
+                  returnAddress: "123 Main St, San Francisco, CA 94102"
+                  originalShippingAddress: "123 Main St, San Francisco, CA 94102"
+                  deliveryDate: "2025-10-15T10:30:00Z"
+
+              clothing-return:
+                summary: Clothing return - wrong size
+                value:
+                  customerId: "CUST-654321"
+                  orderId: "ORD-445566"
+                  customerEmail: "jane.smith@example.com"
+                  customerName: "Jane Smith"
+                  lineItems:
+                    - lineItemId: "LINE-002"
+                      productId: "PROD-SHIRT-200"
+                      sku: "SHIRT-BLUE-M"
+                      productName: "Cotton Blue Dress Shirt"
+                      quantity: 2
+                      unitPrice: 49.99
+                      returnReasonCategory: "SIZE_FIT"
+                      returnReasonDescription: "Size too small, need large instead"
+                    - lineItemId: "LINE-003"
+                      productId: "PROD-PANTS-150"
+                      sku: "PANTS-BLACK-32"
+                      productName: "Black Chino Pants"
+                      quantity: 1
+                      unitPrice: 69.99
+                      returnReasonCategory: "SIZE_FIT"
+                      returnReasonDescription: "Waist size incorrect"
+                  primaryReturnReasonCategory: "SIZE_FIT"
+                  primaryReturnReasonDescription: "Items do not fit properly"
+                  returnAddress: "456 Oak Ave, New York, NY 10001"
+                  originalShippingAddress: "456 Oak Ave, New York, NY 10001"
+                  deliveryDate: "2025-10-20T14:00:00Z"
+
+      responses:
+        '201':
+          description: Return successfully initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnResponse'
+              examples:
+                success-response:
+                  summary: Successful return initiation
+                  value:
+                    id: "ret_1a2b3c4d5e6f"
+                    rmaNumber: "RMA-20251101-A1B2C3"
+                    customerId: "CUST-123456"
+                    orderId: "ORD-789012"
+                    customerEmail: "john.doe@example.com"
+                    customerName: "John Doe"
+                    lineItems:
+                      - lineItemId: "LINE-001"
+                        productId: "PROD-LAPTOP-001"
+                        sku: "LAPTOP-HP-SPEC15"
+                        productName: "HP Spectre x360 15"
+                        quantity: 1
+                        unitPrice: 1299.99
+                        returnReason: "DEFECTIVE: Screen flickering, keyboard backlight not working"
+                        conditionGrade: null
+                        qualityScore: null
+                        dispositionType: null
+                        refundAmount: null
+                        assessmentCompleted: false
+                    status: "PENDING"
+                    primaryReturnReason: "DEFECTIVE: Laptop has hardware defects"
+                    fraudIndicators:
+                      fraudScore: 25
+                      riskLevel: "LOW"
+                      highValueItem: true
+                      frequentReturner: false
+                      returnCountLast90Days: 1
+                    requestedDate: "2025-11-01T10:00:00Z"
+                    approvedDate: null
+                    receivedDate: null
+                    completedDate: null
+                    totalRefundAmount: null
+                    returnAddress: "123 Main St, San Francisco, CA 94102"
+                    warehouseId: null
+                    approvedBy: null
+                    deniedBy: null
+                    denialReason: null
+                    createdAt: "2025-11-01T10:00:00Z"
+                    updatedAt: "2025-11-01T10:00:00Z"
+
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    get:
+      tags:
+        - Search
+      summary: Search returns
+      description: |
+        Search for returns by customer ID or order ID. At least one search parameter must be provided.
+
+        **Use Cases:**
+        - View all returns for a specific customer
+        - Find returns associated with a particular order
+        - Customer service lookup for support inquiries
+
+      operationId: searchReturns
+      parameters:
+        - name: customerId
+          in: query
+          description: Filter by customer ID
+          schema:
+            type: string
+          example: "CUST-123456"
+        - name: orderId
+          in: query
+          description: Filter by order ID
+          schema:
+            type: string
+          example: "ORD-789012"
+
+      responses:
+        '200':
+          description: Returns found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReturnResponse'
+              examples:
+                customer-returns:
+                  summary: Returns for a customer
+                  value:
+                    - id: "ret_1a2b3c4d5e6f"
+                      rmaNumber: "RMA-20251101-A1B2C3"
+                      customerId: "CUST-123456"
+                      orderId: "ORD-789012"
+                      status: "PENDING"
+                      requestedDate: "2025-11-01T10:00:00Z"
+                    - id: "ret_9z8y7x6w5v4u"
+                      rmaNumber: "RMA-20251015-D4E5F6"
+                      customerId: "CUST-123456"
+                      orderId: "ORD-112233"
+                      status: "COMPLETED"
+                      requestedDate: "2025-10-15T08:30:00Z"
+                      completedDate: "2025-10-22T16:45:00Z"
+
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/returns/{rmaNumber}:
+    get:
+      tags:
+        - Returns
+      summary: Get return by RMA number
+      description: |
+        Retrieves detailed information about a specific return using its RMA number.
+
+        **Response Includes:**
+        - Full return details with all line items
+        - Current status and timestamps
+        - Fraud indicators (if calculated)
+        - Refund information (if completed)
+        - Condition assessments (if inspected)
+
+      operationId: getReturnByRmaNumber
+      parameters:
+        - name: rmaNumber
+          in: path
+          required: true
+          description: The RMA number
+          schema:
+            type: string
+            pattern: '^RMA-\d{8}-[A-Z0-9]{6}$'
+          example: "RMA-20251101-A1B2C3"
+
+      responses:
+        '200':
+          description: Return found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnResponse'
+              examples:
+                completed-return:
+                  summary: Completed return with refund
+                  value:
+                    id: "ret_1a2b3c4d5e6f"
+                    rmaNumber: "RMA-20251101-A1B2C3"
+                    customerId: "CUST-123456"
+                    orderId: "ORD-789012"
+                    customerEmail: "john.doe@example.com"
+                    customerName: "John Doe"
+                    lineItems:
+                      - lineItemId: "LINE-001"
+                        productId: "PROD-LAPTOP-001"
+                        sku: "LAPTOP-HP-SPEC15"
+                        productName: "HP Spectre x360 15"
+                        quantity: 1
+                        unitPrice: 1299.99
+                        returnReason: "DEFECTIVE: Screen flickering"
+                        conditionGrade: "C"
+                        qualityScore: 65
+                        dispositionType: "REFURBISH"
+                        refundAmount:
+                          amount: 1169.99
+                          originalAmount: 1299.99
+                          restockingFee: 130.00
+                          currency: "USD"
+                        assessmentCompleted: true
+                    status: "COMPLETED"
+                    primaryReturnReason: "DEFECTIVE: Laptop has hardware defects"
+                    fraudIndicators:
+                      fraudScore: 25
+                      riskLevel: "LOW"
+                      highValueItem: true
+                      frequentReturner: false
+                      returnCountLast90Days: 1
+                    requestedDate: "2025-11-01T10:00:00Z"
+                    approvedDate: "2025-11-01T11:30:00Z"
+                    receivedDate: "2025-11-05T09:15:00Z"
+                    completedDate: "2025-11-05T14:30:00Z"
+                    totalRefundAmount:
+                      amount: 1169.99
+                      originalAmount: 1299.99
+                      restockingFee: 130.00
+                      currency: "USD"
+                    returnAddress: "123 Main St, San Francisco, CA 94102"
+                    warehouseId: "WH-SF-001"
+                    approvedBy: "agent-001"
+                    deniedBy: null
+                    denialReason: null
+                    createdAt: "2025-11-01T10:00:00Z"
+                    updatedAt: "2025-11-05T14:30:00Z"
+
+        '404':
+          description: Return not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                code: "VALIDATION_ERROR"
+                message: "Return not found with RMA: RMA-20251101-INVALID"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/returns/{rmaNumber}/approve:
+    put:
+      tags:
+        - Returns
+      summary: Approve RMA
+      description: |
+        Approves a return merchandise authorization, allowing the customer to ship the item back.
+
+        **Prerequisites:**
+        - Return must be in PENDING status
+        - Fraud score should be acceptable (not HIGH_RISK)
+
+        **Side Effects:**
+        - Status changes to APPROVED
+        - Return label is generated
+        - Customer notification is sent
+        - RmaApprovedEvent is published
+
+      operationId: approveRma
+      parameters:
+        - name: rmaNumber
+          in: path
+          required: true
+          description: The RMA number
+          schema:
+            type: string
+            pattern: '^RMA-\d{8}-[A-Z0-9]{6}$'
+          example: "RMA-20251101-A1B2C3"
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRmaRequest'
+            examples:
+              standard-approval:
+                summary: Standard RMA approval
+                value:
+                  approvedBy: "agent-001"
+                  notes: "Return approved. Standard return policy applies."
+
+      responses:
+        '200':
+          description: RMA approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnResponse'
+              examples:
+                approved:
+                  value:
+                    id: "ret_1a2b3c4d5e6f"
+                    rmaNumber: "RMA-20251101-A1B2C3"
+                    status: "APPROVED"
+                    approvedBy: "agent-001"
+                    approvedDate: "2025-11-01T11:30:00Z"
+
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/BusinessRuleViolation'
+
+  /api/v1/returns/{rmaNumber}/deny:
+    put:
+      tags:
+        - Returns
+      summary: Deny RMA
+      description: |
+        Denies a return merchandise authorization due to policy violations, fraud, or other reasons.
+
+        **Common Denial Reasons:**
+        - Outside return window
+        - High fraud risk
+        - Item not eligible for return
+        - Missing proof of purchase
+        - Item damaged by customer
+
+        **Side Effects:**
+        - Status changes to DENIED
+        - Customer notification is sent
+        - RmaDeniedEvent is published
+        - No return label is generated
+
+      operationId: denyRma
+      parameters:
+        - name: rmaNumber
+          in: path
+          required: true
+          description: The RMA number
+          schema:
+            type: string
+          example: "RMA-20251101-A1B2C3"
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DenyRmaRequest'
+            examples:
+              fraud-denial:
+                summary: Denial due to fraud
+                value:
+                  denialReason: "High fraud risk detected. Multiple returns from different addresses."
+                  deniedBy: "fraud-system"
+              policy-denial:
+                summary: Denial due to policy violation
+                value:
+                  denialReason: "Return request received outside 30-day return window"
+                  deniedBy: "agent-002"
+
+      responses:
+        '200':
+          description: RMA denied successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnResponse'
+
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/BusinessRuleViolation'
+
+  /api/v1/returns/{rmaNumber}/receive:
+    put:
+      tags:
+        - Returns
+      summary: Mark return as received
+      description: |
+        Records that a return has been physically received at the warehouse.
+
+        **Prerequisites:**
+        - Return must be in APPROVED status
+        - Customer must have shipped the item
+
+        **Next Steps:**
+        - Warehouse staff will inspect items
+        - Condition assessment will be performed
+        - Disposition will be determined
+
+      operationId: receiveReturn
+      parameters:
+        - name: rmaNumber
+          in: path
+          required: true
+          description: The RMA number
+          schema:
+            type: string
+          example: "RMA-20251101-A1B2C3"
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiveReturnRequest'
+            examples:
+              warehouse-receipt:
+                summary: Standard warehouse receipt
+                value:
+                  warehouseId: "WH-SF-001"
+                  receivedBy: "warehouse-clerk-042"
+                  notes: "Package received in good condition, no visible damage to shipping box"
+
+      responses:
+        '200':
+          description: Return marked as received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnResponse'
+
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/BusinessRuleViolation'
+
+  /api/v1/returns/{rmaNumber}/assess-condition:
+    post:
+      tags:
+        - Returns
+      summary: Assess item condition
+      description: |
+        Records the physical condition assessment of a returned line item.
+
+        **Condition Grading System:**
+        - **Grade A (95-100)**: Perfect condition, like new, no visible wear
+        - **Grade B (80-94)**: Minor wear, fully functional, can be resold as-is
+        - **Grade C (60-79)**: Noticeable wear, functional, needs refurbishment
+        - **Grade D (0-59)**: Damaged, may not be functional, for parts/liquidation
+
+        **Refund Impact:**
+        - Grade A: Full refund (no restocking fee)
+        - Grade B: 95% refund (5% restocking fee)
+        - Grade C: 90% refund (10% restocking fee)
+        - Grade D: 70% refund (30% restocking fee)
+
+      operationId: assessCondition
+      parameters:
+        - name: rmaNumber
+          in: path
+          required: true
+          description: The RMA number
+          schema:
+            type: string
+          example: "RMA-20251101-A1B2C3"
+
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConditionAssessmentRequest'
+            examples:
+              grade-a-assessment:
+                summary: Grade A - Perfect condition
+                value:
+                  lineItemId: "LINE-001"
+                  conditionGrade: "A"
+                  qualityScore: 98
+                  notes: "Item in perfect condition, original packaging intact, all accessories present"
+                  assessedBy: "inspector-015"
+
+              grade-c-assessment:
+                summary: Grade C - Needs refurbishment
+                value:
+                  lineItemId: "LINE-001"
+                  conditionGrade: "C"
+                  qualityScore: 65
+                  notes: "Screen has minor scratches, keyboard shows wear, battery health at 78%, needs refurbishment"
+                  assessedBy: "inspector-015"
+
+      responses:
+        '200':
+          description: Condition assessed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnResponse'
+
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/BusinessRuleViolation'
+
+  /api/v1/returns/{rmaNumber}/complete:
+    post:
+      tags:
+        - Returns
+      summary: Complete return processing
+      description: |
+        Completes the return processing, calculates final refund, and initiates refund payment.
+
+        **Prerequisites:**
+        - Return must be in RECEIVED status
+        - All line items must have condition assessments
+
+        **Processing:**
+        1. Validates all assessments are complete
+        2. Calculates refund for each line item based on condition
+        3. Applies restocking fees per policy
+        4. Determines disposition for each item
+        5. Initiates refund to original payment method
+        6. Updates inventory systems
+
+        **Events Published:**
+        - RefundProcessedEvent
+        - ReturnCompletedEvent
+        - DispositionDeterminedEvent (per item)
+
+      operationId: completeReturn
+      parameters:
+        - name: rmaNumber
+          in: path
+          required: true
+          description: The RMA number
+          schema:
+            type: string
+          example: "RMA-20251101-A1B2C3"
+
+      responses:
+        '200':
+          description: Return completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnResponse'
+              examples:
+                completed:
+                  summary: Completed return with refund
+                  value:
+                    id: "ret_1a2b3c4d5e6f"
+                    rmaNumber: "RMA-20251101-A1B2C3"
+                    status: "COMPLETED"
+                    completedDate: "2025-11-05T14:30:00Z"
+                    totalRefundAmount:
+                      amount: 1169.99
+                      originalAmount: 1299.99
+                      restockingFee: 130.00
+                      currency: "USD"
+
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/BusinessRuleViolation'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token-based authentication
+
+  schemas:
+    InitiateReturnRequest:
+      type: object
+      required:
+        - customerId
+        - orderId
+        - customerEmail
+        - customerName
+        - lineItems
+        - primaryReturnReasonCategory
+        - primaryReturnReasonDescription
+        - returnAddress
+        - originalShippingAddress
+        - deliveryDate
+      properties:
+        customerId:
+          type: string
+          description: Unique customer identifier
+          example: "CUST-123456"
+        orderId:
+          type: string
+          description: Original order identifier
+          example: "ORD-789012"
+        customerEmail:
+          type: string
+          format: email
+          description: Customer email for notifications
+          example: "john.doe@example.com"
+        customerName:
+          type: string
+          description: Customer full name
+          example: "John Doe"
+        lineItems:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/LineItemRequest'
+          description: Items being returned
+        primaryReturnReasonCategory:
+          type: string
+          enum:
+            - DEFECTIVE
+            - WRONG_ITEM
+            - SIZE_FIT
+            - NOT_AS_DESCRIBED
+            - DAMAGED_IN_TRANSIT
+            - QUALITY_ISSUES
+            - CHANGED_MIND
+            - ORDERED_BY_MISTAKE
+            - FOUND_BETTER_PRICE
+            - NO_LONGER_NEEDED
+            - ARRIVED_LATE
+            - OTHER
+          description: Primary category for return reason
+          example: "DEFECTIVE"
+        primaryReturnReasonDescription:
+          type: string
+          description: Detailed description of return reason
+          example: "Laptop has screen flickering issue"
+          minLength: 10
+          maxLength: 500
+        returnAddress:
+          type: string
+          description: Address where item will be shipped from
+          example: "123 Main St, San Francisco, CA 94102"
+        originalShippingAddress:
+          type: string
+          description: Original delivery address for fraud detection
+          example: "123 Main St, San Francisco, CA 94102"
+        deliveryDate:
+          type: string
+          format: date-time
+          description: Original delivery date (ISO 8601 format)
+          example: "2025-10-15T10:30:00Z"
+
+    LineItemRequest:
+      type: object
+      required:
+        - lineItemId
+        - productId
+        - sku
+        - quantity
+        - unitPrice
+        - returnReasonCategory
+        - returnReasonDescription
+      properties:
+        lineItemId:
+          type: string
+          description: Line item identifier from original order
+          example: "LINE-001"
+        productId:
+          type: string
+          description: Product identifier
+          example: "PROD-LAPTOP-001"
+        sku:
+          type: string
+          description: Stock keeping unit
+          example: "LAPTOP-HP-SPEC15"
+        productName:
+          type: string
+          description: Product name for display
+          example: "HP Spectre x360 15"
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity being returned
+          example: 1
+        unitPrice:
+          type: number
+          format: decimal
+          minimum: 0.01
+          description: Original unit price in USD
+          example: 1299.99
+        returnReasonCategory:
+          type: string
+          enum:
+            - DEFECTIVE
+            - WRONG_ITEM
+            - SIZE_FIT
+            - NOT_AS_DESCRIBED
+            - DAMAGED_IN_TRANSIT
+            - QUALITY_ISSUES
+            - CHANGED_MIND
+            - ORDERED_BY_MISTAKE
+            - FOUND_BETTER_PRICE
+            - NO_LONGER_NEEDED
+            - ARRIVED_LATE
+            - OTHER
+          description: Return reason category for this item
+          example: "DEFECTIVE"
+        returnReasonDescription:
+          type: string
+          description: Specific reason for returning this item
+          example: "Screen flickering, keyboard backlight not working"
+          minLength: 5
+          maxLength: 500
+        serialNumber:
+          type: string
+          description: Serial number (required for serialized products)
+          example: "SN-LAPTOP-789456"
+
+    ApproveRmaRequest:
+      type: object
+      required:
+        - approvedBy
+      properties:
+        approvedBy:
+          type: string
+          description: Identifier of person/system approving RMA
+          example: "agent-001"
+        notes:
+          type: string
+          description: Optional notes about the approval
+          example: "Return approved. Standard return policy applies."
+          maxLength: 1000
+
+    DenyRmaRequest:
+      type: object
+      required:
+        - denialReason
+        - deniedBy
+      properties:
+        denialReason:
+          type: string
+          description: Reason for denying the RMA
+          example: "Return request received outside 30-day return window"
+          minLength: 10
+          maxLength: 500
+        deniedBy:
+          type: string
+          description: Identifier of person/system denying RMA
+          example: "agent-002"
+
+    ReceiveReturnRequest:
+      type: object
+      required:
+        - warehouseId
+        - receivedBy
+      properties:
+        warehouseId:
+          type: string
+          description: Warehouse identifier where return was received
+          example: "WH-SF-001"
+        receivedBy:
+          type: string
+          description: Identifier of person receiving the return
+          example: "warehouse-clerk-042"
+        notes:
+          type: string
+          description: Optional notes about the receipt
+          example: "Package in good condition"
+          maxLength: 1000
+
+    ConditionAssessmentRequest:
+      type: object
+      required:
+        - lineItemId
+        - conditionGrade
+        - qualityScore
+        - assessedBy
+      properties:
+        lineItemId:
+          type: string
+          description: Line item being assessed
+          example: "LINE-001"
+        conditionGrade:
+          type: string
+          enum: [A, B, C, D]
+          description: |
+            Condition grade:
+            - A (95-100): Perfect condition
+            - B (80-94): Minor wear, fully functional
+            - C (60-79): Noticeable wear, needs refurbishment
+            - D (0-59): Damaged, may not be functional
+          example: "C"
+        qualityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Numeric quality score (must match grade range)
+          example: 65
+        notes:
+          type: string
+          description: Detailed assessment notes
+          example: "Screen has minor scratches, keyboard shows wear"
+          maxLength: 2000
+        assessedBy:
+          type: string
+          description: Identifier of person performing assessment
+          example: "inspector-015"
+
+    ReturnResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Internal return identifier
+          example: "ret_1a2b3c4d5e6f"
+        rmaNumber:
+          type: string
+          description: RMA number for customer reference
+          pattern: '^RMA-\d{8}-[A-Z0-9]{6}$'
+          example: "RMA-20251101-A1B2C3"
+        customerId:
+          type: string
+          example: "CUST-123456"
+        orderId:
+          type: string
+          example: "ORD-789012"
+        customerEmail:
+          type: string
+          format: email
+          example: "john.doe@example.com"
+        customerName:
+          type: string
+          example: "John Doe"
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineItemResponse'
+        status:
+          type: string
+          enum:
+            - PENDING
+            - APPROVED
+            - DENIED
+            - RECEIVED
+            - COMPLETED
+            - CANCELLED
+          description: Current return status
+          example: "PENDING"
+        primaryReturnReason:
+          type: string
+          description: Primary reason for return
+          example: "DEFECTIVE: Laptop has hardware defects"
+        fraudIndicators:
+          $ref: '#/components/schemas/FraudIndicatorsResponse'
+        requestedDate:
+          type: string
+          format: date-time
+          description: When return was initiated
+          example: "2025-11-01T10:00:00Z"
+        approvedDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: When RMA was approved
+          example: "2025-11-01T11:30:00Z"
+        receivedDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: When return was received at warehouse
+          example: "2025-11-05T09:15:00Z"
+        completedDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: When return processing was completed
+          example: "2025-11-05T14:30:00Z"
+        totalRefundAmount:
+          $ref: '#/components/schemas/RefundAmountResponse'
+          nullable: true
+        returnAddress:
+          type: string
+          example: "123 Main St, San Francisco, CA 94102"
+        warehouseId:
+          type: string
+          nullable: true
+          example: "WH-SF-001"
+        approvedBy:
+          type: string
+          nullable: true
+          example: "agent-001"
+        deniedBy:
+          type: string
+          nullable: true
+          example: "agent-002"
+        denialReason:
+          type: string
+          nullable: true
+          example: "Outside return window"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:00:00Z"
+
+    LineItemResponse:
+      type: object
+      properties:
+        lineItemId:
+          type: string
+          example: "LINE-001"
+        productId:
+          type: string
+          example: "PROD-LAPTOP-001"
+        sku:
+          type: string
+          example: "LAPTOP-HP-SPEC15"
+        productName:
+          type: string
+          example: "HP Spectre x360 15"
+        quantity:
+          type: integer
+          example: 1
+        unitPrice:
+          type: number
+          format: decimal
+          example: 1299.99
+        returnReason:
+          type: string
+          example: "DEFECTIVE: Screen flickering"
+        conditionGrade:
+          type: string
+          enum: [A, B, C, D]
+          nullable: true
+          example: "C"
+        qualityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          nullable: true
+          example: 65
+        dispositionType:
+          type: string
+          enum:
+            - RESALE
+            - REFURBISH
+            - LIQUIDATE
+            - RECYCLE
+            - DESTROY
+          nullable: true
+          description: |
+            Disposition determination:
+            - RESALE: Resell as-is (Grade A-B)
+            - REFURBISH: Repair and resell (Grade B-C)
+            - LIQUIDATE: Sell to liquidators (Grade C-D)
+            - RECYCLE: Recycle for parts (Grade D)
+            - DESTROY: Dispose of safely (Grade D, hazardous)
+          example: "REFURBISH"
+        refundAmount:
+          $ref: '#/components/schemas/RefundAmountResponse'
+          nullable: true
+        assessmentCompleted:
+          type: boolean
+          example: false
+
+    FraudIndicatorsResponse:
+      type: object
+      nullable: true
+      properties:
+        fraudScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Calculated fraud score (0-100, higher = more suspicious)
+          example: 25
+        riskLevel:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+          description: Risk level classification
+          example: "LOW"
+        highValueItem:
+          type: boolean
+          description: Return contains high-value items
+          example: true
+        frequentReturner:
+          type: boolean
+          description: Customer is a frequent returner
+          example: false
+        returnCountLast90Days:
+          type: integer
+          description: Number of returns by customer in last 90 days
+          example: 1
+
+    RefundAmountResponse:
+      type: object
+      nullable: true
+      properties:
+        amount:
+          type: number
+          format: decimal
+          description: Final refund amount after fees
+          example: 1169.99
+        originalAmount:
+          type: number
+          format: decimal
+          description: Original purchase amount
+          example: 1299.99
+        restockingFee:
+          type: number
+          format: decimal
+          description: Restocking fee deducted
+          example: 130.00
+        currency:
+          type: string
+          description: Currency code (ISO 4217)
+          example: "USD"
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Error code for programmatic handling
+          enum:
+            - VALIDATION_ERROR
+            - BUSINESS_RULE_VIOLATION
+            - INTERNAL_ERROR
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Customer ID is required"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    ValidationError:
+      description: Validation error in request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing-field:
+              summary: Missing required field
+              value:
+                code: "VALIDATION_ERROR"
+                message: "Customer ID is required"
+            invalid-format:
+              summary: Invalid field format
+              value:
+                code: "VALIDATION_ERROR"
+                message: "Invalid email format"
+
+    BusinessRuleViolation:
+      description: Business rule violation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            invalid-status:
+              summary: Invalid status transition
+              value:
+                code: "BUSINESS_RULE_VIOLATION"
+                message: "Can only approve returns in PENDING status"
+            incomplete-assessment:
+              summary: Incomplete assessments
+              value:
+                code: "BUSINESS_RULE_VIOLATION"
+                message: "All line items must be assessed before completion"
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "UNAUTHORIZED"
+            message: "Valid authentication token required"
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "INTERNAL_ERROR"
+            message: "An unexpected error occurred"

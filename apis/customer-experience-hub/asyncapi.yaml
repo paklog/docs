@@ -1,0 +1,1599 @@
+asyncapi: 3.0.0
+info:
+  title: Paklog Customer Experience Hub - Event-Driven Architecture
+  version: 1.0.0
+  description: |
+    # Customer Experience Hub - Asynchronous Event API
+
+    The **Paklog Customer Experience Hub** uses event-driven architecture to enable real-time,
+    scalable, and loosely-coupled integration with other microservices in the Paklog ecosystem.
+
+    ## Event-Driven Architecture Overview
+
+    This service publishes and subscribes to CloudEvents-formatted messages via Apache Kafka,
+    enabling:
+    - **Real-time notifications** when customer actions occur
+    - **Asynchronous processing** of support tickets and feedback
+    - **Event sourcing** for complete audit trails
+    - **Loose coupling** between microservices
+    - **Scalability** through distributed message processing
+
+    ## CloudEvents Standard
+
+    All events conform to the [CloudEvents 1.0 specification](https://cloudevents.io/),
+    providing a consistent, standardized event format across all Paklog microservices.
+
+    **CloudEvents Benefits:**
+    - Vendor-neutral event format
+    - Built-in event metadata (ID, source, type, time)
+    - Support for content negotiation
+    - Extensible via custom attributes
+
+    ## Event Processing Guarantees
+
+    - **At-least-once delivery**: Events may be delivered multiple times; consumers must be idempotent
+    - **Ordering**: Events within the same partition are ordered by timestamp
+    - **Retention**: Events retained for 7 days (configurable)
+    - **Replay capability**: Consumers can replay events from any offset
+
+    ## Message Format
+
+    All messages use CloudEvents JSON format with the following structure:
+    ```json
+    {
+      "specversion": "1.0",
+      "type": "com.paklog.customerx.ticket.created",
+      "source": "/customer-experience-hub",
+      "id": "unique-event-id",
+      "time": "2024-11-01T10:30:00Z",
+      "datacontenttype": "application/json",
+      "data": { /* event-specific payload */ }
+    }
+    ```
+
+    ## Topics Organization
+
+    Topics are organized by domain aggregate:
+    - `customerx.tickets.*`: Support ticket lifecycle events
+    - `customerx.feedback.*`: Customer feedback events
+    - `customerx.tracking.*`: Order tracking events
+    - `customerx.notifications.*`: Notification delivery events
+
+    ## Consumer Groups
+
+    Recommended consumer group naming: `{service-name}-{topic-name}-consumer`
+
+    Example: `notification-service-tickets-created-consumer`
+
+    ## Monitoring and Observability
+
+    All events include correlation IDs and trace context for distributed tracing:
+    - **X-Correlation-ID**: Request correlation across services
+    - **traceparent**: W3C Trace Context for OpenTelemetry integration
+
+  contact:
+    name: Paklog Event Architecture Team
+    email: event-architecture@paklog.com
+    url: https://paklog.com/docs/events
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  production:
+    host: kafka.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: environment
+        description: production
+      - name: region
+        description: us-west-2
+    bindings:
+      kafka:
+        schemaRegistryUrl: https://schema-registry.paklog.com
+        schemaRegistryVendor: Confluent
+
+  staging:
+    host: kafka-staging.paklog.com:9092
+    protocol: kafka
+    description: Staging Kafka cluster for testing
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+    tags:
+      - name: environment
+        description: staging
+      - name: region
+        description: us-west-2
+
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka
+    tags:
+      - name: environment
+        description: local
+
+defaultContentType: application/cloudevents+json
+
+channels:
+  customerx.tickets.created:
+    address: customerx.tickets.created
+    description: |
+      Published when a new support ticket is created by a customer.
+
+      **Published By:** Customer Experience Hub
+
+      **Consumed By:**
+      - Notification Service (sends confirmation email/SMS to customer)
+      - Analytics Service (tracks ticket creation metrics)
+      - Reporting Service (updates dashboards)
+      - CRM Service (updates customer interaction history)
+
+      **Use Cases:**
+      - Send ticket confirmation to customer
+      - Alert support team via Slack/Teams
+      - Track ticket creation SLA metrics
+      - Update customer satisfaction dashboards
+      - Trigger automated routing to appropriate team
+
+      **Partition Key:** `customerId` (ensures all tickets from same customer are ordered)
+
+      **Retention:** 7 days (configurable)
+    messages:
+      ticketCreated:
+        $ref: '#/components/messages/TicketCreatedEvent'
+    bindings:
+      kafka:
+        topic: customerx.tickets.created
+        partitions: 10
+        replicas: 3
+        configs:
+          cleanup.policy: delete
+          retention.ms: 604800000  # 7 days
+          compression.type: snappy
+
+  customerx.tickets.updated:
+    address: customerx.tickets.updated
+    description: |
+      Published when a support ticket status changes (e.g., assigned, in progress, resolved).
+
+      **Published By:** Customer Experience Hub, Support Agent Portal
+
+      **Consumed By:**
+      - Notification Service (notifies customer of status changes)
+      - Analytics Service (tracks resolution times, SLA compliance)
+      - Audit Service (maintains complete ticket history)
+
+      **Use Cases:**
+      - Notify customer when ticket is assigned or updated
+      - Alert customer when ticket is resolved
+      - Track SLA compliance and breach notifications
+      - Update real-time support dashboards
+      - Maintain audit trail of all changes
+
+      **Partition Key:** `ticketId` (ensures ordered updates for same ticket)
+    messages:
+      ticketUpdated:
+        $ref: '#/components/messages/TicketUpdatedEvent'
+    bindings:
+      kafka:
+        topic: customerx.tickets.updated
+        partitions: 10
+        replicas: 3
+        configs:
+          cleanup.policy: delete
+          retention.ms: 604800000
+
+  customerx.tickets.resolved:
+    address: customerx.tickets.resolved
+    description: |
+      Published when a support ticket is marked as resolved.
+
+      **Published By:** Customer Experience Hub, Support Agent Portal
+
+      **Consumed By:**
+      - Notification Service (sends resolution notification to customer)
+      - Feedback Service (triggers feedback request)
+      - Analytics Service (calculates resolution time metrics)
+      - Quality Assurance Service (random ticket review selection)
+
+      **Use Cases:**
+      - Send resolution notification to customer
+      - Request customer feedback on support experience
+      - Calculate and track resolution time SLAs
+      - Trigger quality assurance review process
+      - Update agent performance metrics
+
+      **Partition Key:** `ticketId`
+    messages:
+      ticketResolved:
+        $ref: '#/components/messages/TicketResolvedEvent'
+    bindings:
+      kafka:
+        topic: customerx.tickets.resolved
+        partitions: 10
+        replicas: 3
+        configs:
+          cleanup.policy: delete
+          retention.ms: 604800000
+
+  customerx.feedback.submitted:
+    address: customerx.feedback.submitted
+    description: |
+      Published when a customer submits feedback for an order or service interaction.
+
+      **Published By:** Customer Experience Hub, Mobile App, Web Portal
+
+      **Consumed By:**
+      - Analytics Service (NPS calculation, sentiment analysis)
+      - Notification Service (alerts for poor ratings)
+      - Quality Team Service (review negative feedback)
+      - Customer Success Service (identify at-risk customers)
+      - Rewards Service (thank customers for positive feedback)
+
+      **Use Cases:**
+      - Calculate customer and overall NPS scores
+      - Alert quality team for poor ratings (1-2 stars)
+      - Identify detractors for proactive outreach
+      - Track driver/delivery performance
+      - Trigger automated thank-you for promoters
+      - Feed ML models for sentiment analysis
+
+      **Partition Key:** `customerId`
+
+      **Special Handling:**
+      - Poor ratings (VERY_POOR, POOR) trigger high-priority alerts
+      - Excellent ratings may trigger loyalty rewards
+    messages:
+      feedbackSubmitted:
+        $ref: '#/components/messages/FeedbackSubmittedEvent'
+    bindings:
+      kafka:
+        topic: customerx.feedback.submitted
+        partitions: 10
+        replicas: 3
+        configs:
+          cleanup.policy: delete
+          retention.ms: 2592000000  # 30 days (longer retention for analytics)
+
+  customerx.feedback.responded:
+    address: customerx.feedback.responded
+    description: |
+      Published when the company responds to customer feedback.
+
+      **Published By:** Customer Success Service, Quality Team Service
+
+      **Consumed By:**
+      - Notification Service (notifies customer of response)
+      - Analytics Service (tracks response rate metrics)
+      - Customer Experience Hub (updates feedback status)
+
+      **Use Cases:**
+      - Notify customer that their feedback was acknowledged
+      - Track feedback response times and rates
+      - Close the feedback loop with customers
+      - Measure customer service quality
+
+      **Partition Key:** `feedbackId`
+    messages:
+      feedbackResponded:
+        $ref: '#/components/messages/FeedbackRespondedEvent'
+    bindings:
+      kafka:
+        topic: customerx.feedback.responded
+        partitions: 5
+        replicas: 3
+
+  customerx.tracking.updated:
+    address: customerx.tracking.updated
+    description: |
+      Published when order tracking status changes (e.g., picked up, in transit, delivered).
+
+      **Published By:** Logistics Service, Driver App, Warehouse Management System
+
+      **Consumed By:**
+      - Customer Experience Hub (stores tracking history)
+      - Notification Service (sends delivery updates to customers)
+      - Analytics Service (calculates delivery performance metrics)
+      - Mobile App Service (real-time push notifications)
+
+      **Use Cases:**
+      - Send real-time delivery updates to customers
+      - Push notifications for key milestones (out for delivery, delivered)
+      - Calculate on-time delivery rates
+      - Predict delivery delays proactively
+      - Update customer-facing tracking pages
+
+      **Partition Key:** `orderId`
+
+      **Update Frequency:**
+      - Can be very high during active deliveries
+      - Consider rate limiting notifications to customers
+    messages:
+      trackingUpdated:
+        $ref: '#/components/messages/TrackingUpdatedEvent'
+    bindings:
+      kafka:
+        topic: customerx.tracking.updated
+        partitions: 20  # Higher partitions for high throughput
+        replicas: 3
+        configs:
+          cleanup.policy: delete
+          retention.ms: 604800000
+
+  customerx.tracking.delivered:
+    address: customerx.tracking.delivered
+    description: |
+      Published when an order is successfully delivered to the customer.
+
+      **Published By:** Logistics Service, Driver App
+
+      **Consumed By:**
+      - Customer Experience Hub (records final delivery)
+      - Notification Service (sends delivery confirmation)
+      - Feedback Service (triggers feedback request after 2 hours)
+      - Billing Service (finalizes delivery charges)
+      - Analytics Service (delivery performance metrics)
+
+      **Use Cases:**
+      - Send delivery confirmation to customer
+      - Trigger feedback request (delayed by 2 hours)
+      - Close delivery workflow
+      - Calculate driver performance metrics
+      - Update inventory/warehouse systems
+
+      **Partition Key:** `orderId`
+
+      **Important:**
+      This is a terminal event for delivery lifecycle
+    messages:
+      trackingDelivered:
+        $ref: '#/components/messages/TrackingDeliveredEvent'
+    bindings:
+      kafka:
+        topic: customerx.tracking.delivered
+        partitions: 20
+        replicas: 3
+        configs:
+          cleanup.policy: delete
+          retention.ms: 2592000000  # 30 days
+
+  customerx.notifications.sent:
+    address: customerx.notifications.sent
+    description: |
+      Published when a notification (email, SMS, push) is successfully sent to a customer.
+
+      **Published By:** Notification Service
+
+      **Consumed By:**
+      - Customer Experience Hub (updates notification status)
+      - Analytics Service (notification delivery metrics)
+      - Audit Service (compliance and record-keeping)
+
+      **Use Cases:**
+      - Track notification delivery rates
+      - Audit customer communications
+      - Detect notification delivery failures
+      - Calculate notification costs
+
+      **Partition Key:** `customerId`
+    messages:
+      notificationSent:
+        $ref: '#/components/messages/NotificationSentEvent'
+    bindings:
+      kafka:
+        topic: customerx.notifications.sent
+        partitions: 10
+        replicas: 3
+
+  customerx.notifications.failed:
+    address: customerx.notifications.failed
+    description: |
+      Published when a notification fails to be delivered.
+
+      **Published By:** Notification Service
+
+      **Consumed By:**
+      - Customer Experience Hub (updates notification status)
+      - Alert Service (triggers retry or escalation)
+      - Analytics Service (failure rate tracking)
+
+      **Use Cases:**
+      - Trigger retry mechanisms
+      - Alert operations team for critical notification failures
+      - Track notification provider reliability
+      - Switch to alternative notification channels
+
+      **Partition Key:** `notificationId`
+
+      **Critical Handling:**
+      Failed notifications for high-priority tickets should trigger immediate alerts
+    messages:
+      notificationFailed:
+        $ref: '#/components/messages/NotificationFailedEvent'
+    bindings:
+      kafka:
+        topic: customerx.notifications.failed
+        partitions: 5
+        replicas: 3
+        configs:
+          cleanup.policy: delete
+          retention.ms: 2592000000  # 30 days for debugging
+
+operations:
+  publishTicketCreated:
+    action: send
+    channel:
+      $ref: '#/channels/customerx.tickets.created'
+    summary: Publish ticket created event
+    description: |
+      Publishes an event when a new support ticket is created.
+      This operation is triggered automatically when a customer creates a ticket via the REST API.
+    messages:
+      - $ref: '#/components/messages/TicketCreatedEvent'
+
+  publishTicketUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/customerx.tickets.updated'
+    summary: Publish ticket updated event
+    description: |
+      Publishes an event when a ticket status changes or is updated.
+      Status changes include: assignment, progress updates, customer responses, and comments.
+    messages:
+      - $ref: '#/components/messages/TicketUpdatedEvent'
+
+  publishTicketResolved:
+    action: send
+    channel:
+      $ref: '#/channels/customerx.tickets.resolved'
+    summary: Publish ticket resolved event
+    description: |
+      Publishes an event when a support ticket is marked as resolved.
+      This triggers feedback requests and closes the support workflow.
+    messages:
+      - $ref: '#/components/messages/TicketResolvedEvent'
+
+  publishFeedbackSubmitted:
+    action: send
+    channel:
+      $ref: '#/channels/customerx.feedback.submitted'
+    summary: Publish feedback submitted event
+    description: |
+      Publishes an event when customer feedback is submitted.
+      This triggers NPS calculation, sentiment analysis, and potential alerts for poor ratings.
+    messages:
+      - $ref: '#/components/messages/FeedbackSubmittedEvent'
+
+  subscribeToFeedbackResponded:
+    action: receive
+    channel:
+      $ref: '#/channels/customerx.feedback.responded'
+    summary: Subscribe to feedback response events
+    description: |
+      Listens for events when company responds to customer feedback.
+      Updates internal feedback status to track response completion.
+    messages:
+      - $ref: '#/components/messages/FeedbackRespondedEvent'
+
+  subscribeToTrackingUpdates:
+    action: receive
+    channel:
+      $ref: '#/channels/customerx.tracking.updated'
+    summary: Subscribe to tracking update events
+    description: |
+      Listens for order tracking status changes from logistics systems.
+      Stores tracking history and triggers customer notifications.
+    messages:
+      - $ref: '#/components/messages/TrackingUpdatedEvent'
+
+  subscribeToTrackingDelivered:
+    action: receive
+    channel:
+      $ref: '#/channels/customerx.tracking.delivered'
+    summary: Subscribe to delivery completion events
+    description: |
+      Listens for successful delivery events.
+      Records final delivery status and may trigger feedback requests.
+    messages:
+      - $ref: '#/components/messages/TrackingDeliveredEvent'
+
+  publishNotificationSent:
+    action: send
+    channel:
+      $ref: '#/channels/customerx.notifications.sent'
+    summary: Publish notification sent event
+    description: |
+      Publishes an event when a notification is successfully delivered.
+      Used for tracking and auditing customer communications.
+    messages:
+      - $ref: '#/components/messages/NotificationSentEvent'
+
+  publishNotificationFailed:
+    action: send
+    channel:
+      $ref: '#/channels/customerx.notifications.failed'
+    summary: Publish notification failed event
+    description: |
+      Publishes an event when notification delivery fails.
+      Triggers retry mechanisms and operational alerts.
+    messages:
+      - $ref: '#/components/messages/NotificationFailedEvent'
+
+components:
+  messages:
+    TicketCreatedEvent:
+      name: TicketCreatedEvent
+      title: Support Ticket Created
+      summary: Event published when a customer creates a new support ticket
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/TicketCreatedPayload'
+      examples:
+        - name: High Priority Damaged Package
+          summary: Customer reports damaged package with high priority
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.ticket.created
+            source: /customer-experience-hub
+            id: evt-tkt-20241101-001234
+            time: "2024-11-01T10:30:00Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-abc123
+            traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+            data:
+              ticketId: TKT-2024-789012
+              customerId: CUST-2024-001234
+              orderId: ORD-2024-567890
+              subject: Package arrived damaged
+              description: I received my order today (tracking #PKG123456), but the package was severely damaged. The box was crushed on one side and the contents appear to be broken.
+              priority: HIGH
+              status: OPEN
+              assignedTo: support-agent-42
+              createdAt: "2024-11-01T10:30:00Z"
+              slaDeadline: "2024-11-01T14:30:00Z"
+        - name: Medium Priority General Inquiry
+          summary: Customer asking about delivery options
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.ticket.created
+            source: /customer-experience-hub
+            id: evt-tkt-20241101-002345
+            time: "2024-11-01T11:15:00Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-xyz789
+            traceparent: "00-5cg03g4688c45eb7b4df030e1f1f5847-11g178bb1cb013c8-01"
+            data:
+              ticketId: TKT-2024-789013
+              customerId: CUST-2024-009876
+              orderId: ORD-2024-111222
+              subject: Can I change delivery address?
+              description: I placed an order yesterday and realized I need it delivered to my office instead of home. Is it possible to change the delivery address?
+              priority: MEDIUM
+              status: OPEN
+              assignedTo: support-agent-15
+              createdAt: "2024-11-01T11:15:00Z"
+              slaDeadline: "2024-11-02T11:15:00Z"
+
+    TicketUpdatedEvent:
+      name: TicketUpdatedEvent
+      title: Support Ticket Updated
+      summary: Event published when a support ticket status or details are updated
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/TicketUpdatedPayload'
+      examples:
+        - name: Ticket Status Changed to In Progress
+          summary: Support agent starts working on ticket
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.ticket.updated
+            source: /customer-experience-hub
+            id: evt-tkt-upd-20241101-003456
+            time: "2024-11-01T10:45:00Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-abc123
+            traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-11f067aa0ba902b8-01"
+            data:
+              ticketId: TKT-2024-789012
+              customerId: CUST-2024-001234
+              orderId: ORD-2024-567890
+              previousStatus: OPEN
+              currentStatus: IN_PROGRESS
+              assignedTo: support-agent-42
+              updatedAt: "2024-11-01T10:45:00Z"
+              changeDescription: Ticket assigned to support agent and investigation started
+              comment:
+                commentId: CMT-001
+                author: support-agent-42
+                content: I've started investigating your issue. I can see the damage in the photos you provided. I'm arranging a replacement shipment now.
+                timestamp: "2024-11-01T10:45:00Z"
+
+    TicketResolvedEvent:
+      name: TicketResolvedEvent
+      title: Support Ticket Resolved
+      summary: Event published when a support ticket is marked as resolved
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/TicketResolvedPayload'
+      examples:
+        - name: Ticket Successfully Resolved
+          summary: Support issue resolved and ticket closed
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.ticket.resolved
+            source: /customer-experience-hub
+            id: evt-tkt-res-20241101-004567
+            time: "2024-11-01T14:20:00Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-abc123
+            traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-22f067aa0ba902b9-01"
+            data:
+              ticketId: TKT-2024-789012
+              customerId: CUST-2024-001234
+              orderId: ORD-2024-567890
+              status: RESOLVED
+              assignedTo: support-agent-42
+              createdAt: "2024-11-01T10:30:00Z"
+              resolvedAt: "2024-11-01T14:20:00Z"
+              resolutionTimeMinutes: 230
+              slaDeadline: "2024-11-01T14:30:00Z"
+              metSLA: true
+              resolutionSummary: Replacement order created and expedited shipping arranged. Customer will receive new package within 24 hours with full refund of shipping costs.
+
+    FeedbackSubmittedEvent:
+      name: FeedbackSubmittedEvent
+      title: Customer Feedback Submitted
+      summary: Event published when a customer submits feedback
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/FeedbackSubmittedPayload'
+      examples:
+        - name: Excellent Delivery Feedback
+          summary: Very satisfied customer providing positive feedback
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.feedback.submitted
+            source: /customer-experience-hub
+            id: evt-fdb-20241101-005678
+            time: "2024-11-01T15:45:00Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-fdb456
+            traceparent: "00-6dh14h5799d56fc8c5eg141f2g2g6958-22h289cc2dc124d9-01"
+            data:
+              feedbackId: FDB-2024-456789
+              customerId: CUST-2024-001234
+              orderId: ORD-2024-567890
+              rating: EXCELLENT
+              ratingValue: 5
+              category: DELIVERY
+              comments: Outstanding service! Package arrived a day early, in perfect condition. The driver was professional and even waited for me to inspect the package. Will definitely use Paklog again!
+              submittedAt: "2024-11-01T15:45:00Z"
+              npsCategory: PROMOTER
+        - name: Poor Tracking Feedback
+          summary: Dissatisfied customer reporting tracking issues
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.feedback.submitted
+            source: /customer-experience-hub
+            id: evt-fdb-20241101-006789
+            time: "2024-11-01T16:30:00Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-fdb789
+            traceparent: "00-7ei25i6800e67gd9d6fh252g3h3h7069-33i390dd3ed235e0-01"
+            data:
+              feedbackId: FDB-2024-456790
+              customerId: CUST-2024-002468
+              orderId: ORD-2024-135790
+              rating: POOR
+              ratingValue: 2
+              category: TRACKING
+              comments: The tracking information was completely inaccurate. It said my package was delivered but I didn't receive it until 2 days later. Very frustrating.
+              submittedAt: "2024-11-01T16:30:00Z"
+              npsCategory: DETRACTOR
+              alertRequired: true
+              alertReason: Low rating (POOR) - requires immediate quality team review
+
+    FeedbackRespondedEvent:
+      name: FeedbackRespondedEvent
+      title: Feedback Response Sent
+      summary: Event published when company responds to customer feedback
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/FeedbackRespondedPayload'
+      examples:
+        - name: Response to Negative Feedback
+          summary: Quality team responds to customer's poor rating
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.feedback.responded
+            source: /customer-success-service
+            id: evt-fdb-resp-20241101-007890
+            time: "2024-11-01T17:15:00Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-fdb789
+            data:
+              feedbackId: FDB-2024-456790
+              customerId: CUST-2024-002468
+              respondedBy: quality-team-manager-5
+              responseMessage: We sincerely apologize for the tracking issues you experienced. We've identified the problem and are working to improve our tracking system accuracy. As a token of our apology, we've credited your account with a discount on your next shipment.
+              respondedAt: "2024-11-01T17:15:00Z"
+              responseTimeMinutes: 45
+
+    TrackingUpdatedEvent:
+      name: TrackingUpdatedEvent
+      title: Order Tracking Status Updated
+      summary: Event published when order tracking status changes
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/TrackingUpdatedPayload'
+      examples:
+        - name: Package In Transit
+          summary: Package arrives at distribution center
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.tracking.updated
+            source: /logistics-service
+            id: evt-trk-20241031-008901
+            time: "2024-10-31T09:15:00Z"
+            datacontenttype: application/json
+            correlationid: ord-20241030-567890
+            traceparent: "00-8fj36j7911f78he0e7gi363h4i4i8170-44j401ee4fe346f1-01"
+            data:
+              trackingId: TRK-2024-987654
+              orderId: ORD-2024-567890
+              customerId: CUST-2024-001234
+              previousStatus: PICKED_UP
+              currentStatus: IN_TRANSIT
+              previousLocation: San Francisco Warehouse, CA
+              currentLocation: Los Angeles Distribution Center, CA
+              timestamp: "2024-10-31T09:15:00Z"
+              notes: Package arrived at distribution center
+              estimatedDelivery: "2024-11-02T17:00:00Z"
+              carrierInfo: Paklog Express
+              trackingNumber: PKG123456789
+              notifyCustomer: true
+        - name: Out for Delivery
+          summary: Package loaded on delivery vehicle
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.tracking.updated
+            source: /logistics-service
+            id: evt-trk-20241101-009012
+            time: "2024-11-01T07:30:00Z"
+            datacontenttype: application/json
+            correlationid: ord-20241030-567890
+            traceparent: "00-8fj36j7911f78he0e7gi363h4i4i8170-55j512ff5gf457g2-01"
+            data:
+              trackingId: TRK-2024-987654
+              orderId: ORD-2024-567890
+              customerId: CUST-2024-001234
+              previousStatus: IN_TRANSIT
+              currentStatus: OUT_FOR_DELIVERY
+              previousLocation: Los Angeles Distribution Center, CA
+              currentLocation: Los Angeles Delivery Hub, CA
+              timestamp: "2024-11-01T07:30:00Z"
+              notes: Package loaded on delivery vehicle #DV-42. Driver - John Smith, ETA 2:00 PM
+              estimatedDelivery: "2024-11-01T14:00:00Z"
+              carrierInfo: Paklog Express
+              trackingNumber: PKG123456789
+              driverName: John Smith
+              driverPhone: "+1-555-0123"
+              vehicleId: DV-42
+              notifyCustomer: true
+              notificationPriority: HIGH
+
+    TrackingDeliveredEvent:
+      name: TrackingDeliveredEvent
+      title: Order Successfully Delivered
+      summary: Event published when order is delivered to customer
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/TrackingDeliveredPayload'
+      examples:
+        - name: Successful Delivery with Signature
+          summary: Package delivered and signed by customer
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.tracking.delivered
+            source: /logistics-service
+            id: evt-trk-del-20241101-010123
+            time: "2024-11-01T14:22:00Z"
+            datacontenttype: application/json
+            correlationid: ord-20241030-567890
+            traceparent: "00-8fj36j7911f78he0e7gi363h4i4i8170-66k623gg6hg568h3-01"
+            data:
+              trackingId: TRK-2024-987654
+              orderId: ORD-2024-567890
+              customerId: CUST-2024-001234
+              status: DELIVERED
+              deliveryLocation: 123 Main St, Los Angeles, CA 90001
+              deliveredAt: "2024-11-01T14:22:00Z"
+              estimatedDelivery: "2024-11-02T17:00:00Z"
+              deliveredEarly: true
+              earlyByHours: 26.63
+              signedBy: John Customer
+              signatureUrl: https://paklog.com/signatures/sig-20241101-abc123.png
+              photoUrl: https://paklog.com/delivery-photos/photo-20241101-abc123.jpg
+              driverName: John Smith
+              driverId: DRV-2024-0042
+              carrierInfo: Paklog Express
+              trackingNumber: PKG123456789
+              requestFeedback: true
+              feedbackDelayMinutes: 120
+
+    NotificationSentEvent:
+      name: NotificationSentEvent
+      title: Notification Successfully Sent
+      summary: Event published when notification is delivered to customer
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/NotificationSentPayload'
+      examples:
+        - name: Ticket Confirmation Email Sent
+          summary: Customer receives ticket creation confirmation via email
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.notification.sent
+            source: /notification-service
+            id: evt-notif-20241101-011234
+            time: "2024-11-01T10:30:15Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-abc123
+            data:
+              notificationId: NOTIF-2024-123456
+              customerId: CUST-2024-001234
+              type: EMAIL
+              subject: Your support ticket has been created - TKT-2024-789012
+              recipient: customer@example.com
+              sentAt: "2024-11-01T10:30:15Z"
+              relatedEntity: TKT-2024-789012
+              relatedEntityType: SUPPORT_TICKET
+              provider: SendGrid
+              messageId: sg-msg-20241101-xyz789
+
+    NotificationFailedEvent:
+      name: NotificationFailedEvent
+      title: Notification Delivery Failed
+      summary: Event published when notification fails to be delivered
+      contentType: application/cloudevents+json
+      payload:
+        $ref: '#/components/schemas/NotificationFailedPayload'
+      examples:
+        - name: SMS Delivery Failure
+          summary: SMS notification fails due to invalid phone number
+          payload:
+            specversion: "1.0"
+            type: com.paklog.customerx.notification.failed
+            source: /notification-service
+            id: evt-notif-fail-20241101-012345
+            time: "2024-11-01T10:30:30Z"
+            datacontenttype: application/json
+            correlationid: req-20241101-abc123
+            data:
+              notificationId: NOTIF-2024-123457
+              customerId: CUST-2024-001234
+              type: SMS
+              recipient: "+1-555-INVALID"
+              failedAt: "2024-11-01T10:30:30Z"
+              errorMessage: Invalid phone number format
+              errorCode: INVALID_RECIPIENT
+              relatedEntity: TKT-2024-789012
+              relatedEntityType: SUPPORT_TICKET
+              provider: Twilio
+              retryable: false
+              retryCount: 0
+              nextRetryAt: null
+
+  schemas:
+    TicketCreatedPayload:
+      type: object
+      description: CloudEvents payload for ticket creation event
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          description: CloudEvents specification version
+          const: "1.0"
+        type:
+          type: string
+          description: Event type identifier
+          const: com.paklog.customerx.ticket.created
+        source:
+          type: string
+          description: Source of the event
+          example: /customer-experience-hub
+        id:
+          type: string
+          description: Unique event identifier
+          example: evt-tkt-20241101-001234
+        time:
+          type: string
+          format: date-time
+          description: Event timestamp
+        datacontenttype:
+          type: string
+          description: Content type of data
+          const: application/json
+        correlationid:
+          type: string
+          description: Correlation ID for request tracing
+          example: req-20241101-abc123
+        traceparent:
+          type: string
+          description: W3C Trace Context for distributed tracing
+          example: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
+        data:
+          type: object
+          required:
+            - ticketId
+            - customerId
+            - orderId
+            - subject
+            - description
+            - priority
+            - status
+            - createdAt
+            - slaDeadline
+          properties:
+            ticketId:
+              type: string
+              example: TKT-2024-789012
+            customerId:
+              type: string
+              example: CUST-2024-001234
+            orderId:
+              type: string
+              example: ORD-2024-567890
+            subject:
+              type: string
+              example: Package arrived damaged
+            description:
+              type: string
+            priority:
+              type: string
+              enum: [CRITICAL, HIGH, MEDIUM, LOW]
+            status:
+              type: string
+              enum: [OPEN, IN_PROGRESS, WAITING_CUSTOMER, RESOLVED, CLOSED]
+            assignedTo:
+              type: string
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+            slaDeadline:
+              type: string
+              format: date-time
+
+    TicketUpdatedPayload:
+      type: object
+      description: CloudEvents payload for ticket update event
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.customerx.ticket.updated
+        source:
+          type: string
+        id:
+          type: string
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        correlationid:
+          type: string
+        traceparent:
+          type: string
+        data:
+          type: object
+          required:
+            - ticketId
+            - customerId
+            - orderId
+            - currentStatus
+            - updatedAt
+          properties:
+            ticketId:
+              type: string
+            customerId:
+              type: string
+            orderId:
+              type: string
+            previousStatus:
+              type: string
+              enum: [OPEN, IN_PROGRESS, WAITING_CUSTOMER, RESOLVED, CLOSED]
+            currentStatus:
+              type: string
+              enum: [OPEN, IN_PROGRESS, WAITING_CUSTOMER, RESOLVED, CLOSED]
+            assignedTo:
+              type: string
+              nullable: true
+            updatedAt:
+              type: string
+              format: date-time
+            changeDescription:
+              type: string
+            comment:
+              type: object
+              nullable: true
+              properties:
+                commentId:
+                  type: string
+                author:
+                  type: string
+                content:
+                  type: string
+                timestamp:
+                  type: string
+                  format: date-time
+
+    TicketResolvedPayload:
+      type: object
+      description: CloudEvents payload for ticket resolution event
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.customerx.ticket.resolved
+        source:
+          type: string
+        id:
+          type: string
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        correlationid:
+          type: string
+        traceparent:
+          type: string
+        data:
+          type: object
+          required:
+            - ticketId
+            - customerId
+            - orderId
+            - status
+            - createdAt
+            - resolvedAt
+            - resolutionTimeMinutes
+            - metSLA
+          properties:
+            ticketId:
+              type: string
+            customerId:
+              type: string
+            orderId:
+              type: string
+            status:
+              type: string
+              const: RESOLVED
+            assignedTo:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+            resolvedAt:
+              type: string
+              format: date-time
+            resolutionTimeMinutes:
+              type: integer
+              description: Time taken to resolve ticket in minutes
+            slaDeadline:
+              type: string
+              format: date-time
+            metSLA:
+              type: boolean
+              description: Whether ticket was resolved within SLA
+            resolutionSummary:
+              type: string
+              description: Summary of how the issue was resolved
+
+    FeedbackSubmittedPayload:
+      type: object
+      description: CloudEvents payload for feedback submission event
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.customerx.feedback.submitted
+        source:
+          type: string
+        id:
+          type: string
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        correlationid:
+          type: string
+        traceparent:
+          type: string
+        data:
+          type: object
+          required:
+            - feedbackId
+            - customerId
+            - orderId
+            - rating
+            - ratingValue
+            - category
+            - submittedAt
+            - npsCategory
+          properties:
+            feedbackId:
+              type: string
+            customerId:
+              type: string
+            orderId:
+              type: string
+            rating:
+              type: string
+              enum: [VERY_POOR, POOR, NEUTRAL, GOOD, EXCELLENT]
+            ratingValue:
+              type: integer
+              minimum: 1
+              maximum: 5
+              description: Numeric rating value (1-5)
+            category:
+              type: string
+              enum: [DELIVERY, DRIVER, PACKAGING, TRACKING, SUPPORT, OVERALL]
+            comments:
+              type: string
+            submittedAt:
+              type: string
+              format: date-time
+            npsCategory:
+              type: string
+              enum: [PROMOTER, PASSIVE, DETRACTOR]
+              description: NPS classification based on rating
+            alertRequired:
+              type: boolean
+              description: Whether this feedback requires immediate attention
+            alertReason:
+              type: string
+              description: Reason why alert is required
+
+    FeedbackRespondedPayload:
+      type: object
+      description: CloudEvents payload when feedback is responded to
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.customerx.feedback.responded
+        source:
+          type: string
+        id:
+          type: string
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        correlationid:
+          type: string
+        data:
+          type: object
+          required:
+            - feedbackId
+            - customerId
+            - respondedBy
+            - responseMessage
+            - respondedAt
+          properties:
+            feedbackId:
+              type: string
+            customerId:
+              type: string
+            respondedBy:
+              type: string
+              description: ID of person/system that responded
+            responseMessage:
+              type: string
+              description: Response message sent to customer
+            respondedAt:
+              type: string
+              format: date-time
+            responseTimeMinutes:
+              type: integer
+              description: Time taken to respond in minutes
+
+    TrackingUpdatedPayload:
+      type: object
+      description: CloudEvents payload for tracking status update
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.customerx.tracking.updated
+        source:
+          type: string
+        id:
+          type: string
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        correlationid:
+          type: string
+        traceparent:
+          type: string
+        data:
+          type: object
+          required:
+            - trackingId
+            - orderId
+            - customerId
+            - currentStatus
+            - currentLocation
+            - timestamp
+          properties:
+            trackingId:
+              type: string
+            orderId:
+              type: string
+            customerId:
+              type: string
+            previousStatus:
+              type: string
+            currentStatus:
+              type: string
+              enum: [ORDER_PLACED, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, DELIVERY_FAILED, RETURNED]
+            previousLocation:
+              type: string
+            currentLocation:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+            notes:
+              type: string
+            estimatedDelivery:
+              type: string
+              format: date-time
+            carrierInfo:
+              type: string
+            trackingNumber:
+              type: string
+            driverName:
+              type: string
+            driverPhone:
+              type: string
+            vehicleId:
+              type: string
+            notifyCustomer:
+              type: boolean
+              description: Whether to send customer notification for this update
+            notificationPriority:
+              type: string
+              enum: [LOW, MEDIUM, HIGH]
+
+    TrackingDeliveredPayload:
+      type: object
+      description: CloudEvents payload for successful delivery
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.customerx.tracking.delivered
+        source:
+          type: string
+        id:
+          type: string
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        correlationid:
+          type: string
+        traceparent:
+          type: string
+        data:
+          type: object
+          required:
+            - trackingId
+            - orderId
+            - customerId
+            - status
+            - deliveryLocation
+            - deliveredAt
+          properties:
+            trackingId:
+              type: string
+            orderId:
+              type: string
+            customerId:
+              type: string
+            status:
+              type: string
+              const: DELIVERED
+            deliveryLocation:
+              type: string
+              description: Actual delivery address
+            deliveredAt:
+              type: string
+              format: date-time
+            estimatedDelivery:
+              type: string
+              format: date-time
+            deliveredEarly:
+              type: boolean
+            earlyByHours:
+              type: number
+              description: Hours early (positive) or late (negative)
+            signedBy:
+              type: string
+              description: Name of person who signed for package
+            signatureUrl:
+              type: string
+              format: uri
+              description: URL to signature image
+            photoUrl:
+              type: string
+              format: uri
+              description: URL to delivery photo
+            driverName:
+              type: string
+            driverId:
+              type: string
+            carrierInfo:
+              type: string
+            trackingNumber:
+              type: string
+            requestFeedback:
+              type: boolean
+              description: Whether to request feedback from customer
+            feedbackDelayMinutes:
+              type: integer
+              description: Minutes to wait before requesting feedback
+
+    NotificationSentPayload:
+      type: object
+      description: CloudEvents payload for successful notification delivery
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.customerx.notification.sent
+        source:
+          type: string
+        id:
+          type: string
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        correlationid:
+          type: string
+        data:
+          type: object
+          required:
+            - notificationId
+            - customerId
+            - type
+            - recipient
+            - sentAt
+          properties:
+            notificationId:
+              type: string
+            customerId:
+              type: string
+            type:
+              type: string
+              enum: [SMS, EMAIL, PUSH, IN_APP, WEBHOOK]
+            subject:
+              type: string
+            recipient:
+              type: string
+              description: Email address, phone number, or device ID
+            sentAt:
+              type: string
+              format: date-time
+            relatedEntity:
+              type: string
+              description: ID of related entity (ticket, order, etc.)
+            relatedEntityType:
+              type: string
+              enum: [SUPPORT_TICKET, ORDER, FEEDBACK, TRACKING]
+            provider:
+              type: string
+              description: Notification provider (SendGrid, Twilio, etc.)
+            messageId:
+              type: string
+              description: Provider's message ID for tracking
+
+    NotificationFailedPayload:
+      type: object
+      description: CloudEvents payload for failed notification delivery
+      required:
+        - specversion
+        - type
+        - source
+        - id
+        - time
+        - datacontenttype
+        - data
+      properties:
+        specversion:
+          type: string
+          const: "1.0"
+        type:
+          type: string
+          const: com.paklog.customerx.notification.failed
+        source:
+          type: string
+        id:
+          type: string
+        time:
+          type: string
+          format: date-time
+        datacontenttype:
+          type: string
+          const: application/json
+        correlationid:
+          type: string
+        data:
+          type: object
+          required:
+            - notificationId
+            - customerId
+            - type
+            - recipient
+            - failedAt
+            - errorMessage
+            - errorCode
+          properties:
+            notificationId:
+              type: string
+            customerId:
+              type: string
+            type:
+              type: string
+              enum: [SMS, EMAIL, PUSH, IN_APP, WEBHOOK]
+            recipient:
+              type: string
+            failedAt:
+              type: string
+              format: date-time
+            errorMessage:
+              type: string
+              description: Detailed error message
+            errorCode:
+              type: string
+              description: Error code from provider
+            relatedEntity:
+              type: string
+            relatedEntityType:
+              type: string
+              enum: [SUPPORT_TICKET, ORDER, FEEDBACK, TRACKING]
+            provider:
+              type: string
+            retryable:
+              type: boolean
+              description: Whether this failure can be retried
+            retryCount:
+              type: integer
+              description: Number of retry attempts so far
+            nextRetryAt:
+              type: string
+              format: date-time
+              nullable: true
+              description: When next retry will be attempted
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: |
+        SASL/SCRAM-SHA-256 authentication for Kafka.
+
+        **Credentials:**
+        - Username and password provided via environment variables
+        - Credentials managed via secrets management system (Vault, AWS Secrets Manager)
+
+        **Configuration:**
+        ```properties
+        security.protocol=SASL_SSL
+        sasl.mechanism=SCRAM-SHA-256
+        sasl.jaas.config=org.apache.kafka.common.security.scram.ScramLoginModule required username="<USERNAME>" password="<PASSWORD>";
+        ```
+
+        **Best Practices:**
+        - Rotate credentials every 90 days
+        - Use separate credentials per environment
+        - Never commit credentials to version control

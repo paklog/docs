@@ -1,0 +1,644 @@
+asyncapi: 2.6.0
+info:
+  title: Wave Planning Service Events
+  version: 1.0.0
+  description: |
+    Event-driven API for Wave Planning Service using Apache Kafka.
+    This service publishes and subscribes to events related to wave creation, optimization, and execution.
+  contact:
+    name: WMS Team
+    email: wms-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  development:
+    url: localhost:9092
+    protocol: kafka
+    description: Local Kafka broker
+  production:
+    url: kafka-cluster.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+
+defaultContentType: application/json
+
+channels:
+  wave.created:
+    description: Published when a new wave is created
+    publish:
+      operationId: publishWaveCreated
+      summary: Wave created event
+      message:
+        $ref: '#/components/messages/WaveCreated'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Wave ID
+
+  wave.optimized:
+    description: Published when a wave is optimized
+    publish:
+      operationId: publishWaveOptimized
+      summary: Wave optimized event
+      message:
+        $ref: '#/components/messages/WaveOptimized'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Wave ID
+
+  wave.released:
+    description: Published when a wave is released for picking
+    publish:
+      operationId: publishWaveReleased
+      summary: Wave released event
+      message:
+        $ref: '#/components/messages/WaveReleased'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Wave ID
+
+  wave.started:
+    description: Published when wave execution starts
+    publish:
+      operationId: publishWaveStarted
+      summary: Wave started event
+      message:
+        $ref: '#/components/messages/WaveStarted'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Wave ID
+
+  wave.completed:
+    description: Published when a wave is completed
+    publish:
+      operationId: publishWaveCompleted
+      summary: Wave completed event
+      message:
+        $ref: '#/components/messages/WaveCompleted'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Wave ID
+
+  wave.cancelled:
+    description: Published when a wave is cancelled
+    publish:
+      operationId: publishWaveCancelled
+      summary: Wave cancelled event
+      message:
+        $ref: '#/components/messages/WaveCancelled'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Wave ID
+
+  wave.merged:
+    description: Published when waves are merged
+    publish:
+      operationId: publishWavesMerged
+      summary: Waves merged event
+      message:
+        $ref: '#/components/messages/WavesMerged'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: New wave ID
+
+  order.created:
+    description: Subscribe to order creation events
+    subscribe:
+      operationId: onOrderCreated
+      summary: Handle new orders for wave planning
+      message:
+        $ref: '#/components/messages/OrderCreated'
+
+  order.priority.changed:
+    description: Subscribe to order priority changes
+    subscribe:
+      operationId: onOrderPriorityChanged
+      summary: Handle order priority changes
+      message:
+        $ref: '#/components/messages/OrderPriorityChanged'
+
+  order.cancelled:
+    description: Subscribe to order cancellation events
+    subscribe:
+      operationId: onOrderCancelled
+      summary: Handle order cancellations
+      message:
+        $ref: '#/components/messages/OrderCancelled'
+
+  inventory.unavailable:
+    description: Subscribe to inventory availability issues
+    subscribe:
+      operationId: onInventoryUnavailable
+      summary: Handle inventory unavailability
+      message:
+        $ref: '#/components/messages/InventoryUnavailable'
+
+  pick.session.completed:
+    description: Subscribe to pick session completion
+    subscribe:
+      operationId: onPickSessionCompleted
+      summary: Track wave progress
+      message:
+        $ref: '#/components/messages/PickSessionCompleted'
+
+  carrier.cutoff.approaching:
+    description: Subscribe to carrier cutoff warnings
+    subscribe:
+      operationId: onCarrierCutoffApproaching
+      summary: Handle approaching carrier cutoffs
+      message:
+        $ref: '#/components/messages/CarrierCutoffApproaching'
+
+components:
+  messages:
+    WaveCreated:
+      name: WaveCreated
+      title: Wave Created Event
+      summary: Emitted when a new wave is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveCreatedPayload'
+
+    WaveOptimized:
+      name: WaveOptimized
+      title: Wave Optimized Event
+      summary: Emitted when a wave is optimized
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveOptimizedPayload'
+
+    WaveReleased:
+      name: WaveReleased
+      title: Wave Released Event
+      summary: Emitted when a wave is released for execution
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveReleasedPayload'
+
+    WaveStarted:
+      name: WaveStarted
+      title: Wave Started Event
+      summary: Emitted when wave execution begins
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveStartedPayload'
+
+    WaveCompleted:
+      name: WaveCompleted
+      title: Wave Completed Event
+      summary: Emitted when a wave is fully completed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveCompletedPayload'
+
+    WaveCancelled:
+      name: WaveCancelled
+      title: Wave Cancelled Event
+      summary: Emitted when a wave is cancelled
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveCancelledPayload'
+
+    WavesMerged:
+      name: WavesMerged
+      title: Waves Merged Event
+      summary: Emitted when multiple waves are merged
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WavesMergedPayload'
+
+    OrderCreated:
+      name: OrderCreated
+      title: Order Created Event
+      summary: Received when a new order is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OrderCreatedPayload'
+
+    OrderPriorityChanged:
+      name: OrderPriorityChanged
+      title: Order Priority Changed Event
+      summary: Received when order priority changes
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OrderPriorityChangedPayload'
+
+    OrderCancelled:
+      name: OrderCancelled
+      title: Order Cancelled Event
+      summary: Received when an order is cancelled
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/OrderCancelledPayload'
+
+    InventoryUnavailable:
+      name: InventoryUnavailable
+      title: Inventory Unavailable Event
+      summary: Received when inventory becomes unavailable
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InventoryUnavailablePayload'
+
+    PickSessionCompleted:
+      name: PickSessionCompleted
+      title: Pick Session Completed Event
+      summary: Received when a pick session is completed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PickSessionCompletedPayload'
+
+    CarrierCutoffApproaching:
+      name: CarrierCutoffApproaching
+      title: Carrier Cutoff Approaching Event
+      summary: Received when carrier cutoff time is approaching
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/CarrierCutoffApproachingPayload'
+
+  schemas:
+    WaveCreatedPayload:
+      type: object
+      required:
+        - waveId
+        - warehouseId
+        - type
+        - status
+        - createdAt
+        - orderIds
+      properties:
+        waveId:
+          type: string
+          description: Unique wave identifier
+        warehouseId:
+          type: string
+          description: Warehouse where wave is created
+        type:
+          type: string
+          enum: [TIME_BASED, CARRIER_BASED, ZONE_BASED, CAPACITY_BASED, PRIORITY_BASED]
+        status:
+          type: string
+          enum: [DRAFT, PLANNED]
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+        orderIds:
+          type: array
+          items:
+            type: string
+        plannedStartTime:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        metrics:
+          $ref: '#/components/schemas/WaveMetrics'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    WaveOptimizedPayload:
+      type: object
+      required:
+        - waveId
+        - optimizationCriteria
+        - beforeMetrics
+        - afterMetrics
+        - improvementPercent
+      properties:
+        waveId:
+          type: string
+        warehouseId:
+          type: string
+        optimizationCriteria:
+          type: object
+          properties:
+            minimizeTravelDistance:
+              type: boolean
+            balanceWorkload:
+              type: boolean
+            prioritizeSLA:
+              type: boolean
+        beforeMetrics:
+          $ref: '#/components/schemas/WaveMetrics'
+        afterMetrics:
+          $ref: '#/components/schemas/WaveMetrics'
+        improvementPercent:
+          type: number
+          format: double
+        optimizedAt:
+          type: string
+          format: date-time
+        optimizedBy:
+          type: string
+
+    WaveReleasedPayload:
+      type: object
+      required:
+        - waveId
+        - warehouseId
+        - orderIds
+        - releaseTime
+      properties:
+        waveId:
+          type: string
+        warehouseId:
+          type: string
+        orderIds:
+          type: array
+          items:
+            type: string
+        assignedPickers:
+          type: array
+          items:
+            type: string
+        releaseTime:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        estimatedDuration:
+          type: integer
+          description: Estimated duration in minutes
+        metrics:
+          $ref: '#/components/schemas/WaveMetrics'
+
+    WaveStartedPayload:
+      type: object
+      required:
+        - waveId
+        - actualStartTime
+      properties:
+        waveId:
+          type: string
+        warehouseId:
+          type: string
+        actualStartTime:
+          type: string
+          format: date-time
+        activeOperators:
+          type: array
+          items:
+            type: string
+        totalOrders:
+          type: integer
+        totalPicks:
+          type: integer
+
+    WaveCompletedPayload:
+      type: object
+      required:
+        - waveId
+        - completionTime
+        - finalMetrics
+      properties:
+        waveId:
+          type: string
+        warehouseId:
+          type: string
+        completionTime:
+          type: string
+          format: date-time
+        actualDuration:
+          type: integer
+          description: Actual duration in minutes
+        finalMetrics:
+          $ref: '#/components/schemas/WaveMetrics'
+        performance:
+          type: object
+          properties:
+            plannedVsActual:
+              type: number
+              description: Percentage comparison
+            efficiency:
+              type: number
+            completionRate:
+              type: number
+
+    WaveCancelledPayload:
+      type: object
+      required:
+        - waveId
+        - reason
+        - cancelledAt
+      properties:
+        waveId:
+          type: string
+        warehouseId:
+          type: string
+        reason:
+          type: string
+        affectedOrders:
+          type: array
+          items:
+            type: string
+        cancelledAt:
+          type: string
+          format: date-time
+        cancelledBy:
+          type: string
+
+    WavesMergedPayload:
+      type: object
+      required:
+        - newWaveId
+        - mergedWaveIds
+        - mergedAt
+      properties:
+        newWaveId:
+          type: string
+        mergedWaveIds:
+          type: array
+          items:
+            type: string
+        totalOrders:
+          type: integer
+        mergedAt:
+          type: string
+          format: date-time
+        mergedBy:
+          type: string
+
+    OrderCreatedPayload:
+      type: object
+      required:
+        - orderId
+        - customerId
+        - orderDate
+      properties:
+        orderId:
+          type: string
+        customerId:
+          type: string
+        orderDate:
+          type: string
+          format: date-time
+        requiredDate:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        carrier:
+          type: string
+        shippingMethod:
+          type: string
+        totalItems:
+          type: integer
+        totalWeight:
+          type: number
+        totalVolume:
+          type: number
+
+    OrderPriorityChangedPayload:
+      type: object
+      required:
+        - orderId
+        - oldPriority
+        - newPriority
+      properties:
+        orderId:
+          type: string
+        oldPriority:
+          type: string
+        newPriority:
+          type: string
+        reason:
+          type: string
+        changedAt:
+          type: string
+          format: date-time
+
+    OrderCancelledPayload:
+      type: object
+      required:
+        - orderId
+        - reason
+      properties:
+        orderId:
+          type: string
+        waveId:
+          type: string
+          description: Wave ID if order was already assigned
+        reason:
+          type: string
+        cancelledAt:
+          type: string
+          format: date-time
+
+    InventoryUnavailablePayload:
+      type: object
+      required:
+        - locationId
+        - productId
+        - reason
+      properties:
+        locationId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        affectedOrders:
+          type: array
+          items:
+            type: string
+        reason:
+          type: string
+        reportedAt:
+          type: string
+          format: date-time
+
+    PickSessionCompletedPayload:
+      type: object
+      required:
+        - sessionId
+        - waveId
+        - completedAt
+      properties:
+        sessionId:
+          type: string
+        waveId:
+          type: string
+        operatorId:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        totalPicks:
+          type: integer
+        successfulPicks:
+          type: integer
+        duration:
+          type: integer
+          description: Duration in minutes
+
+    CarrierCutoffApproachingPayload:
+      type: object
+      required:
+        - carrier
+        - cutoffTime
+        - minutesRemaining
+      properties:
+        carrier:
+          type: string
+        serviceLevel:
+          type: string
+        cutoffTime:
+          type: string
+          format: date-time
+        minutesRemaining:
+          type: integer
+        affectedOrders:
+          type: array
+          items:
+            type: string
+        recommendedAction:
+          type: string
+
+    WaveMetrics:
+      type: object
+      properties:
+        totalOrders:
+          type: integer
+        totalLines:
+          type: integer
+        totalUnits:
+          type: integer
+        totalVolume:
+          type: number
+        totalWeight:
+          type: number
+        estimatedPickers:
+          type: integer
+        estimatedDuration:
+          type: integer
+          description: Duration in minutes
+        totalDistance:
+          type: number
+        ordersByZone:
+          type: object
+          additionalProperties:
+            type: integer
+        ordersByCarrier:
+          type: object
+          additionalProperties:
+            type: integer

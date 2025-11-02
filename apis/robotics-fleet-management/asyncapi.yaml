@@ -1,0 +1,1188 @@
+asyncapi: 3.0.0
+info:
+  title: Robotics Fleet Management Event Streaming API
+  version: 1.0.0
+  description: |
+    # Robotics Fleet Management Event Streaming API
+
+    This API defines the asynchronous, event-driven communication patterns for the Robotics Fleet Management System
+    using Apache Kafka as the message broker.
+
+    ## Event-Driven Architecture
+
+    The system uses Domain-Driven Design (DDD) with domain events to enable:
+    - **Loose Coupling**: Services react to events without direct dependencies
+    - **Scalability**: Multiple consumers can process events in parallel
+    - **Auditability**: Complete event history for compliance and debugging
+    - **Real-time Processing**: Immediate reaction to fleet state changes
+    - **Event Sourcing**: Reconstruct system state from event history
+
+    ## Message Flow Patterns
+
+    ### Robot Lifecycle Events
+    1. **Registration**: `RobotRegisteredEvent` → Fleet updates inventory
+    2. **Task Assignment**: `RobotTaskAssignedEvent` → Analytics track assignment
+    3. **Task Execution**: `RobotTaskStartedEvent` → Monitoring dashboards update
+    4. **Task Completion**: `RobotTaskCompletedEvent` → Fleet rebalances workload
+    5. **Task Failure**: `RobotTaskFailedEvent` → Alert systems notify operators
+
+    ### Battery Management Events
+    1. **Low Battery**: `BatteryLowEvent` → Charging coordinator routes robot
+    2. **Charging Started**: `ChargingStartedEvent` → Station updates availability
+    3. **Charging Complete**: `ChargingCompletedEvent` → Robot returns to fleet
+
+    ### Fleet Optimization Events
+    1. **Fleet Rebalanced**: `FleetRebalancedEvent` → Analytics record optimization
+    2. **Maintenance Required**: `RobotMaintenanceRequiredEvent` → Maintenance scheduler acts
+
+    ## Message Patterns
+
+    ### Cloud Events Standard
+    All events follow the CloudEvents v1.0 specification:
+    - `ce-id`: Unique event identifier (UUID)
+    - `ce-source`: Event source URI
+    - `ce-type`: Event type identifier
+    - `ce-time`: Event timestamp (ISO 8601)
+    - `ce-specversion`: CloudEvents version (1.0)
+
+    ### Event Headers
+    - `correlation-id`: Trace related events across services
+    - `causation-id`: Link events in causal chains
+    - `aggregate-id`: Identify the aggregate root
+    - `aggregate-version`: Track aggregate version for optimistic locking
+
+    ## Kafka Configuration
+
+    ### Topics
+    - **Partitioning**: By robot ID or fleet ID for ordered processing
+    - **Retention**: 7 days for operational events, 90 days for audit events
+    - **Replication**: Factor of 3 for high availability
+    - **Compaction**: Log compaction for state snapshots
+
+    ### Consumer Groups
+    - `robotics-fleet-management`: Primary application consumer
+    - `analytics-service`: Analytics and reporting
+    - `monitoring-service`: Real-time dashboards
+    - `alert-service`: Operator notifications
+    - `audit-service`: Compliance and audit logging
+
+  contact:
+    name: Paklog Robotics Team
+    email: robotics@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  local:
+    host: localhost:9092
+    protocol: kafka
+    description: Local development Kafka broker
+    tags:
+      - name: env:development
+  development:
+    host: kafka-dev.paklog.com:9092
+    protocol: kafka
+    description: Development environment Kafka cluster
+    tags:
+      - name: env:development
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+  staging:
+    host: kafka-staging.paklog.com:9092
+    protocol: kafka
+    description: Staging environment Kafka cluster
+    tags:
+      - name: env:staging
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+  production:
+    host: kafka.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+    tags:
+      - name: env:production
+    security:
+      - $ref: '#/components/securitySchemes/saslScram'
+
+channels:
+  robotRegistered:
+    address: robot.registered
+    description: |
+      Events published when a new robot is registered in the fleet.
+
+      **Consumers:**
+      - Fleet Management Service: Updates fleet inventory
+      - Analytics Service: Records robot registration metrics
+      - Monitoring Service: Adds robot to monitoring dashboards
+    messages:
+      robotRegisteredEvent:
+        $ref: '#/components/messages/RobotRegisteredEvent'
+    servers:
+      - $ref: '#/servers/local'
+      - $ref: '#/servers/development'
+      - $ref: '#/servers/staging'
+      - $ref: '#/servers/production'
+
+  robotTaskAssigned:
+    address: robot.task.assigned
+    description: |
+      Events published when a task is assigned to a robot.
+
+      **Consumers:**
+      - Task Management Service: Updates task status
+      - Analytics Service: Tracks task assignment patterns
+      - Monitoring Service: Updates robot status displays
+    messages:
+      robotTaskAssignedEvent:
+        $ref: '#/components/messages/RobotTaskAssignedEvent'
+
+  robotTaskStarted:
+    address: robot.task.started
+    description: |
+      Events published when a robot starts executing an assigned task.
+
+      **Consumers:**
+      - Task Management Service: Updates task status to IN_PROGRESS
+      - Analytics Service: Records task start time for duration calculation
+      - Monitoring Service: Updates real-time dashboards
+    messages:
+      robotTaskStartedEvent:
+        $ref: '#/components/messages/RobotTaskStartedEvent'
+
+  robotTaskCompleted:
+    address: robot.task.completed
+    description: |
+      Events published when a robot successfully completes a task.
+
+      **Consumers:**
+      - Task Management Service: Marks task as COMPLETED
+      - Fleet Management Service: May trigger fleet rebalancing
+      - Analytics Service: Records completion metrics (duration, success rate)
+      - Billing Service: Records billable activity
+    messages:
+      robotTaskCompletedEvent:
+        $ref: '#/components/messages/RobotTaskCompletedEvent'
+
+  robotTaskFailed:
+    address: robot.task.failed
+    description: |
+      Events published when a robot fails to complete a task.
+
+      **Consumers:**
+      - Task Management Service: Marks task as FAILED and may retry
+      - Alert Service: Notifies operators of failure
+      - Analytics Service: Records failure metrics and reasons
+      - Incident Management: Creates incident tickets for investigation
+    messages:
+      robotTaskFailedEvent:
+        $ref: '#/components/messages/RobotTaskFailedEvent'
+
+  batteryLow:
+    address: robot.battery.low
+    description: |
+      Events published when a robot's battery level drops below thresholds.
+
+      **Battery Thresholds:**
+      - Low: ≤ 20% (warning)
+      - Critical: ≤ 10% (emergency)
+
+      **Consumers:**
+      - Charging Coordinator: Routes robot to nearest charging station
+      - Fleet Management: Prevents new task assignments
+      - Alert Service: Notifies operators for critical levels
+      - Analytics Service: Tracks battery usage patterns
+    messages:
+      batteryLowEvent:
+        $ref: '#/components/messages/BatteryLowEvent'
+
+  chargingStarted:
+    address: robot.charging.started
+    description: |
+      Events published when a robot begins charging at a station.
+
+      **Consumers:**
+      - Charging Station Service: Updates station availability
+      - Fleet Management: Marks robot as unavailable
+      - Analytics Service: Records charging session start
+      - Monitoring Service: Updates charging station displays
+    messages:
+      chargingStartedEvent:
+        $ref: '#/components/messages/ChargingStartedEvent'
+
+  chargingCompleted:
+    address: robot.charging.completed
+    description: |
+      Events published when a robot completes charging.
+
+      **Consumers:**
+      - Charging Station Service: Releases charging slot
+      - Fleet Management: Returns robot to available pool
+      - Analytics Service: Records charging duration and efficiency
+      - Task Scheduler: May immediately assign pending tasks
+    messages:
+      chargingCompletedEvent:
+        $ref: '#/components/messages/ChargingCompletedEvent'
+
+  robotMaintenanceRequired:
+    address: robot.maintenance.required
+    description: |
+      Events published when a robot requires maintenance based on health metrics.
+
+      **Maintenance Triggers:**
+      - Degraded sensor performance
+      - Motor wear indicators
+      - Frequent task failures
+      - Scheduled preventive maintenance
+
+      **Consumers:**
+      - Maintenance Scheduler: Creates maintenance work orders
+      - Fleet Management: Marks robot as requiring maintenance
+      - Alert Service: Notifies maintenance team
+      - Analytics Service: Tracks maintenance patterns
+    messages:
+      robotMaintenanceRequiredEvent:
+        $ref: '#/components/messages/RobotMaintenanceRequiredEvent'
+
+  fleetRebalanced:
+    address: fleet.rebalanced
+    description: |
+      Events published when the fleet workload is rebalanced.
+
+      **Rebalancing Triggers:**
+      - Utilization imbalance > 20%
+      - Idle robot count exceeds threshold
+      - Task queue length exceeds capacity
+
+      **Consumers:**
+      - Analytics Service: Records rebalancing events and effectiveness
+      - Monitoring Service: Updates fleet utilization dashboards
+      - Capacity Planning: Informs scaling decisions
+    messages:
+      fleetRebalancedEvent:
+        $ref: '#/components/messages/FleetRebalancedEvent'
+
+operations:
+  publishRobotRegistered:
+    action: send
+    channel:
+      $ref: '#/channels/robotRegistered'
+    summary: Publish robot registration event
+    description: |
+      Published by the Fleet Management Service when a new robot is registered.
+
+      **Trigger:** POST /api/v1/robots
+    messages:
+      - $ref: '#/components/messages/RobotRegisteredEvent'
+
+  subscribeRobotRegistered:
+    action: receive
+    channel:
+      $ref: '#/channels/robotRegistered'
+    summary: Subscribe to robot registration events
+    description: Receive notifications when new robots join the fleet
+
+  publishRobotTaskAssigned:
+    action: send
+    channel:
+      $ref: '#/channels/robotTaskAssigned'
+    summary: Publish task assignment event
+    description: |
+      Published when a task is assigned to a robot.
+
+      **Trigger:** PUT /api/v1/robots/{robotId}/assign-task or POST /api/v1/tasks
+    messages:
+      - $ref: '#/components/messages/RobotTaskAssignedEvent'
+
+  subscribeRobotTaskAssigned:
+    action: receive
+    channel:
+      $ref: '#/channels/robotTaskAssigned'
+    summary: Subscribe to task assignment events
+
+  publishRobotTaskStarted:
+    action: send
+    channel:
+      $ref: '#/channels/robotTaskStarted'
+    summary: Publish task started event
+    description: |
+      Published when a robot begins executing a task.
+
+      **Trigger:** Robot starts task execution
+    messages:
+      - $ref: '#/components/messages/RobotTaskStartedEvent'
+
+  subscribeRobotTaskStarted:
+    action: receive
+    channel:
+      $ref: '#/channels/robotTaskStarted'
+    summary: Subscribe to task started events
+
+  publishRobotTaskCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/robotTaskCompleted'
+    summary: Publish task completion event
+    description: |
+      Published when a robot successfully completes a task.
+
+      **Trigger:** Robot completes task successfully
+    messages:
+      - $ref: '#/components/messages/RobotTaskCompletedEvent'
+
+  subscribeRobotTaskCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/robotTaskCompleted'
+    summary: Subscribe to task completion events
+
+  publishRobotTaskFailed:
+    action: send
+    channel:
+      $ref: '#/channels/robotTaskFailed'
+    summary: Publish task failure event
+    description: |
+      Published when a robot fails to complete a task.
+
+      **Trigger:** Robot task execution failure
+    messages:
+      - $ref: '#/components/messages/RobotTaskFailedEvent'
+
+  subscribeRobotTaskFailed:
+    action: receive
+    channel:
+      $ref: '#/channels/robotTaskFailed'
+    summary: Subscribe to task failure events
+
+  publishBatteryLow:
+    action: send
+    channel:
+      $ref: '#/channels/batteryLow'
+    summary: Publish low battery event
+    description: |
+      Published when robot battery drops below threshold.
+
+      **Trigger:** PUT /api/v1/robots/{robotId}/battery (when level ≤ 20%)
+    messages:
+      - $ref: '#/components/messages/BatteryLowEvent'
+
+  subscribeBatteryLow:
+    action: receive
+    channel:
+      $ref: '#/channels/batteryLow'
+    summary: Subscribe to low battery events
+
+  publishChargingStarted:
+    action: send
+    channel:
+      $ref: '#/channels/chargingStarted'
+    summary: Publish charging started event
+    description: |
+      Published when a robot begins charging.
+
+      **Trigger:** Robot docks at charging station
+    messages:
+      - $ref: '#/components/messages/ChargingStartedEvent'
+
+  subscribeChargingStarted:
+    action: receive
+    channel:
+      $ref: '#/channels/chargingStarted'
+    summary: Subscribe to charging started events
+
+  publishChargingCompleted:
+    action: send
+    channel:
+      $ref: '#/channels/chargingCompleted'
+    summary: Publish charging completed event
+    description: |
+      Published when a robot completes charging.
+
+      **Trigger:** Robot battery reaches 100%
+    messages:
+      - $ref: '#/components/messages/ChargingCompletedEvent'
+
+  subscribeChargingCompleted:
+    action: receive
+    channel:
+      $ref: '#/channels/chargingCompleted'
+    summary: Subscribe to charging completed events
+
+  publishRobotMaintenanceRequired:
+    action: send
+    channel:
+      $ref: '#/channels/robotMaintenanceRequired'
+    summary: Publish maintenance required event
+    description: |
+      Published when a robot requires maintenance.
+
+      **Trigger:** Health metrics indicate maintenance needed
+    messages:
+      - $ref: '#/components/messages/RobotMaintenanceRequiredEvent'
+
+  subscribeRobotMaintenanceRequired:
+    action: receive
+    channel:
+      $ref: '#/channels/robotMaintenanceRequired'
+    summary: Subscribe to maintenance required events
+
+  publishFleetRebalanced:
+    action: send
+    channel:
+      $ref: '#/channels/fleetRebalanced'
+    summary: Publish fleet rebalanced event
+    description: |
+      Published when the fleet workload is rebalanced.
+
+      **Trigger:** Fleet utilization imbalance detected
+    messages:
+      - $ref: '#/components/messages/FleetRebalancedEvent'
+
+  subscribeFleetRebalanced:
+    action: receive
+    channel:
+      $ref: '#/channels/fleetRebalanced'
+    summary: Subscribe to fleet rebalanced events
+
+components:
+  messages:
+    RobotRegisteredEvent:
+      name: RobotRegisteredEvent
+      title: Robot Registered Event
+      summary: A new robot has been registered in the fleet
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/RobotRegisteredEventPayload'
+      examples:
+        - name: pickerRobotRegistered
+          summary: Picker robot registration
+          headers:
+            ce-id: "evt-12345678-1234-1234-1234-123456789abc"
+            ce-source: "/fleet-management/robots"
+            ce-type: "com.paklog.robotics.robot.registered.v1"
+            ce-time: "2025-11-01T10:30:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-abc123"
+            aggregate-id: "ROBOT-001"
+            aggregate-type: "Robot"
+            aggregate-version: 1
+          payload:
+            robotId: "ROBOT-001"
+            model: "PickerBot-3000"
+            initialPosition:
+              x: 100.5
+              y: 250.8
+              heading: 90.0
+            capabilities:
+              - PICKER
+              - SCANNER
+            occurredAt: "2025-11-01T10:30:00Z"
+        - name: transporterRobotRegistered
+          summary: Heavy transporter robot registration
+          headers:
+            ce-id: "evt-87654321-4321-4321-4321-cba987654321"
+            ce-source: "/fleet-management/robots"
+            ce-type: "com.paklog.robotics.robot.registered.v1"
+            ce-time: "2025-11-01T09:15:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-def456"
+            aggregate-id: "ROBOT-002"
+            aggregate-type: "Robot"
+            aggregate-version: 1
+          payload:
+            robotId: "ROBOT-002"
+            model: "TransportMax-5000"
+            initialPosition:
+              x: 500.0
+              y: 750.0
+              heading: 180.0
+            capabilities:
+              - TRANSPORTER
+              - LIFTER
+            occurredAt: "2025-11-01T09:15:00Z"
+
+    RobotTaskAssignedEvent:
+      name: RobotTaskAssignedEvent
+      title: Robot Task Assigned Event
+      summary: A task has been assigned to a robot
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/RobotTaskAssignedEventPayload'
+      examples:
+        - name: highPriorityPickTask
+          summary: High priority picking task assignment
+          headers:
+            ce-id: "evt-aabbccdd-1111-2222-3333-444455556666"
+            ce-source: "/fleet-management/robots/ROBOT-001"
+            ce-type: "com.paklog.robotics.robot.task.assigned.v1"
+            ce-time: "2025-11-01T10:35:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-task123"
+            causation-id: "evt-12345678-1234-1234-1234-123456789abc"
+            aggregate-id: "ROBOT-001"
+            aggregate-type: "Robot"
+            aggregate-version: 2
+          payload:
+            robotId: "ROBOT-001"
+            taskId: "TASK-123"
+            taskType: PICK
+            priority: HIGH
+            occurredAt: "2025-11-01T10:35:00Z"
+
+    RobotTaskStartedEvent:
+      name: RobotTaskStartedEvent
+      title: Robot Task Started Event
+      summary: A robot has started executing a task
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/RobotTaskStartedEventPayload'
+      examples:
+        - name: pickTaskStarted
+          summary: Robot begins picking task
+          headers:
+            ce-id: "evt-11223344-5566-7788-9900-aabbccddeeff"
+            ce-source: "/fleet-management/robots/ROBOT-001"
+            ce-type: "com.paklog.robotics.robot.task.started.v1"
+            ce-time: "2025-11-01T10:36:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-task123"
+            causation-id: "evt-aabbccdd-1111-2222-3333-444455556666"
+            aggregate-id: "ROBOT-001"
+            aggregate-type: "Robot"
+            aggregate-version: 3
+          payload:
+            robotId: "ROBOT-001"
+            taskId: "TASK-123"
+            position:
+              x: 100.5
+              y: 200.3
+              heading: 45.0
+            occurredAt: "2025-11-01T10:36:00Z"
+
+    RobotTaskCompletedEvent:
+      name: RobotTaskCompletedEvent
+      title: Robot Task Completed Event
+      summary: A robot has successfully completed a task
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/RobotTaskCompletedEventPayload'
+      examples:
+        - name: pickTaskCompleted
+          summary: Picking task completed successfully
+          headers:
+            ce-id: "evt-ffeeddcc-bbaa-9988-7766-554433221100"
+            ce-source: "/fleet-management/robots/ROBOT-001"
+            ce-type: "com.paklog.robotics.robot.task.completed.v1"
+            ce-time: "2025-11-01T10:40:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-task123"
+            causation-id: "evt-11223344-5566-7788-9900-aabbccddeeff"
+            aggregate-id: "ROBOT-001"
+            aggregate-type: "Robot"
+            aggregate-version: 4
+          payload:
+            robotId: "ROBOT-001"
+            taskId: "TASK-123"
+            position:
+              x: 500.0
+              y: 600.0
+              heading: 90.0
+            occurredAt: "2025-11-01T10:40:00Z"
+
+    RobotTaskFailedEvent:
+      name: RobotTaskFailedEvent
+      title: Robot Task Failed Event
+      summary: A robot has failed to complete a task
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/RobotTaskFailedEventPayload'
+      examples:
+        - name: taskFailedBatteryDepleted
+          summary: Task failed due to battery depletion
+          headers:
+            ce-id: "evt-99887766-5544-3322-1100-ffeeddccbbaa"
+            ce-source: "/fleet-management/robots/ROBOT-002"
+            ce-type: "com.paklog.robotics.robot.task.failed.v1"
+            ce-time: "2025-11-01T11:05:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-task124"
+            causation-id: "evt-taskstart-124"
+            aggregate-id: "ROBOT-002"
+            aggregate-type: "Robot"
+            aggregate-version: 5
+          payload:
+            robotId: "ROBOT-002"
+            taskId: "TASK-124"
+            reason: "Battery depleted during task execution"
+            occurredAt: "2025-11-01T11:05:00Z"
+        - name: taskFailedObstacle
+          summary: Task failed due to obstacle blocking path
+          headers:
+            ce-id: "evt-aabbccdd-eeff-0011-2233-445566778899"
+            ce-source: "/fleet-management/robots/ROBOT-003"
+            ce-type: "com.paklog.robotics.robot.task.failed.v1"
+            ce-time: "2025-11-01T11:10:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-task125"
+            causation-id: "evt-taskstart-125"
+            aggregate-id: "ROBOT-003"
+            aggregate-type: "Robot"
+            aggregate-version: 3
+          payload:
+            robotId: "ROBOT-003"
+            taskId: "TASK-125"
+            reason: "Persistent obstacle blocking navigation path"
+            occurredAt: "2025-11-01T11:10:00Z"
+
+    BatteryLowEvent:
+      name: BatteryLowEvent
+      title: Battery Low Event
+      summary: Robot battery level has dropped below threshold
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/BatteryLowEventPayload'
+      examples:
+        - name: batteryLowWarning
+          summary: Battery low warning (20%)
+          headers:
+            ce-id: "evt-battery-1122-3344-5566-778899aabbcc"
+            ce-source: "/fleet-management/robots/ROBOT-001"
+            ce-type: "com.paklog.robotics.robot.battery.low.v1"
+            ce-time: "2025-11-01T12:00:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-robot001-battery"
+            aggregate-id: "ROBOT-001"
+            aggregate-type: "Robot"
+            aggregate-version: 10
+          payload:
+            robotId: "ROBOT-001"
+            batteryPercentage: 18
+            emergency: false
+            position:
+              x: 1500.0
+              y: 2000.0
+              heading: 270.0
+            occurredAt: "2025-11-01T12:00:00Z"
+        - name: batteryCritical
+          summary: Critical battery level (8%)
+          headers:
+            ce-id: "evt-battery-crit-9988-7766-5544-332211"
+            ce-source: "/fleet-management/robots/ROBOT-004"
+            ce-type: "com.paklog.robotics.robot.battery.low.v1"
+            ce-time: "2025-11-01T12:15:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-robot004-battery-critical"
+            aggregate-id: "ROBOT-004"
+            aggregate-type: "Robot"
+            aggregate-version: 7
+          payload:
+            robotId: "ROBOT-004"
+            batteryPercentage: 8
+            emergency: true
+            position:
+              x: 3200.0
+              y: 1800.0
+              heading: 135.0
+            occurredAt: "2025-11-01T12:15:00Z"
+
+    ChargingStartedEvent:
+      name: ChargingStartedEvent
+      title: Charging Started Event
+      summary: Robot has started charging at a charging station
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/ChargingStartedEventPayload'
+      examples:
+        - name: chargingStarted
+          summary: Robot begins charging
+          headers:
+            ce-id: "evt-charge-start-5544-3322-1100-ffeeddcc"
+            ce-source: "/fleet-management/robots/ROBOT-001"
+            ce-type: "com.paklog.robotics.robot.charging.started.v1"
+            ce-time: "2025-11-01T12:05:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-robot001-charging"
+            causation-id: "evt-battery-1122-3344-5566-778899aabbcc"
+            aggregate-id: "ROBOT-001"
+            aggregate-type: "Robot"
+            aggregate-version: 11
+          payload:
+            robotId: "ROBOT-001"
+            currentBatteryLevel: 18
+            position:
+              x: 50.0
+              y: 50.0
+              heading: 0.0
+            occurredAt: "2025-11-01T12:05:00Z"
+
+    ChargingCompletedEvent:
+      name: ChargingCompletedEvent
+      title: Charging Completed Event
+      summary: Robot has completed charging
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/ChargingCompletedEventPayload'
+      examples:
+        - name: chargingCompleted
+          summary: Robot finishes charging
+          headers:
+            ce-id: "evt-charge-done-6677-8899-aabb-ccddeeff0011"
+            ce-source: "/fleet-management/robots/ROBOT-001"
+            ce-type: "com.paklog.robotics.robot.charging.completed.v1"
+            ce-time: "2025-11-01T12:35:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-robot001-charging"
+            causation-id: "evt-charge-start-5544-3322-1100-ffeeddcc"
+            aggregate-id: "ROBOT-001"
+            aggregate-type: "Robot"
+            aggregate-version: 12
+          payload:
+            robotId: "ROBOT-001"
+            finalBatteryLevel: 100
+            occurredAt: "2025-11-01T12:35:00Z"
+
+    RobotMaintenanceRequiredEvent:
+      name: RobotMaintenanceRequiredEvent
+      title: Robot Maintenance Required Event
+      summary: Robot requires maintenance based on health metrics
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/RobotMaintenanceRequiredEventPayload'
+      examples:
+        - name: maintenanceRequired
+          summary: Robot needs preventive maintenance
+          headers:
+            ce-id: "evt-maint-1234-5678-90ab-cdef12345678"
+            ce-source: "/fleet-management/robots/ROBOT-005"
+            ce-type: "com.paklog.robotics.robot.maintenance.required.v1"
+            ce-time: "2025-11-01T14:00:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-robot005-health"
+            aggregate-id: "ROBOT-005"
+            aggregate-type: "Robot"
+            aggregate-version: 25
+          payload:
+            robotId: "ROBOT-005"
+            healthMetrics:
+              motorWear: 0.85
+              sensorAccuracy: 0.72
+              navigationErrors: 15
+              taskFailureRate: 0.12
+              operatingHours: 2400
+            occurredAt: "2025-11-01T14:00:00Z"
+
+    FleetRebalancedEvent:
+      name: FleetRebalancedEvent
+      title: Fleet Rebalanced Event
+      summary: Fleet workload has been rebalanced
+      contentType: application/json
+      headers:
+        $ref: '#/components/schemas/CloudEventHeaders'
+      payload:
+        $ref: '#/components/schemas/FleetRebalancedEventPayload'
+      examples:
+        - name: fleetRebalanced
+          summary: Fleet utilization rebalanced
+          headers:
+            ce-id: "evt-fleet-balance-abcd-1234-efgh-5678"
+            ce-source: "/fleet-management/fleet/FLEET-001"
+            ce-type: "com.paklog.robotics.fleet.rebalanced.v1"
+            ce-time: "2025-11-01T15:00:00Z"
+            ce-specversion: "1.0"
+            correlation-id: "corr-fleet-optimization"
+            aggregate-id: "FLEET-001"
+            aggregate-type: "Fleet"
+            aggregate-version: 50
+          payload:
+            fleetId: "FLEET-001"
+            robotCount: 50
+            utilizationRate: 0.84
+            occurredAt: "2025-11-01T15:00:00Z"
+
+  schemas:
+    CloudEventHeaders:
+      type: object
+      description: CloudEvents v1.0 standard headers
+      properties:
+        ce-id:
+          type: string
+          format: uuid
+          description: Unique event identifier
+          example: "evt-12345678-1234-1234-1234-123456789abc"
+        ce-source:
+          type: string
+          format: uri
+          description: Event source identifier
+          example: "/fleet-management/robots/ROBOT-001"
+        ce-type:
+          type: string
+          description: Event type identifier
+          example: "com.paklog.robotics.robot.registered.v1"
+        ce-time:
+          type: string
+          format: date-time
+          description: Event timestamp
+          example: "2025-11-01T10:30:00Z"
+        ce-specversion:
+          type: string
+          description: CloudEvents specification version
+          enum: ["1.0"]
+          example: "1.0"
+        correlation-id:
+          type: string
+          description: Correlation ID for tracing related events
+          example: "corr-abc123"
+        causation-id:
+          type: string
+          description: ID of the event that caused this event
+          example: "evt-parent-event-id"
+        aggregate-id:
+          type: string
+          description: Identifier of the aggregate root
+          example: "ROBOT-001"
+        aggregate-type:
+          type: string
+          description: Type of the aggregate root
+          enum: ["Robot", "RobotTask", "Fleet", "ChargingStation"]
+          example: "Robot"
+        aggregate-version:
+          type: integer
+          description: Version of the aggregate for optimistic locking
+          example: 1
+
+    RobotRegisteredEventPayload:
+      type: object
+      required:
+        - robotId
+        - model
+        - initialPosition
+        - capabilities
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          description: Unique robot identifier
+          example: "ROBOT-001"
+        model:
+          type: string
+          description: Robot model name
+          example: "PickerBot-3000"
+        initialPosition:
+          $ref: '#/components/schemas/Position'
+        capabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/RobotCapability'
+          example: ["PICKER", "SCANNER"]
+        occurredAt:
+          type: string
+          format: date-time
+          description: When the event occurred
+          example: "2025-11-01T10:30:00Z"
+
+    RobotTaskAssignedEventPayload:
+      type: object
+      required:
+        - robotId
+        - taskId
+        - taskType
+        - priority
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-001"
+        taskId:
+          type: string
+          example: "TASK-123"
+        taskType:
+          $ref: '#/components/schemas/TaskType'
+        priority:
+          $ref: '#/components/schemas/TaskPriority'
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:35:00Z"
+
+    RobotTaskStartedEventPayload:
+      type: object
+      required:
+        - robotId
+        - taskId
+        - position
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-001"
+        taskId:
+          type: string
+          example: "TASK-123"
+        position:
+          $ref: '#/components/schemas/Position'
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:36:00Z"
+
+    RobotTaskCompletedEventPayload:
+      type: object
+      required:
+        - robotId
+        - taskId
+        - position
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-001"
+        taskId:
+          type: string
+          example: "TASK-123"
+        position:
+          $ref: '#/components/schemas/Position'
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T10:40:00Z"
+
+    RobotTaskFailedEventPayload:
+      type: object
+      required:
+        - robotId
+        - taskId
+        - reason
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-002"
+        taskId:
+          type: string
+          example: "TASK-124"
+        reason:
+          type: string
+          description: Detailed failure reason
+          example: "Battery depleted during task execution"
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T11:05:00Z"
+
+    BatteryLowEventPayload:
+      type: object
+      required:
+        - robotId
+        - batteryPercentage
+        - emergency
+        - position
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-001"
+        batteryPercentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Current battery percentage
+          example: 18
+        emergency:
+          type: boolean
+          description: True if battery is critically low (≤10%)
+          example: false
+        position:
+          $ref: '#/components/schemas/Position'
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T12:00:00Z"
+
+    ChargingStartedEventPayload:
+      type: object
+      required:
+        - robotId
+        - currentBatteryLevel
+        - position
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-001"
+        currentBatteryLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Battery level when charging started
+          example: 18
+        position:
+          $ref: '#/components/schemas/Position'
+          description: Charging station position
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T12:05:00Z"
+
+    ChargingCompletedEventPayload:
+      type: object
+      required:
+        - robotId
+        - finalBatteryLevel
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-001"
+        finalBatteryLevel:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Battery level after charging
+          example: 100
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T12:35:00Z"
+
+    RobotMaintenanceRequiredEventPayload:
+      type: object
+      required:
+        - robotId
+        - healthMetrics
+        - occurredAt
+      properties:
+        robotId:
+          type: string
+          example: "ROBOT-005"
+        healthMetrics:
+          type: object
+          description: Health metrics that triggered maintenance requirement
+          additionalProperties: true
+          example:
+            motorWear: 0.85
+            sensorAccuracy: 0.72
+            navigationErrors: 15
+            taskFailureRate: 0.12
+            operatingHours: 2400
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T14:00:00Z"
+
+    FleetRebalancedEventPayload:
+      type: object
+      required:
+        - fleetId
+        - robotCount
+        - utilizationRate
+        - occurredAt
+      properties:
+        fleetId:
+          type: string
+          example: "FLEET-001"
+        robotCount:
+          type: integer
+          description: Total number of robots in fleet
+          example: 50
+        utilizationRate:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Fleet utilization rate after rebalancing
+          example: 0.84
+        occurredAt:
+          type: string
+          format: date-time
+          example: "2025-11-01T15:00:00Z"
+
+    Position:
+      type: object
+      required:
+        - x
+        - y
+        - heading
+      properties:
+        x:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          description: X coordinate in meters
+          example: 100.5
+        y:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 10000
+          description: Y coordinate in meters
+          example: 250.8
+        heading:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 360
+          description: Direction in degrees
+          example: 90.0
+
+    RobotCapability:
+      type: string
+      enum:
+        - PICKER
+        - TRANSPORTER
+        - SORTER
+        - LIFTER
+        - SCANNER
+        - COLLABORATIVE
+      description: |
+        Robot capabilities:
+        - PICKER: Can pick items from shelves
+        - TRANSPORTER: Can transport pallets/containers
+        - SORTER: Can sort items
+        - LIFTER: Can lift heavy loads
+        - SCANNER: Has barcode/RFID scanning capability
+        - COLLABORATIVE: Can work safely alongside humans
+      example: PICKER
+
+    TaskType:
+      type: string
+      enum:
+        - PICK
+        - TRANSPORT
+        - SORT
+        - DELIVER
+        - CHARGE
+        - MAINTENANCE
+      example: PICK
+
+    TaskPriority:
+      type: string
+      enum:
+        - LOW
+        - MEDIUM
+        - HIGH
+        - CRITICAL
+      example: HIGH
+
+  securitySchemes:
+    saslScram:
+      type: scramSha256
+      description: SASL/SCRAM-SHA-256 authentication for Kafka

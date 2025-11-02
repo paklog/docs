@@ -1,0 +1,207 @@
+asyncapi: 3.0.0
+info:
+  title: Product Catalog Service Events
+  version: 1.1.0
+  description: |-
+    The Product Catalog Service manages product information and publishes domain events
+    when products are created, updated, or deleted. This service follows Domain-Driven Design
+    principles and uses event-driven architecture.
+  contact:
+    name: Paklog Team
+    url: https://github.com/paklog/product-catalog
+  license:
+    name: MIT
+
+defaultContentType: application/json
+
+servers:
+  development:
+    host: localhost:9092
+    protocol: kafka
+    description: Kafka broker for development environment
+    tags:
+      - name: env:development
+        description: Development environment
+  production:
+    host: localhost:9092
+    protocol: kafka
+    description: Kafka broker for production environment
+    tags:
+      - name: env:production
+        description: Production environment
+
+channels:
+  product.events:
+    address: product.events
+    description: Channel for all product-related domain events emitted by the service
+    messages:
+      ProductCreatedEvent:
+        $ref: '#/components/messages/ProductCreatedEvent'
+      ProductUpdatedEvent:
+        $ref: '#/components/messages/ProductUpdatedEvent'
+      ProductDeletedEvent:
+        $ref: '#/components/messages/ProductDeletedEvent'
+
+operations:
+  publishProductCreated:
+    action: send
+    channel:
+      $ref: '#/channels/product.events'
+    summary: Publish product created event
+    description: Published when a new product is created in the catalog
+    messages:
+      - $ref: '#/components/messages/ProductCreatedEvent'
+    tags:
+      - name: Product Events
+        description: Product lifecycle events
+
+  publishProductUpdated:
+    action: send
+    channel:
+      $ref: '#/channels/product.events'
+    summary: Publish product updated event
+    description: Published when an existing product is modified
+    messages:
+      - $ref: '#/components/messages/ProductUpdatedEvent'
+    tags:
+      - name: Product Events
+        description: Product lifecycle events
+
+  publishProductDeleted:
+    action: send
+    channel:
+      $ref: '#/channels/product.events'
+    summary: Publish product deleted event
+    description: Published when a product is deleted from the catalog
+    messages:
+      - $ref: '#/components/messages/ProductDeletedEvent'
+    tags:
+      - name: Product Events
+        description: Product lifecycle events
+
+components:
+  messages:
+    ProductCreatedEvent:
+      name: ProductCreatedEvent
+      title: Product Created Event
+      summary: Event emitted when a new product is created
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ProductCreatedEvent'
+      examples:
+        - name: product-created
+          summary: Example of a product created event
+          payload:
+            event_id: 550e8400-e29b-41d4-a716-446655440000
+            occurred_on: '2024-01-15T10:30:00Z'
+            event_type: ProductCreated
+            sku:
+              value: LAPTOP-001
+            title: Gaming Laptop Pro
+    ProductUpdatedEvent:
+      name: ProductUpdatedEvent
+      title: Product Updated Event
+      summary: Event emitted when a product is updated
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ProductUpdatedEvent'
+      examples:
+        - name: product-updated
+          summary: Example of a product updated event
+          payload:
+            event_id: 550e8400-e29b-41d4-a716-446655440001
+            occurred_on: '2024-01-15T11:30:00Z'
+            event_type: ProductUpdated
+            sku:
+              value: LAPTOP-001
+            title: Gaming Laptop Pro Max
+    ProductDeletedEvent:
+      name: ProductDeletedEvent
+      title: Product Deleted Event
+      summary: Event emitted when a product is deleted
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ProductDeletedEvent'
+      examples:
+        - name: product-deleted
+          summary: Example of a product deleted event
+          payload:
+            event_id: 550e8400-e29b-41d4-a716-446655440002
+            occurred_on: '2024-01-15T12:30:00Z'
+            event_type: ProductDeleted
+            sku:
+              value: LAPTOP-001
+
+  schemas:
+    DomainEvent:
+      type: object
+      description: Base contract shared by all domain events emitted by the service
+      required:
+        - event_id
+        - occurred_on
+        - event_type
+        - sku
+      properties:
+        event_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the event instance
+        occurred_on:
+          type: string
+          format: date-time
+          description: Timestamp when the event occurred (UTC)
+        event_type:
+          type: string
+          description: Type of the domain event
+        sku:
+          $ref: '#/components/schemas/SKU'
+    ProductCreatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/DomainEvent'
+        - type: object
+          required:
+            - title
+          properties:
+            event_type:
+              type: string
+              enum:
+                - ProductCreated
+            title:
+              type: string
+              description: Product title at the time of creation
+    ProductUpdatedEvent:
+      allOf:
+        - $ref: '#/components/schemas/DomainEvent'
+        - type: object
+          required:
+            - title
+          properties:
+            event_type:
+              type: string
+              enum:
+                - ProductUpdated
+            title:
+              type: string
+              description: Updated product title
+    ProductDeletedEvent:
+      allOf:
+        - $ref: '#/components/schemas/DomainEvent'
+        - type: object
+          properties:
+            event_type:
+              type: string
+              enum:
+                - ProductDeleted
+    SKU:
+      type: object
+      description: Stock Keeping Unit - unique product identifier
+      required:
+        - value
+      properties:
+        value:
+          type: string
+          description: Seller-provided SKU value
+          minLength: 1
+tags:
+  - name: Product Events
+    description: Events related to product lifecycle management

@@ -1,0 +1,725 @@
+asyncapi: 2.6.0
+info:
+  title: Pick Execution Service Events
+  version: 1.0.0
+  description: |
+    Event-driven API for Pick Execution Service using Apache Kafka.
+    This service publishes and subscribes to events related to pick session execution,
+    pick confirmations, short picks, and put wall operations.
+  contact:
+    name: WES Team
+    email: wes-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  development:
+    url: localhost:9092
+    protocol: kafka
+    description: Local Kafka broker
+  production:
+    url: kafka-cluster.paklog.com:9092
+    protocol: kafka
+    description: Production Kafka cluster
+
+defaultContentType: application/json
+
+channels:
+  pick.session.started:
+    description: Published when a pick session starts
+    publish:
+      operationId: publishPickSessionStarted
+      summary: Pick session started event
+      message:
+        $ref: '#/components/messages/PickSessionStarted'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Session ID
+
+  pick.session.completed:
+    description: Published when a pick session is completed
+    publish:
+      operationId: publishPickSessionCompleted
+      summary: Pick session completed event
+      message:
+        $ref: '#/components/messages/PickSessionCompleted'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Session ID
+
+  pick.session.cancelled:
+    description: Published when a pick session is cancelled
+    publish:
+      operationId: publishPickSessionCancelled
+      summary: Pick session cancelled event
+      message:
+        $ref: '#/components/messages/PickSessionCancelled'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Session ID
+
+  pick.confirmed:
+    description: Published when a pick is confirmed
+    publish:
+      operationId: publishPickConfirmed
+      summary: Pick confirmed event
+      message:
+        $ref: '#/components/messages/PickConfirmed'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Instruction ID
+
+  pick.short:
+    description: Published when a short pick occurs
+    publish:
+      operationId: publishShortPick
+      summary: Short pick event
+      message:
+        $ref: '#/components/messages/ShortPick'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Instruction ID
+
+  pick.path.optimized:
+    description: Published when pick path is optimized
+    publish:
+      operationId: publishPickPathOptimized
+      summary: Pick path optimized event
+      message:
+        $ref: '#/components/messages/PickPathOptimized'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Session ID
+
+  putwall.order.complete:
+    description: Published when all items for an order are put in put wall
+    publish:
+      operationId: publishPutWallOrderComplete
+      summary: Put wall order complete event
+      message:
+        $ref: '#/components/messages/PutWallOrderComplete'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Order ID
+
+  putwall.slot.assigned:
+    description: Published when an order is assigned to a put wall slot
+    publish:
+      operationId: publishPutWallSlotAssigned
+      summary: Put wall slot assigned event
+      message:
+        $ref: '#/components/messages/PutWallSlotAssigned'
+      bindings:
+        kafka:
+          key:
+            type: string
+            description: Slot ID
+
+  task.assigned:
+    description: Subscribe to task assignment events
+    subscribe:
+      operationId: onTaskAssigned
+      summary: Handle task assignments and create pick sessions
+      message:
+        $ref: '#/components/messages/TaskAssigned'
+
+  inventory.reserved:
+    description: Subscribe to inventory reservation events
+    subscribe:
+      operationId: onInventoryReserved
+      summary: Handle inventory reservations for picks
+      message:
+        $ref: '#/components/messages/InventoryReserved'
+
+  wave.released:
+    description: Subscribe to wave release events
+    subscribe:
+      operationId: onWaveReleased
+      summary: Create pick sessions from released waves
+      message:
+        $ref: '#/components/messages/WaveReleased'
+
+components:
+  messages:
+    PickSessionStarted:
+      name: PickSessionStarted
+      title: Pick Session Started Event
+      summary: Emitted when a pick session begins
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PickSessionStartedPayload'
+
+    PickSessionCompleted:
+      name: PickSessionCompleted
+      title: Pick Session Completed Event
+      summary: Emitted when a pick session is completed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PickSessionCompletedPayload'
+
+    PickSessionCancelled:
+      name: PickSessionCancelled
+      title: Pick Session Cancelled Event
+      summary: Emitted when a pick session is cancelled
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PickSessionCancelledPayload'
+
+    PickConfirmed:
+      name: PickConfirmed
+      title: Pick Confirmed Event
+      summary: Emitted when a pick is confirmed
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PickConfirmedPayload'
+
+    ShortPick:
+      name: ShortPick
+      title: Short Pick Event
+      summary: Emitted when a short pick occurs
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/ShortPickPayload'
+
+    PickPathOptimized:
+      name: PickPathOptimized
+      title: Pick Path Optimized Event
+      summary: Emitted when pick path is optimized
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PickPathOptimizedPayload'
+
+    PutWallOrderComplete:
+      name: PutWallOrderComplete
+      title: Put Wall Order Complete Event
+      summary: Emitted when all items for an order are put in put wall
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PutWallOrderCompletePayload'
+
+    PutWallSlotAssigned:
+      name: PutWallSlotAssigned
+      title: Put Wall Slot Assigned Event
+      summary: Emitted when order is assigned to put wall slot
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PutWallSlotAssignedPayload'
+
+    TaskAssigned:
+      name: TaskAssigned
+      title: Task Assigned Event
+      summary: Received when a pick task is assigned to a worker
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/TaskAssignedPayload'
+
+    InventoryReserved:
+      name: InventoryReserved
+      title: Inventory Reserved Event
+      summary: Received when inventory is reserved for picking
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/InventoryReservedPayload'
+
+    WaveReleased:
+      name: WaveReleased
+      title: Wave Released Event
+      summary: Received when a wave is released for picking
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/WaveReleasedPayload'
+
+  schemas:
+    PickSessionStartedPayload:
+      type: object
+      required:
+        - sessionId
+        - pickerId
+        - warehouseId
+        - startedAt
+        - strategy
+      properties:
+        sessionId:
+          type: string
+        pickerId:
+          type: string
+        pickerName:
+          type: string
+        warehouseId:
+          type: string
+        waveId:
+          type: string
+        strategy:
+          type: string
+          enum: [DISCRETE, BATCH, ZONE, CLUSTER]
+        putWallId:
+          type: string
+        totalInstructions:
+          type: integer
+        totalUnits:
+          type: integer
+        estimatedDuration:
+          type: integer
+          description: Estimated duration in minutes
+        estimatedDistance:
+          type: number
+          description: Estimated travel distance in meters
+        startLocation:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        pickPath:
+          type: object
+          properties:
+            algorithm:
+              type: string
+            totalDistance:
+              type: number
+            waypoints:
+              type: array
+              items:
+                type: string
+
+    PickSessionCompletedPayload:
+      type: object
+      required:
+        - sessionId
+        - pickerId
+        - completedAt
+        - duration
+      properties:
+        sessionId:
+          type: string
+        pickerId:
+          type: string
+        warehouseId:
+          type: string
+        waveId:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          description: Actual duration in minutes
+        totalInstructions:
+          type: integer
+        completedInstructions:
+          type: integer
+        totalUnits:
+          type: integer
+        pickedUnits:
+          type: integer
+        shortPicks:
+          type: integer
+        actualDistance:
+          type: number
+          description: Actual travel distance in meters
+        estimatedDistance:
+          type: number
+        performance:
+          type: object
+          properties:
+            unitsPerHour:
+              type: number
+            linesPerHour:
+              type: number
+            accuracy:
+              type: number
+              format: percentage
+            travelEfficiency:
+              type: number
+              format: percentage
+
+    PickSessionCancelledPayload:
+      type: object
+      required:
+        - sessionId
+        - reason
+        - cancelledAt
+      properties:
+        sessionId:
+          type: string
+        pickerId:
+          type: string
+        warehouseId:
+          type: string
+        waveId:
+          type: string
+        reason:
+          type: string
+        cancelledAt:
+          type: string
+          format: date-time
+        cancelledBy:
+          type: string
+        completedInstructions:
+          type: integer
+        totalInstructions:
+          type: integer
+
+    PickConfirmedPayload:
+      type: object
+      required:
+        - instructionId
+        - sessionId
+        - pickerId
+        - productId
+        - expectedQuantity
+        - actualQuantity
+        - pickedAt
+      properties:
+        instructionId:
+          type: string
+        sessionId:
+          type: string
+        pickerId:
+          type: string
+        warehouseId:
+          type: string
+        waveId:
+          type: string
+        orderId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        expectedQuantity:
+          type: integer
+        actualQuantity:
+          type: integer
+        variance:
+          type: integer
+          description: Difference between expected and actual
+        pickLocation:
+          type: string
+        zone:
+          type: string
+        destinationLocation:
+          type: string
+        lpn:
+          type: string
+        barcode:
+          type: string
+          description: Scanned barcode
+        pickedAt:
+          type: string
+          format: date-time
+        sequenceNumber:
+          type: integer
+        putWallSlot:
+          type: string
+          description: Put wall slot if batch picking
+
+    ShortPickPayload:
+      type: object
+      required:
+        - instructionId
+        - sessionId
+        - pickerId
+        - productId
+        - expectedQuantity
+        - actualQuantity
+        - reason
+        - reportedAt
+      properties:
+        instructionId:
+          type: string
+        sessionId:
+          type: string
+        pickerId:
+          type: string
+        warehouseId:
+          type: string
+        waveId:
+          type: string
+        orderId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        expectedQuantity:
+          type: integer
+        actualQuantity:
+          type: integer
+          description: Actual quantity picked (may be 0)
+        shortQuantity:
+          type: integer
+          description: Shortage amount
+        pickLocation:
+          type: string
+        reason:
+          type: string
+          enum: [OUT_OF_STOCK, DAMAGED, LOCATION_EMPTY, CANNOT_FIND, OTHER]
+        reasonCode:
+          type: string
+        notes:
+          type: string
+        reportedAt:
+          type: string
+          format: date-time
+        requiresReplenishment:
+          type: boolean
+        requiresInvestigation:
+          type: boolean
+
+    PickPathOptimizedPayload:
+      type: object
+      required:
+        - sessionId
+        - algorithm
+        - optimizedAt
+      properties:
+        sessionId:
+          type: string
+        pickerId:
+          type: string
+        warehouseId:
+          type: string
+        algorithm:
+          type: string
+          enum: [NEAREST_NEIGHBOR, TWO_OPT, GENETIC]
+        optimizedAt:
+          type: string
+          format: date-time
+        beforeDistance:
+          type: number
+          description: Distance before optimization
+        afterDistance:
+          type: number
+          description: Distance after optimization
+        improvement:
+          type: number
+          format: percentage
+          description: Percentage improvement
+        waypoints:
+          type: array
+          items:
+            type: object
+            properties:
+              sequence:
+                type: integer
+              location:
+                type: string
+              instructionId:
+                type: string
+        estimatedTimeSaved:
+          type: integer
+          description: Estimated time saved in minutes
+
+    PutWallOrderCompletePayload:
+      type: object
+      required:
+        - orderId
+        - putWallId
+        - slotId
+        - completedAt
+      properties:
+        orderId:
+          type: string
+        putWallId:
+          type: string
+        slotId:
+          type: string
+        slotNumber:
+          type: string
+        warehouseId:
+          type: string
+        sessionId:
+          type: string
+        pickerId:
+          type: string
+        completedAt:
+          type: string
+          format: date-time
+        totalItems:
+          type: integer
+        totalUnits:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              productId:
+                type: string
+              sku:
+                type: string
+              expectedQuantity:
+                type: integer
+              actualQuantity:
+                type: integer
+        readyForPacking:
+          type: boolean
+
+    PutWallSlotAssignedPayload:
+      type: object
+      required:
+        - putWallId
+        - slotId
+        - orderId
+        - assignedAt
+      properties:
+        putWallId:
+          type: string
+        slotId:
+          type: string
+        slotNumber:
+          type: string
+        orderId:
+          type: string
+        warehouseId:
+          type: string
+        sessionId:
+          type: string
+        assignedAt:
+          type: string
+          format: date-time
+        expectedItems:
+          type: integer
+        expectedUnits:
+          type: integer
+
+    TaskAssignedPayload:
+      type: object
+      required:
+        - taskId
+        - workerId
+        - taskType
+        - assignedAt
+      properties:
+        taskId:
+          type: string
+        taskType:
+          type: string
+        workerId:
+          type: string
+        warehouseId:
+          type: string
+        waveId:
+          type: string
+        orderId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        sourceLocation:
+          type: string
+        destinationLocation:
+          type: string
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        assignedAt:
+          type: string
+          format: date-time
+        dueDate:
+          type: string
+          format: date-time
+
+    InventoryReservedPayload:
+      type: object
+      required:
+        - reservationId
+        - orderId
+        - productId
+        - quantity
+        - location
+        - reservedAt
+      properties:
+        reservationId:
+          type: string
+        orderId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        location:
+          type: string
+        lpn:
+          type: string
+        warehouseId:
+          type: string
+        reservedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        reservedBy:
+          type: string
+
+    WaveReleasedPayload:
+      type: object
+      required:
+        - waveId
+        - warehouseId
+        - orderIds
+        - releaseTime
+      properties:
+        waveId:
+          type: string
+        warehouseId:
+          type: string
+        orderIds:
+          type: array
+          items:
+            type: string
+        assignedPickers:
+          type: array
+          items:
+            type: string
+        releaseTime:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        estimatedDuration:
+          type: integer
+        totalPicks:
+          type: integer
+        pickDetails:
+          type: array
+          items:
+            type: object
+            properties:
+              orderId:
+                type: string
+              productId:
+                type: string
+              sku:
+                type: string
+              quantity:
+                type: integer
+              pickLocation:
+                type: string
+              zone:
+                type: string

@@ -1,0 +1,18 @@
+{
+  "schemaName": "dp_physical_tracking_events_v1",
+  "dimensionFieldSpecs": [
+    {"name": "event_id", "dataType": "STRING"},
+    {"name": "lpn", "dataType": "STRING"},
+    {"name": "movement_id", "dataType": "STRING"},
+    {"name": "from_location", "dataType": "STRING"},
+    {"name": "to_location", "dataType": "STRING"},
+    {"name": "location_id", "dataType": "STRING"},
+    {"name": "warehouse_id", "dataType": "STRING"},
+    {"name": "zone", "dataType": "STRING"},
+    {"name": "movement_type", "dataType": "STRING"}
+  ],
+  "dateTimeFieldSpecs": [
+    {"name": "event_time", "dataType": "LONG", "format": "1:MILLISECONDS:EPOCH", "granularity": "1:MILLISECONDS"}
+  ]
+}
+

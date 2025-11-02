@@ -1,0 +1,24 @@
+{
+  "specversion": "1.0",
+  "type": "com.example.fulfillment.inventory.stock_level.changed",
+  "source": "/fulfillment/inventory-service",
+  "subject": "SKU-ABC-123",
+  "id": "3b7a8d77-d5e2-4f90-9d94-677b0c6a0a93",
+  "time": "2024-11-01T10:31:15Z",
+  "datacontenttype": "application/json",
+  "data": {
+    "sku": "SKU-ABC-123",
+    "previous_stock_level": {
+      "quantity_on_hand": 100,
+      "quantity_allocated": 20,
+      "available_to_promise": 80
+    },
+    "new_stock_level": {
+      "quantity_on_hand": 98,
+      "quantity_allocated": 22,
+      "available_to_promise": 76
+    },
+    "change_reason": "ITEM_PICKED"
+  }
+}
+

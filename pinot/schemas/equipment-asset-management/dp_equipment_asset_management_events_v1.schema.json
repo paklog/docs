@@ -1,0 +1,13 @@
+{
+  "schemaName": "dp_equipment_asset_management_events_v1",
+  "dimensionFieldSpecs": [
+    {"name": "event_id", "dataType": "STRING"},
+    {"name": "event_type", "dataType": "STRING"},
+    {"name": "event_source", "dataType": "STRING"},
+    {"name": "event_subject", "dataType": "STRING"}
+  ],
+  "dateTimeFieldSpecs": [
+    {"name": "event_time", "dataType": "LONG", "format": "1:MILLISECONDS:EPOCH", "granularity": "1:MILLISECONDS"}
+  ]
+}
+

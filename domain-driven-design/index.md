@@ -11,7 +11,7 @@ This section contains comprehensive Domain-Driven Design (DDD) documentation for
 ## Core Documentation
 
 ### [Bounded Contexts Overview](bounded-contexts-overview) **NEW**
-Complete strategic design documentation for all 22 services:
+Complete strategic design documentation for all 27 services:
 - Context map with relationships
 - Integration patterns between contexts
 - Shared kernel and partnerships
@@ -26,17 +26,9 @@ Comprehensive catalog of all domain aggregates:
 - Domain events per aggregate
 - Value objects catalog
 
-## Bounded Contexts (Original 6 Services)
+## Bounded Contexts (Original 5 Services)
 
-### 1. [Warehouse Operations Context](warehouse-operations/ddd)
-Core warehouse execution domain including:
-- **Aggregates**: Wave, Task, Pick, Pack, Location
-- **Domain Events**: WaveCreated, TaskAssigned, PickCompleted
-- **Value Objects**: LocationCode, Priority, Quantity
-- **Domain Services**: WavePlanningService, TaskAllocationService
-- **Anti-Corruption Layer**: External WMS integration
-
-### 2. [Inventory Context](inventory/ddd)
+### 1. [Inventory Context](inventory/ddd)
 Inventory management bounded context:
 - **Aggregates**: InventoryItem, StockLevel, Adjustment
 - **Domain Events**: StockReceived, StockAdjusted, StockMoved
@@ -44,7 +36,7 @@ Inventory management bounded context:
 - **Domain Services**: AllocationService, ReplenishmentService
 - **Repository Patterns**: InventoryRepository, StockLevelRepository
 
-### 3. [Order Management Context](order-management/ddd)
+### 2. [Order Management Context](order-management/ddd)
 Order processing and fulfillment domain:
 - **Aggregates**: Order, OrderLine, Allocation
 - **Domain Events**: OrderPlaced, OrderAllocated, OrderShipped
@@ -52,7 +44,7 @@ Order processing and fulfillment domain:
 - **Domain Services**: OrderFulfillmentService, AllocationService
 - **Saga Patterns**: OrderFulfillmentSaga
 
-### 4. [Cartonization Context](cartonization/ddd)
+### 3. [Cartonization Context](cartonization/ddd)
 Packing optimization bounded context:
 - **Aggregates**: PackingPlan, Container, PackedItem
 - **Domain Events**: ContainerSelected, ItemsPacked, PackingCompleted
@@ -60,7 +52,7 @@ Packing optimization bounded context:
 - **Domain Services**: PackingOptimizationService, ContainerSelectionService
 - **Algorithms**: 3D bin packing, weight distribution
 
-### 5. [Product Catalog Context](product-catalog/ddd)
+### 4. [Product Catalog Context](product-catalog/ddd)
 Product information management:
 - **Aggregates**: Product, ProductVariant, Category
 - **Domain Events**: ProductCreated, ProductUpdated, CategoryAssigned
@@ -68,7 +60,7 @@ Product information management:
 - **Domain Services**: ProductClassificationService
 - **Read Models**: ProductSearchModel, ProductHierarchyModel
 
-### 6. [Shipment & Transportation Context](shipment-transportation/ddd)
+### 5. [Shipment & Transportation Context](shipment-transportation/ddd)
 Outbound logistics domain:
 - **Aggregates**: Shipment, Carrier, TrackingInfo
 - **Domain Events**: ShipmentCreated, LabelGenerated, ShipmentDispatched
@@ -113,7 +105,7 @@ Outbound logistics domain:
 - Published language for integration
 
 #### Context Mapping
-- **Customer-Supplier**: Order Management → Warehouse Operations
+- **Customer-Supplier**: Order Management → Task Execution
 - **Conformist**: Shipment → External Carrier APIs
 - **Anti-Corruption Layer**: Legacy system integration
 - **Open Host Service**: REST APIs for external consumers

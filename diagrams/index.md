@@ -11,7 +11,7 @@ This section contains comprehensive technical diagrams that illustrate the archi
 ## Available Diagrams
 
 ### 0. [Complete System Overview](00-SYSTEM-OVERVIEW) **NEW**
-Comprehensive view of all 22 microservices:
+Comprehensive view of all 27 microservices:
 - Complete microservices ecosystem map
 - Service categories (Foundation, Execution, Advanced, Intelligence)
 - Technology stack overview

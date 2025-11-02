@@ -1,0 +1,1351 @@
+openapi: 3.1.0
+info:
+  title: Paklog Customer Experience Hub API
+  version: 1.0.0
+  description: |
+    # Customer Experience Hub API
+
+    The **Paklog Customer Experience Hub** provides comprehensive APIs for managing customer interactions, support tickets, feedback, order tracking, and notifications within the Paklog logistics platform.
+
+    ## Key Features
+
+    - **Support Ticket Management**: Create, track, and manage customer support tickets with SLA monitoring
+    - **Customer Feedback**: Collect and analyze customer feedback with NPS scoring
+    - **Order Tracking**: Real-time order tracking and delivery status updates
+    - **Customer Insights**: Calculate customer NPS (Net Promoter Score) and engagement metrics
+
+    ## Architecture
+
+    This service follows Domain-Driven Design (DDD) principles and CQRS patterns, with event-driven integration via Apache Kafka for asynchronous processing.
+
+    ## Rate Limiting
+
+    API endpoints are rate-limited to ensure fair usage:
+    - **Standard tier**: 100 requests per minute
+    - **Premium tier**: 500 requests per minute
+
+    ## Support
+
+    For API support, contact: api-support@paklog.com
+
+  contact:
+    name: Paklog API Support
+    email: api-support@paklog.com
+    url: https://paklog.com/support
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://api.paklog.com/customer-experience/v1
+    description: Production environment
+  - url: https://api-staging.paklog.com/customer-experience/v1
+    description: Staging environment
+  - url: http://localhost:8080/api/v1/customer-experience
+    description: Local development environment
+
+tags:
+  - name: Support Tickets
+    description: |
+      Operations for managing customer support tickets including creation, tracking, and resolution.
+      Tickets follow SLA-based workflows with priority handling.
+  - name: Feedback
+    description: |
+      Customer feedback collection and management with NPS (Net Promoter Score) calculation.
+      Supports multiple feedback categories and rating systems.
+  - name: Order Tracking
+    description: |
+      Real-time order tracking with status updates, location tracking, and delivery estimation.
+      Provides complete shipment visibility to customers.
+  - name: Customer Insights
+    description: |
+      Customer analytics and insights including NPS scores, satisfaction metrics, and engagement data.
+
+paths:
+  /tickets:
+    post:
+      tags:
+        - Support Tickets
+      summary: Create a new support ticket
+      description: |
+        Creates a new customer support ticket with automatic SLA assignment based on priority.
+
+        **Priority Levels:**
+        - `CRITICAL`: 2-hour SLA, immediate escalation
+        - `HIGH`: 4-hour SLA, escalation after 2 hours
+        - `MEDIUM`: 1-day SLA, standard handling
+        - `LOW`: 3-day SLA, batch processing
+
+        **Automatic Actions:**
+        - Assigns unique ticket ID
+        - Calculates SLA deadline based on priority
+        - Sends ticket confirmation notification to customer
+        - Publishes `TicketCreated` event to event bus
+        - Routes to appropriate support team based on category
+
+        **Example Use Cases:**
+        - Customer reports damaged package
+        - Delivery delay complaint
+        - Request for special delivery instructions
+        - General inquiry about service
+      operationId: createTicket
+      requestBody:
+        required: true
+        description: Support ticket creation details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTicketCommand'
+            examples:
+              damaged_package:
+                summary: Damaged Package Report
+                description: Customer reporting a damaged package upon delivery
+                value:
+                  customerId: "CUST-2024-001234"
+                  orderId: "ORD-2024-567890"
+                  subject: "Package arrived damaged"
+                  description: |
+                    I received my order today (tracking #PKG123456), but the package was severely damaged.
+                    The box was crushed on one side and the contents appear to be broken.
+                    I have attached photos showing the damage. I would like a replacement or refund.
+                  priority: "HIGH"
+              delivery_delay:
+                summary: Delivery Delay Complaint
+                description: Customer complaining about delayed delivery
+                value:
+                  customerId: "CUST-2024-005678"
+                  orderId: "ORD-2024-998877"
+                  subject: "Order delivery is 3 days late"
+                  description: |
+                    My order was supposed to arrive on 2024-10-28 but it's now 2024-10-31 and I still haven't received it.
+                    The tracking shows it's stuck at the distribution center. This is urgent as it's a birthday gift.
+                  priority: "HIGH"
+              general_inquiry:
+                summary: General Service Inquiry
+                description: Customer asking about delivery options
+                value:
+                  customerId: "CUST-2024-009876"
+                  orderId: "ORD-2024-111222"
+                  subject: "Can I change delivery address?"
+                  description: |
+                    I placed an order yesterday and realized I need it delivered to my office instead of home.
+                    Is it possible to change the delivery address? The order hasn't shipped yet according to tracking.
+                  priority: "MEDIUM"
+      responses:
+        '201':
+          description: |
+            Support ticket created successfully.
+            The ticket is now in the queue and assigned to a support agent based on priority and workload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupportTicket'
+              examples:
+                created_ticket:
+                  summary: Successfully created ticket
+                  value:
+                    ticketId: "TKT-2024-789012"
+                    customerId: "CUST-2024-001234"
+                    orderId: "ORD-2024-567890"
+                    subject: "Package arrived damaged"
+                    description: "I received my order today (tracking #PKG123456), but the package was severely damaged..."
+                    status: "OPEN"
+                    priority: "HIGH"
+                    assignedTo: "support-agent-42"
+                    comments: []
+                    createdAt: "2024-11-01T10:30:00Z"
+                    resolvedAt: null
+                    slaDeadline: "2024-11-01T14:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+
+  /feedback:
+    post:
+      tags:
+        - Feedback
+      summary: Submit customer feedback
+      description: |
+        Submits customer feedback for an order with rating and detailed comments.
+
+        **Feedback Categories:**
+        - `DELIVERY`: Delivery experience, timeliness, package condition
+        - `DRIVER`: Driver professionalism, communication, courtesy
+        - `PACKAGING`: Package quality, protection, presentation
+        - `TRACKING`: Tracking accuracy, update frequency, information quality
+        - `SUPPORT`: Customer support experience, responsiveness, helpfulness
+        - `OVERALL`: General satisfaction with entire service
+
+        **Rating Scale:**
+        - `VERY_POOR` (1): Extremely dissatisfied
+        - `POOR` (2): Dissatisfied
+        - `NEUTRAL` (3): Neither satisfied nor dissatisfied
+        - `GOOD` (4): Satisfied
+        - `EXCELLENT` (5): Extremely satisfied
+
+        **NPS Classification:**
+        - Ratings 1-2: Detractors
+        - Rating 3: Passives
+        - Ratings 4-5: Promoters
+
+        **Automatic Actions:**
+        - Updates customer NPS score
+        - Triggers alerts for poor ratings (1-2)
+        - Sends thank-you notification for excellent ratings (5)
+        - Publishes `FeedbackSubmitted` event
+        - Routes negative feedback to quality team
+      operationId: submitFeedback
+      requestBody:
+        required: true
+        description: Customer feedback details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitFeedbackCommand'
+            examples:
+              excellent_delivery:
+                summary: Excellent Delivery Experience
+                description: Very satisfied customer providing positive feedback
+                value:
+                  customerId: "CUST-2024-001234"
+                  orderId: "ORD-2024-567890"
+                  rating: "EXCELLENT"
+                  category: "DELIVERY"
+                  comments: |
+                    Outstanding service! Package arrived a day early, in perfect condition.
+                    The driver was professional and even waited for me to inspect the package.
+                    Will definitely use Paklog again!
+              poor_tracking:
+                summary: Poor Tracking Experience
+                description: Dissatisfied customer reporting tracking issues
+                value:
+                  customerId: "CUST-2024-002468"
+                  orderId: "ORD-2024-135790"
+                  rating: "POOR"
+                  category: "TRACKING"
+                  comments: |
+                    The tracking information was completely inaccurate. It said my package was delivered
+                    but I didn't receive it until 2 days later. Very frustrating experience trying to
+                    figure out where my package was.
+              neutral_overall:
+                summary: Neutral Overall Experience
+                description: Customer with mixed feelings about service
+                value:
+                  customerId: "CUST-2024-003579"
+                  orderId: "ORD-2024-246801"
+                  rating: "NEUTRAL"
+                  category: "OVERALL"
+                  comments: |
+                    Delivery was on time which was good, but the packaging could have been better.
+                    The box was a bit damaged but items inside were fine. Average experience overall.
+      responses:
+        '201':
+          description: Feedback submitted successfully and recorded in the system
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feedback'
+              examples:
+                submitted_feedback:
+                  summary: Successfully submitted feedback
+                  value:
+                    feedbackId: "FDB-2024-456789"
+                    customerId: "CUST-2024-001234"
+                    orderId: "ORD-2024-567890"
+                    rating: "EXCELLENT"
+                    category: "DELIVERY"
+                    comments: "Outstanding service! Package arrived a day early..."
+                    submittedAt: "2024-11-01T15:45:00Z"
+                    respondedTo: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Order not found or customer not authorized to provide feedback for this order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2024-11-01T15:45:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Order ORD-2024-567890 not found or not associated with customer CUST-2024-001234"
+                path: "/api/v1/customer-experience/feedback"
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+
+  /orders/{orderId}/tracking:
+    get:
+      tags:
+        - Order Tracking
+      summary: Get order tracking information
+      description: |
+        Retrieves comprehensive tracking information for a specific order including:
+        - Current status and location
+        - Complete status history with timestamps
+        - Estimated and actual delivery times
+        - Carrier information and tracking number
+
+        **Tracking Statuses:**
+        - `ORDER_PLACED`: Order received and being processed
+        - `PICKED_UP`: Package picked up from sender
+        - `IN_TRANSIT`: Package in transit to destination
+        - `OUT_FOR_DELIVERY`: Package on delivery vehicle
+        - `DELIVERED`: Package successfully delivered
+        - `DELIVERY_FAILED`: Delivery attempt failed
+        - `RETURNED`: Package being returned to sender
+
+        **Update Frequency:**
+        - Active deliveries: Updated every 30 minutes
+        - Out for delivery: Updated every 10 minutes
+        - Delivered orders: Final status (no further updates)
+
+        **Real-time Updates:**
+        For real-time updates, consider using the WebSocket endpoint `/ws/tracking/{orderId}`
+        to receive live status changes without polling.
+      operationId: trackOrder
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          description: Unique identifier of the order to track
+          schema:
+            type: string
+            pattern: '^ORD-\d{4}-\d{6}$'
+            example: "ORD-2024-567890"
+      responses:
+        '200':
+          description: Order tracking information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderTracking'
+              examples:
+                in_transit:
+                  summary: Package In Transit
+                  description: Package currently being transported to destination
+                  value:
+                    trackingId: "TRK-2024-987654"
+                    orderId: "ORD-2024-567890"
+                    customerId: "CUST-2024-001234"
+                    currentStatus: "IN_TRANSIT"
+                    currentLocation: "Los Angeles Distribution Center, CA"
+                    statusHistory:
+                      - status: "ORDER_PLACED"
+                        location: "San Francisco, CA"
+                        timestamp: "2024-10-30T08:00:00Z"
+                        notes: "Order received and processing initiated"
+                      - status: "PICKED_UP"
+                        location: "San Francisco Warehouse, CA"
+                        timestamp: "2024-10-30T14:30:00Z"
+                        notes: "Package picked up by carrier"
+                      - status: "IN_TRANSIT"
+                        location: "Los Angeles Distribution Center, CA"
+                        timestamp: "2024-10-31T09:15:00Z"
+                        notes: "Package arrived at distribution center"
+                    estimatedDelivery: "2024-11-02T17:00:00Z"
+                    actualDelivery: null
+                    carrierInfo: "Paklog Express"
+                    trackingNumber: "PKG123456789"
+                out_for_delivery:
+                  summary: Out for Delivery
+                  description: Package is on the delivery vehicle heading to customer
+                  value:
+                    trackingId: "TRK-2024-876543"
+                    orderId: "ORD-2024-111222"
+                    customerId: "CUST-2024-002468"
+                    currentStatus: "OUT_FOR_DELIVERY"
+                    currentLocation: "Seattle Delivery Hub, WA"
+                    statusHistory:
+                      - status: "ORDER_PLACED"
+                        location: "Portland, OR"
+                        timestamp: "2024-10-29T10:00:00Z"
+                        notes: "Order confirmed"
+                      - status: "PICKED_UP"
+                        location: "Portland Warehouse, OR"
+                        timestamp: "2024-10-29T16:00:00Z"
+                        notes: "Picked up from sender"
+                      - status: "IN_TRANSIT"
+                        location: "Seattle Hub, WA"
+                        timestamp: "2024-10-30T08:00:00Z"
+                        notes: "Arrived at destination city"
+                      - status: "OUT_FOR_DELIVERY"
+                        location: "Seattle Delivery Hub, WA"
+                        timestamp: "2024-11-01T07:30:00Z"
+                        notes: "Package loaded on delivery vehicle #DV-42. Driver: John Smith"
+                    estimatedDelivery: "2024-11-01T16:00:00Z"
+                    actualDelivery: null
+                    carrierInfo: "Paklog Express"
+                    trackingNumber: "PKG987654321"
+                delivered:
+                  summary: Successfully Delivered
+                  description: Package has been delivered to customer
+                  value:
+                    trackingId: "TRK-2024-765432"
+                    orderId: "ORD-2024-333444"
+                    customerId: "CUST-2024-003579"
+                    currentStatus: "DELIVERED"
+                    currentLocation: "123 Main St, Boston, MA 02101"
+                    statusHistory:
+                      - status: "ORDER_PLACED"
+                        location: "New York, NY"
+                        timestamp: "2024-10-28T09:00:00Z"
+                        notes: "Order processing started"
+                      - status: "PICKED_UP"
+                        location: "New York Warehouse, NY"
+                        timestamp: "2024-10-28T15:00:00Z"
+                        notes: "Package picked up"
+                      - status: "IN_TRANSIT"
+                        location: "Boston Hub, MA"
+                        timestamp: "2024-10-29T11:00:00Z"
+                        notes: "Arrived at destination hub"
+                      - status: "OUT_FOR_DELIVERY"
+                        location: "Boston Delivery Center, MA"
+                        timestamp: "2024-10-30T08:00:00Z"
+                        notes: "Out for delivery with driver Jane Doe"
+                      - status: "DELIVERED"
+                        location: "123 Main St, Boston, MA 02101"
+                        timestamp: "2024-10-30T14:22:00Z"
+                        notes: "Package delivered and signed by: John Customer"
+                    estimatedDelivery: "2024-10-30T17:00:00Z"
+                    actualDelivery: "2024-10-30T14:22:00Z"
+                    carrierInfo: "Paklog Express"
+                    trackingNumber: "PKG456789123"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Order not found or tracking information not available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2024-11-01T16:00:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Order ORD-2024-567890 not found or tracking information not yet available"
+                path: "/api/v1/customer-experience/orders/ORD-2024-567890/tracking"
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+
+  /customers/{customerId}/tickets:
+    get:
+      tags:
+        - Support Tickets
+      summary: Get all tickets for a customer
+      description: |
+        Retrieves all support tickets associated with a specific customer, including open,
+        in-progress, and closed tickets.
+
+        **Filtering Options:**
+        Use query parameters to filter tickets by status, priority, or date range.
+
+        **Sorting:**
+        Results are sorted by creation date (newest first) by default.
+
+        **Pagination:**
+        For customers with many tickets, use `page` and `size` query parameters.
+
+        **Use Cases:**
+        - Customer support dashboard
+        - Customer service history view
+        - Ticket analytics and reporting
+      operationId: getCustomerTickets
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          description: Unique identifier of the customer
+          schema:
+            type: string
+            pattern: '^CUST-\d{4}-\d{6}$'
+            example: "CUST-2024-001234"
+        - name: status
+          in: query
+          required: false
+          description: Filter tickets by status
+          schema:
+            type: string
+            enum: [OPEN, IN_PROGRESS, WAITING_CUSTOMER, RESOLVED, CLOSED]
+            example: "OPEN"
+        - name: priority
+          in: query
+          required: false
+          description: Filter tickets by priority level
+          schema:
+            type: string
+            enum: [CRITICAL, HIGH, MEDIUM, LOW]
+            example: "HIGH"
+        - name: page
+          in: query
+          required: false
+          description: Page number for pagination (0-indexed)
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+            example: 0
+        - name: size
+          in: query
+          required: false
+          description: Number of tickets per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+            example: 20
+      responses:
+        '200':
+          description: List of customer tickets retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupportTicket'
+              examples:
+                multiple_tickets:
+                  summary: Customer with multiple tickets
+                  value:
+                    - ticketId: "TKT-2024-789012"
+                      customerId: "CUST-2024-001234"
+                      orderId: "ORD-2024-567890"
+                      subject: "Package arrived damaged"
+                      description: "I received my order today but the package was severely damaged..."
+                      status: "IN_PROGRESS"
+                      priority: "HIGH"
+                      assignedTo: "support-agent-42"
+                      comments:
+                        - commentId: "CMT-001"
+                          author: "support-agent-42"
+                          content: "We're very sorry about this. I've initiated a replacement order for you."
+                          timestamp: "2024-11-01T11:00:00Z"
+                      createdAt: "2024-11-01T10:30:00Z"
+                      resolvedAt: null
+                      slaDeadline: "2024-11-01T14:30:00Z"
+                    - ticketId: "TKT-2024-654321"
+                      customerId: "CUST-2024-001234"
+                      orderId: "ORD-2024-333222"
+                      subject: "Question about delivery options"
+                      description: "Can I schedule a specific delivery time?"
+                      status: "RESOLVED"
+                      priority: "MEDIUM"
+                      assignedTo: "support-agent-15"
+                      comments:
+                        - commentId: "CMT-002"
+                          author: "support-agent-15"
+                          content: "Yes! You can schedule delivery via our app. Here's how..."
+                          timestamp: "2024-10-28T09:15:00Z"
+                        - commentId: "CMT-003"
+                          author: "CUST-2024-001234"
+                          content: "Perfect, that worked. Thank you!"
+                          timestamp: "2024-10-28T10:30:00Z"
+                      createdAt: "2024-10-28T09:00:00Z"
+                      resolvedAt: "2024-10-28T10:35:00Z"
+                      slaDeadline: "2024-10-29T09:00:00Z"
+                empty_list:
+                  summary: Customer with no tickets
+                  value: []
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                timestamp: "2024-11-01T16:00:00Z"
+                status: 404
+                error: "Not Found"
+                message: "Customer CUST-2024-001234 not found"
+                path: "/api/v1/customer-experience/customers/CUST-2024-001234/tickets"
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+
+  /customers/{customerId}/nps:
+    get:
+      tags:
+        - Customer Insights
+      summary: Get customer Net Promoter Score (NPS)
+      description: |
+        Calculates and returns the Net Promoter Score (NPS) for a specific customer based on
+        their feedback history.
+
+        **NPS Calculation:**
+        NPS is calculated using the formula: `(% Promoters - % Detractors)`
+
+        - **Promoters** (score 9-10): Ratings of GOOD (4) or EXCELLENT (5)
+        - **Passives** (score 7-8): Ratings of NEUTRAL (3)
+        - **Detractors** (score 0-6): Ratings of POOR (2) or VERY_POOR (1)
+
+        **Score Interpretation:**
+        - **75-100**: Excellent - Customer is a strong advocate
+        - **50-74**: Very Good - Customer is satisfied and likely to recommend
+        - **25-49**: Good - Customer is generally satisfied
+        - **0-24**: Fair - Customer is lukewarm
+        - **-100-(-1)**: Poor - Customer is dissatisfied
+
+        **Calculation Period:**
+        By default, NPS is calculated based on all historical feedback. Use query parameters
+        to specify a time period.
+
+        **Minimum Feedback Requirement:**
+        At least 3 feedback submissions are required for a statistically meaningful NPS score.
+      operationId: getCustomerNPS
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          description: Unique identifier of the customer
+          schema:
+            type: string
+            pattern: '^CUST-\d{4}-\d{6}$'
+            example: "CUST-2024-001234"
+        - name: fromDate
+          in: query
+          required: false
+          description: Start date for NPS calculation (ISO 8601 format)
+          schema:
+            type: string
+            format: date-time
+            example: "2024-01-01T00:00:00Z"
+        - name: toDate
+          in: query
+          required: false
+          description: End date for NPS calculation (ISO 8601 format)
+          schema:
+            type: string
+            format: date-time
+            example: "2024-12-31T23:59:59Z"
+      responses:
+        '200':
+          description: Customer NPS score calculated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NPSResponse'
+              examples:
+                excellent_nps:
+                  summary: Excellent NPS Score
+                  description: Customer with very high satisfaction
+                  value:
+                    customerId: "CUST-2024-001234"
+                    npsScore: 85.5
+                    totalFeedback: 12
+                    promoters: 10
+                    passives: 2
+                    detractors: 0
+                    interpretation: "Excellent"
+                    calculatedAt: "2024-11-01T16:00:00Z"
+                    period:
+                      from: "2024-01-01T00:00:00Z"
+                      to: "2024-11-01T16:00:00Z"
+                good_nps:
+                  summary: Good NPS Score
+                  description: Customer with moderate satisfaction
+                  value:
+                    customerId: "CUST-2024-002468"
+                    npsScore: 33.3
+                    totalFeedback: 9
+                    promoters: 5
+                    passives: 3
+                    detractors: 1
+                    interpretation: "Good"
+                    calculatedAt: "2024-11-01T16:00:00Z"
+                    period:
+                      from: "2024-01-01T00:00:00Z"
+                      to: "2024-11-01T16:00:00Z"
+                poor_nps:
+                  summary: Poor NPS Score
+                  description: Customer with low satisfaction
+                  value:
+                    customerId: "CUST-2024-003579"
+                    npsScore: -25.0
+                    totalFeedback: 8
+                    promoters: 2
+                    passives: 2
+                    detractors: 4
+                    interpretation: "Poor"
+                    calculatedAt: "2024-11-01T16:00:00Z"
+                    period:
+                      from: "2024-01-01T00:00:00Z"
+                      to: "2024-11-01T16:00:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Customer not found or insufficient feedback data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                customer_not_found:
+                  summary: Customer not found
+                  value:
+                    timestamp: "2024-11-01T16:00:00Z"
+                    status: 404
+                    error: "Not Found"
+                    message: "Customer CUST-2024-001234 not found"
+                    path: "/api/v1/customer-experience/customers/CUST-2024-001234/nps"
+                insufficient_feedback:
+                  summary: Insufficient feedback
+                  value:
+                    timestamp: "2024-11-01T16:00:00Z"
+                    status: 404
+                    error: "Insufficient Data"
+                    message: "Customer CUST-2024-001234 has only 2 feedback submissions. Minimum 3 required for NPS calculation"
+                    path: "/api/v1/customer-experience/customers/CUST-2024-001234/nps"
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+
+components:
+  schemas:
+    CreateTicketCommand:
+      type: object
+      required:
+        - customerId
+        - orderId
+        - subject
+        - description
+        - priority
+      properties:
+        customerId:
+          type: string
+          description: Unique identifier of the customer creating the ticket
+          pattern: '^CUST-\d{4}-\d{6}$'
+          example: "CUST-2024-001234"
+        orderId:
+          type: string
+          description: Order ID related to this support ticket
+          pattern: '^ORD-\d{4}-\d{6}$'
+          example: "ORD-2024-567890"
+        subject:
+          type: string
+          description: Brief subject line describing the issue
+          minLength: 5
+          maxLength: 200
+          example: "Package arrived damaged"
+        description:
+          type: string
+          description: Detailed description of the issue or inquiry
+          minLength: 20
+          maxLength: 5000
+          example: "I received my order today (tracking #PKG123456), but the package was severely damaged. The box was crushed on one side and the contents appear to be broken."
+        priority:
+          type: string
+          description: |
+            Priority level of the ticket which determines SLA:
+            - CRITICAL: 2-hour SLA
+            - HIGH: 4-hour SLA
+            - MEDIUM: 1-day SLA
+            - LOW: 3-day SLA
+          enum: [CRITICAL, HIGH, MEDIUM, LOW]
+          example: "HIGH"
+
+    SubmitFeedbackCommand:
+      type: object
+      required:
+        - customerId
+        - orderId
+        - rating
+        - category
+      properties:
+        customerId:
+          type: string
+          description: Unique identifier of the customer submitting feedback
+          pattern: '^CUST-\d{4}-\d{6}$'
+          example: "CUST-2024-001234"
+        orderId:
+          type: string
+          description: Order ID for which feedback is being provided
+          pattern: '^ORD-\d{4}-\d{6}$'
+          example: "ORD-2024-567890"
+        rating:
+          type: string
+          description: |
+            Overall satisfaction rating:
+            - VERY_POOR (1): Extremely dissatisfied
+            - POOR (2): Dissatisfied
+            - NEUTRAL (3): Neither satisfied nor dissatisfied
+            - GOOD (4): Satisfied
+            - EXCELLENT (5): Extremely satisfied
+          enum: [VERY_POOR, POOR, NEUTRAL, GOOD, EXCELLENT]
+          example: "EXCELLENT"
+        category:
+          type: string
+          description: Category of feedback for better classification and analysis
+          enum: [DELIVERY, DRIVER, PACKAGING, TRACKING, SUPPORT, OVERALL]
+          example: "DELIVERY"
+        comments:
+          type: string
+          description: Optional detailed comments and suggestions
+          maxLength: 2000
+          example: "Outstanding service! Package arrived a day early, in perfect condition."
+
+    SupportTicket:
+      type: object
+      required:
+        - ticketId
+        - customerId
+        - orderId
+        - subject
+        - description
+        - status
+        - priority
+        - createdAt
+        - slaDeadline
+      properties:
+        ticketId:
+          type: string
+          description: Unique identifier for the support ticket
+          pattern: '^TKT-\d{4}-\d{6}$'
+          example: "TKT-2024-789012"
+        customerId:
+          type: string
+          description: Customer who created the ticket
+          pattern: '^CUST-\d{4}-\d{6}$'
+          example: "CUST-2024-001234"
+        orderId:
+          type: string
+          description: Related order ID
+          pattern: '^ORD-\d{4}-\d{6}$'
+          example: "ORD-2024-567890"
+        subject:
+          type: string
+          description: Ticket subject line
+          example: "Package arrived damaged"
+        description:
+          type: string
+          description: Detailed description of the issue
+          example: "I received my order today but the package was severely damaged..."
+        status:
+          type: string
+          description: |
+            Current status of the ticket:
+            - OPEN: Newly created, awaiting assignment
+            - IN_PROGRESS: Being actively worked on by support team
+            - WAITING_CUSTOMER: Awaiting customer response
+            - RESOLVED: Issue resolved, awaiting customer confirmation
+            - CLOSED: Ticket closed and archived
+          enum: [OPEN, IN_PROGRESS, WAITING_CUSTOMER, RESOLVED, CLOSED]
+          example: "IN_PROGRESS"
+        priority:
+          type: string
+          description: Priority level
+          enum: [CRITICAL, HIGH, MEDIUM, LOW]
+          example: "HIGH"
+        assignedTo:
+          type: string
+          description: Support agent assigned to handle this ticket
+          nullable: true
+          example: "support-agent-42"
+        comments:
+          type: array
+          description: Conversation thread between customer and support
+          items:
+            $ref: '#/components/schemas/TicketComment'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when ticket was created
+          example: "2024-11-01T10:30:00Z"
+        resolvedAt:
+          type: string
+          format: date-time
+          description: Timestamp when ticket was resolved
+          nullable: true
+          example: null
+        slaDeadline:
+          type: string
+          format: date-time
+          description: SLA deadline for first response based on priority
+          example: "2024-11-01T14:30:00Z"
+
+    TicketComment:
+      type: object
+      required:
+        - commentId
+        - author
+        - content
+        - timestamp
+      properties:
+        commentId:
+          type: string
+          description: Unique identifier for the comment
+          example: "CMT-001"
+        author:
+          type: string
+          description: ID of the person who wrote the comment (customer or agent)
+          example: "support-agent-42"
+        content:
+          type: string
+          description: Comment text content
+          example: "We're very sorry about this. I've initiated a replacement order for you."
+        timestamp:
+          type: string
+          format: date-time
+          description: When the comment was posted
+          example: "2024-11-01T11:00:00Z"
+
+    Feedback:
+      type: object
+      required:
+        - feedbackId
+        - customerId
+        - orderId
+        - rating
+        - category
+        - submittedAt
+        - respondedTo
+      properties:
+        feedbackId:
+          type: string
+          description: Unique identifier for the feedback
+          pattern: '^FDB-\d{4}-\d{6}$'
+          example: "FDB-2024-456789"
+        customerId:
+          type: string
+          description: Customer who submitted the feedback
+          pattern: '^CUST-\d{4}-\d{6}$'
+          example: "CUST-2024-001234"
+        orderId:
+          type: string
+          description: Order being reviewed
+          pattern: '^ORD-\d{4}-\d{6}$'
+          example: "ORD-2024-567890"
+        rating:
+          type: string
+          description: Customer satisfaction rating
+          enum: [VERY_POOR, POOR, NEUTRAL, GOOD, EXCELLENT]
+          example: "EXCELLENT"
+        category:
+          type: string
+          description: Feedback category
+          enum: [DELIVERY, DRIVER, PACKAGING, TRACKING, SUPPORT, OVERALL]
+          example: "DELIVERY"
+        comments:
+          type: string
+          description: Customer comments
+          example: "Outstanding service! Package arrived a day early, in perfect condition."
+        submittedAt:
+          type: string
+          format: date-time
+          description: When feedback was submitted
+          example: "2024-11-01T15:45:00Z"
+        respondedTo:
+          type: boolean
+          description: Whether the company has responded to this feedback
+          example: false
+
+    OrderTracking:
+      type: object
+      required:
+        - trackingId
+        - orderId
+        - customerId
+        - currentStatus
+        - currentLocation
+        - statusHistory
+        - estimatedDelivery
+        - carrierInfo
+        - trackingNumber
+      properties:
+        trackingId:
+          type: string
+          description: Unique tracking identifier
+          pattern: '^TRK-\d{4}-\d{6}$'
+          example: "TRK-2024-987654"
+        orderId:
+          type: string
+          description: Associated order ID
+          pattern: '^ORD-\d{4}-\d{6}$'
+          example: "ORD-2024-567890"
+        customerId:
+          type: string
+          description: Customer ID
+          pattern: '^CUST-\d{4}-\d{6}$'
+          example: "CUST-2024-001234"
+        currentStatus:
+          type: string
+          description: |
+            Current delivery status:
+            - ORDER_PLACED: Order confirmed
+            - PICKED_UP: Picked up from sender
+            - IN_TRANSIT: In transit to destination
+            - OUT_FOR_DELIVERY: On delivery vehicle
+            - DELIVERED: Successfully delivered
+            - DELIVERY_FAILED: Delivery attempt failed
+            - RETURNED: Returning to sender
+          enum: [ORDER_PLACED, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, DELIVERY_FAILED, RETURNED]
+          example: "IN_TRANSIT"
+        currentLocation:
+          type: string
+          description: Current package location
+          example: "Los Angeles Distribution Center, CA"
+        statusHistory:
+          type: array
+          description: Complete chronological history of status updates
+          items:
+            $ref: '#/components/schemas/StatusUpdate'
+        estimatedDelivery:
+          type: string
+          format: date-time
+          description: Estimated delivery date and time
+          example: "2024-11-02T17:00:00Z"
+        actualDelivery:
+          type: string
+          format: date-time
+          description: Actual delivery timestamp (null if not yet delivered)
+          nullable: true
+          example: null
+        carrierInfo:
+          type: string
+          description: Carrier company name
+          example: "Paklog Express"
+        trackingNumber:
+          type: string
+          description: External tracking number from carrier
+          example: "PKG123456789"
+
+    StatusUpdate:
+      type: object
+      required:
+        - status
+        - location
+        - timestamp
+      properties:
+        status:
+          type: string
+          description: Status at this point in time
+          enum: [ORDER_PLACED, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, DELIVERY_FAILED, RETURNED]
+          example: "IN_TRANSIT"
+        location:
+          type: string
+          description: Geographic location for this status update
+          example: "Los Angeles Distribution Center, CA"
+        timestamp:
+          type: string
+          format: date-time
+          description: When this status occurred
+          example: "2024-10-31T09:15:00Z"
+        notes:
+          type: string
+          description: Additional notes or details about this status
+          example: "Package arrived at distribution center"
+
+    NPSResponse:
+      type: object
+      required:
+        - customerId
+        - npsScore
+        - totalFeedback
+        - promoters
+        - passives
+        - detractors
+        - interpretation
+        - calculatedAt
+        - period
+      properties:
+        customerId:
+          type: string
+          description: Customer identifier
+          pattern: '^CUST-\d{4}-\d{6}$'
+          example: "CUST-2024-001234"
+        npsScore:
+          type: number
+          format: double
+          description: Net Promoter Score (-100 to +100)
+          minimum: -100
+          maximum: 100
+          example: 85.5
+        totalFeedback:
+          type: integer
+          description: Total number of feedback submissions included in calculation
+          minimum: 0
+          example: 12
+        promoters:
+          type: integer
+          description: Number of promoters (ratings 4-5)
+          minimum: 0
+          example: 10
+        passives:
+          type: integer
+          description: Number of passives (rating 3)
+          minimum: 0
+          example: 2
+        detractors:
+          type: integer
+          description: Number of detractors (ratings 1-2)
+          minimum: 0
+          example: 0
+        interpretation:
+          type: string
+          description: |
+            Human-readable interpretation of the NPS score:
+            - Excellent (75-100)
+            - Very Good (50-74)
+            - Good (25-49)
+            - Fair (0-24)
+            - Poor (-100 to -1)
+          enum: [Excellent, Very Good, Good, Fair, Poor]
+          example: "Excellent"
+        calculatedAt:
+          type: string
+          format: date-time
+          description: When this NPS was calculated
+          example: "2024-11-01T16:00:00Z"
+        period:
+          type: object
+          description: Time period for which NPS was calculated
+          required:
+            - from
+            - to
+          properties:
+            from:
+              type: string
+              format: date-time
+              description: Start date of calculation period
+              example: "2024-01-01T00:00:00Z"
+            to:
+              type: string
+              format: date-time
+              description: End date of calculation period
+              example: "2024-11-01T16:00:00Z"
+
+    ErrorResponse:
+      type: object
+      required:
+        - timestamp
+        - status
+        - error
+        - message
+        - path
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2024-11-01T16:00:00Z"
+        status:
+          type: integer
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: Error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Detailed error message
+          example: "Validation failed: priority must be one of [CRITICAL, HIGH, MEDIUM, LOW]"
+        path:
+          type: string
+          description: API endpoint path where error occurred
+          example: "/api/v1/customer-experience/tickets"
+        validationErrors:
+          type: array
+          description: Detailed validation errors (for 400 Bad Request)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field that failed validation
+                example: "priority"
+              message:
+                type: string
+                description: Validation error message
+                example: "must be one of [CRITICAL, HIGH, MEDIUM, LOW]"
+              rejectedValue:
+                description: Value that was rejected
+                example: "URGENT"
+
+  responses:
+    BadRequest:
+      description: |
+        Bad Request - The request was invalid or malformed.
+        Common causes:
+        - Missing required fields
+        - Invalid field values
+        - Malformed JSON
+        - Invalid data types
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing_required_field:
+              summary: Missing Required Field
+              value:
+                timestamp: "2024-11-01T16:00:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Validation failed"
+                path: "/api/v1/customer-experience/tickets"
+                validationErrors:
+                  - field: "priority"
+                    message: "must not be null"
+                    rejectedValue: null
+            invalid_enum_value:
+              summary: Invalid Enum Value
+              value:
+                timestamp: "2024-11-01T16:00:00Z"
+                status: 400
+                error: "Bad Request"
+                message: "Validation failed"
+                path: "/api/v1/customer-experience/tickets"
+                validationErrors:
+                  - field: "priority"
+                    message: "must be one of [CRITICAL, HIGH, MEDIUM, LOW]"
+                    rejectedValue: "URGENT"
+
+    Unauthorized:
+      description: |
+        Unauthorized - Authentication credentials are missing or invalid.
+        Provide a valid Bearer token or API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2024-11-01T16:00:00Z"
+            status: 401
+            error: "Unauthorized"
+            message: "Authentication credentials are missing or invalid"
+            path: "/api/v1/customer-experience/tickets"
+
+    RateLimitExceeded:
+      description: |
+        Too Many Requests - Rate limit exceeded.
+        Wait before making additional requests or upgrade to a higher tier.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2024-11-01T16:00:00Z"
+            status: 429
+            error: "Too Many Requests"
+            message: "Rate limit exceeded. Maximum 100 requests per minute. Try again in 45 seconds."
+            path: "/api/v1/customer-experience/tickets"
+      headers:
+        X-RateLimit-Limit:
+          description: Maximum number of requests allowed per minute
+          schema:
+            type: integer
+            example: 100
+        X-RateLimit-Remaining:
+          description: Number of requests remaining in current window
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          description: Timestamp when rate limit resets
+          schema:
+            type: integer
+            format: unix-timestamp
+            example: 1730476845
+        Retry-After:
+          description: Seconds to wait before retrying
+          schema:
+            type: integer
+            example: 45
+
+    InternalServerError:
+      description: |
+        Internal Server Error - An unexpected error occurred on the server.
+        If this persists, contact API support.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            timestamp: "2024-11-01T16:00:00Z"
+            status: 500
+            error: "Internal Server Error"
+            message: "An unexpected error occurred. Please try again later or contact support if this persists."
+            path: "/api/v1/customer-experience/tickets"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Bearer token authentication.
+
+        **Obtaining a Token:**
+        1. Authenticate via the Auth API endpoint
+        2. Include the token in the Authorization header: `Authorization: Bearer {token}`
+
+        **Token Expiration:**
+        Tokens expire after 24 hours. Refresh tokens are valid for 30 days.
+
+        **Example:**
+        ```
+        Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        ```
+
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: |
+        API Key authentication for service-to-service communication.
+
+        **Obtaining an API Key:**
+        1. Log in to the Paklog Developer Portal
+        2. Navigate to API Keys section
+        3. Generate a new API key with appropriate scopes
+
+        **Security:**
+        - Never expose API keys in client-side code
+        - Rotate API keys regularly
+        - Use environment-specific keys
+
+        **Example:**
+        ```
+        X-API-Key: pk_live_1234567890abcdef
+        ```
+
+security:
+  - bearerAuth: []
+  - apiKeyAuth: []

@@ -1,0 +1,17 @@
+source:
+  type: pinot
+  config:
+    connection:
+      host_port: ${PINOT_BROKER_URL_STAGING}
+    platform_instance: staging
+    include_tables:
+      - ".*"
+    profiling:
+      enabled: false
+
+sink:
+  type: datahub-rest
+  config:
+    server: ${DATAHUB_GMS_STAGING}
+    token: ${DATAHUB_TOKEN_STAGING}
+

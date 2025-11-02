@@ -1,0 +1,111 @@
+{
+  "info": {
+    "_postman_id": "d4e5f6a1-b2c3-4d3e-8f7g-4b5c6d1e2f3a",
+    "name": "Quality & Compliance API",
+    "description": "API for managing quality inspections, regulatory compliance, and audit trails.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Inspections",
+      "item": [
+        {
+          "name": "Create Inspection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inspections",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inspections"
+              ]
+            },
+            "description": "**Summary**: Creates a new quality inspection for a specific item, order, or receiving event.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"inspectionType\": \"RECEIVING\",\n  \"referenceId\": \"PO-12345\",\n  \"sku\": \"SKU-ABC\",\n  \"samplingStrategy\": \"AQL_2_5\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": null,
+              "status": "Inspection created.",
+              "code": 201,
+              "header": [],
+              "body": "{\n  \"inspectionId\": \"INSP-987\",\n  \"status\": \"PENDING\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Submit Inspection Results",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/inspections/{{inspectionId}}/results",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "inspections",
+                "{{inspectionId}}",
+                "results"
+              ]
+            },
+            "description": "**Summary**: Submits the results of a quality inspection, including any detected defects.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\": \"FAILED\",\n  \"defects\": [\n    {\n      \"defectCode\": \"COSMETIC_DAMAGE\",\n      \"severity\": \"MINOR\",\n      \"notes\": \"Scratches on the product casing.\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": null,
+              "status": "Results submitted.",
+              "code": 200,
+              "header": [],
+              "body": "{\n  \"inspectionId\": \"INSP-987\",\n  \"status\": \"COMPLETED\",\n  \"nextAction\": \"QUARANTINE_ITEM\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "/api/v1/quality"
+    },
+    {
+      "key": "inspectionId",
+      "value": "INSP-987"
+    }
+  ]
+}

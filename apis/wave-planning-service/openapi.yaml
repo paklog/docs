@@ -1,0 +1,927 @@
+openapi: 3.0.3
+info:
+  title: Wave Planning Service API
+  description: |
+    The Wave Planning Service is responsible for creating, optimizing, and managing warehouse picking waves.
+    It implements sophisticated algorithms to group orders efficiently based on various strategies including
+    carrier cutoffs, zone optimization, and capacity constraints.
+  version: 1.0.0
+  contact:
+    name: WMS Team
+    email: wms-team@paklog.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://localhost:8081
+    description: Local development
+  - url: https://wave-planning.paklog.com
+    description: Production
+
+tags:
+  - name: Waves
+    description: Wave management operations
+  - name: Optimization
+    description: Wave optimization operations
+  - name: Monitoring
+    description: Wave monitoring and metrics
+
+paths:
+  /waves:
+    get:
+      tags:
+        - Waves
+      summary: List all waves
+      description: Retrieve a list of waves with optional filtering
+      operationId: listWaves
+      parameters:
+        - $ref: '#/components/parameters/WarehouseId'
+        - $ref: '#/components/parameters/Status'
+        - $ref: '#/components/parameters/DateFrom'
+        - $ref: '#/components/parameters/DateTo'
+        - $ref: '#/components/parameters/PageNumber'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: List of waves
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  waves:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Wave'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    post:
+      tags:
+        - Waves
+      summary: Create a new wave
+      description: Create a new wave with specified orders
+      operationId: createWave
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWaveRequest'
+      responses:
+        '201':
+          description: Wave created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /waves/{waveId}:
+    get:
+      tags:
+        - Waves
+      summary: Get wave by ID
+      description: Retrieve detailed information about a specific wave
+      operationId: getWaveById
+      parameters:
+        - $ref: '#/components/parameters/WaveId'
+      responses:
+        '200':
+          description: Wave details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaveDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    put:
+      tags:
+        - Waves
+      summary: Update wave
+      description: Update wave properties (only for waves in DRAFT or PLANNED status)
+      operationId: updateWave
+      parameters:
+        - $ref: '#/components/parameters/WaveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWaveRequest'
+      responses:
+        '200':
+          description: Wave updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+    delete:
+      tags:
+        - Waves
+      summary: Cancel wave
+      description: Cancel a wave and release its orders
+      operationId: cancelWave
+      parameters:
+        - $ref: '#/components/parameters/WaveId'
+        - name: reason
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Wave cancelled successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /waves/create-carrier-based:
+    post:
+      tags:
+        - Waves
+      summary: Create carrier-based waves
+      description: Create waves grouped by carrier with cutoff times
+      operationId: createCarrierWaves
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierWaveRequest'
+      responses:
+        '201':
+          description: Carrier waves created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /waves/create-zone-based:
+    post:
+      tags:
+        - Waves
+      summary: Create zone-based waves
+      description: Create waves optimized for zone picking
+      operationId: createZoneWaves
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneWaveRequest'
+      responses:
+        '201':
+          description: Zone waves created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /waves/create-capacity-based:
+    post:
+      tags:
+        - Waves
+      summary: Create capacity-based waves
+      description: Create waves respecting capacity constraints
+      operationId: createCapacityWaves
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapacityWaveRequest'
+      responses:
+        '201':
+          description: Capacity waves created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Wave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /waves/{waveId}/optimize:
+    post:
+      tags:
+        - Optimization
+      summary: Optimize wave
+      description: Optimize an existing wave using specified criteria
+      operationId: optimizeWave
+      parameters:
+        - $ref: '#/components/parameters/WaveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OptimizationCriteria'
+      responses:
+        '200':
+          description: Wave optimized successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptimizationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /waves/{waveId}/release:
+    post:
+      tags:
+        - Waves
+      summary: Release wave
+      description: Release wave for picking execution
+      operationId: releaseWave
+      parameters:
+        - $ref: '#/components/parameters/WaveId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignedPickers:
+                  type: array
+                  items:
+                    type: string
+                priority:
+                  type: string
+                  enum: [LOW, MEDIUM, HIGH, URGENT]
+      responses:
+        '200':
+          description: Wave released successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /waves/{waveId}/progress:
+    get:
+      tags:
+        - Monitoring
+      summary: Get wave progress
+      description: Get real-time progress of wave execution
+      operationId: getWaveProgress
+      parameters:
+        - $ref: '#/components/parameters/WaveId'
+      responses:
+        '200':
+          description: Wave progress information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaveProgress'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /waves/{waveId}/metrics:
+    get:
+      tags:
+        - Monitoring
+      summary: Get wave metrics
+      description: Get detailed metrics for a wave
+      operationId: getWaveMetrics
+      parameters:
+        - $ref: '#/components/parameters/WaveId'
+      responses:
+        '200':
+          description: Wave metrics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaveMetrics'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /waves/merge:
+    post:
+      tags:
+        - Waves
+      summary: Merge waves
+      description: Merge multiple waves into a single wave
+      operationId: mergeWaves
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - waveIds
+              properties:
+                waveIds:
+                  type: array
+                  minItems: 2
+                  items:
+                    type: string
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Waves merged successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wave'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+components:
+  parameters:
+    WaveId:
+      name: waveId
+      in: path
+      required: true
+      schema:
+        type: string
+      description: Unique identifier of the wave
+
+    WarehouseId:
+      name: warehouseId
+      in: query
+      schema:
+        type: string
+      description: Filter by warehouse ID
+
+    Status:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [DRAFT, PLANNED, RELEASED, IN_PROGRESS, COMPLETED, CANCELLED]
+      description: Filter by wave status
+
+    DateFrom:
+      name: dateFrom
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Filter waves created after this date
+
+    DateTo:
+      name: dateTo
+      in: query
+      schema:
+        type: string
+        format: date-time
+      description: Filter waves created before this date
+
+    PageNumber:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 0
+      description: Page number for pagination
+
+    PageSize:
+      name: size
+      in: query
+      schema:
+        type: integer
+        default: 20
+        maximum: 100
+      description: Number of items per page
+
+  schemas:
+    Wave:
+      type: object
+      required:
+        - waveId
+        - warehouseId
+        - status
+        - type
+        - createdAt
+      properties:
+        waveId:
+          type: string
+          description: Unique identifier
+        warehouseId:
+          type: string
+          description: Warehouse identifier
+        status:
+          $ref: '#/components/schemas/WaveStatus'
+        type:
+          $ref: '#/components/schemas/WaveType'
+        name:
+          type: string
+          description: Wave name or number
+        createdAt:
+          type: string
+          format: date-time
+        plannedStartTime:
+          type: string
+          format: date-time
+        plannedEndTime:
+          type: string
+          format: date-time
+        actualStartTime:
+          type: string
+          format: date-time
+        actualEndTime:
+          type: string
+          format: date-time
+        orderIds:
+          type: array
+          items:
+            type: string
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        metadata:
+          type: object
+          additionalProperties: true
+
+    WaveDetails:
+      allOf:
+        - $ref: '#/components/schemas/Wave'
+        - type: object
+          properties:
+            orders:
+              type: array
+              items:
+                $ref: '#/components/schemas/Order'
+            metrics:
+              $ref: '#/components/schemas/WaveMetrics'
+            assignments:
+              type: array
+              items:
+                $ref: '#/components/schemas/PickerAssignment'
+
+    WaveStatus:
+      type: string
+      enum:
+        - DRAFT
+        - PLANNED
+        - RELEASED
+        - IN_PROGRESS
+        - COMPLETED
+        - CANCELLED
+
+    WaveType:
+      type: string
+      enum:
+        - TIME_BASED
+        - CARRIER_BASED
+        - ZONE_BASED
+        - CAPACITY_BASED
+        - PRIORITY_BASED
+
+    Order:
+      type: object
+      properties:
+        orderId:
+          type: string
+        customerId:
+          type: string
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        orderDate:
+          type: string
+          format: date-time
+        requiredDate:
+          type: string
+          format: date-time
+        carrier:
+          type: string
+        shippingMethod:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+
+    OrderLine:
+      type: object
+      properties:
+        lineId:
+          type: string
+        productId:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        pickLocation:
+          type: string
+        zone:
+          type: string
+        weight:
+          type: number
+        volume:
+          type: number
+
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        zipCode:
+          type: string
+        country:
+          type: string
+
+    WaveMetrics:
+      type: object
+      properties:
+        totalOrders:
+          type: integer
+        totalLines:
+          type: integer
+        totalUnits:
+          type: integer
+        totalVolume:
+          type: number
+        totalWeight:
+          type: number
+        estimatedPickers:
+          type: integer
+        estimatedDuration:
+          type: integer
+          description: Duration in minutes
+        totalDistance:
+          type: number
+          description: Total travel distance in meters
+        ordersByZone:
+          type: object
+          additionalProperties:
+            type: integer
+        ordersByCarrier:
+          type: object
+          additionalProperties:
+            type: integer
+        completionRate:
+          type: number
+          format: percentage
+
+    CreateWaveRequest:
+      type: object
+      required:
+        - warehouseId
+        - type
+        - orderIds
+      properties:
+        warehouseId:
+          type: string
+        type:
+          $ref: '#/components/schemas/WaveType'
+        name:
+          type: string
+        orderIds:
+          type: array
+          minItems: 1
+          items:
+            type: string
+        plannedStartTime:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        metadata:
+          type: object
+
+    UpdateWaveRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        plannedStartTime:
+          type: string
+          format: date-time
+        plannedEndTime:
+          type: string
+          format: date-time
+        priority:
+          type: string
+          enum: [LOW, MEDIUM, HIGH, URGENT]
+        metadata:
+          type: object
+
+    CarrierWaveRequest:
+      type: object
+      required:
+        - warehouseId
+        - cutoffs
+      properties:
+        warehouseId:
+          type: string
+        cutoffs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarrierCutoff'
+        includeAllOrders:
+          type: boolean
+          default: false
+
+    CarrierCutoff:
+      type: object
+      required:
+        - carrier
+        - cutoffTime
+      properties:
+        carrier:
+          type: string
+        cutoffTime:
+          type: string
+          format: date-time
+        serviceLevel:
+          type: string
+
+    ZoneWaveRequest:
+      type: object
+      required:
+        - warehouseId
+      properties:
+        warehouseId:
+          type: string
+        zones:
+          type: array
+          items:
+            type: string
+        maxZonesPerWave:
+          type: integer
+          default: 3
+        minOrdersPerWave:
+          type: integer
+          default: 10
+
+    CapacityWaveRequest:
+      type: object
+      required:
+        - warehouseId
+        - capacity
+      properties:
+        warehouseId:
+          type: string
+        capacity:
+          $ref: '#/components/schemas/WaveCapacity'
+
+    WaveCapacity:
+      type: object
+      properties:
+        maxOrders:
+          type: integer
+          default: 100
+        maxLines:
+          type: integer
+          default: 500
+        maxVolume:
+          type: number
+        maxWeight:
+          type: number
+        maxPickers:
+          type: integer
+        maxDuration:
+          type: integer
+          description: Max duration in minutes
+
+    OptimizationCriteria:
+      type: object
+      properties:
+        minimizeTravelDistance:
+          type: boolean
+          default: true
+        balanceWorkload:
+          type: boolean
+          default: true
+        prioritizeSLA:
+          type: boolean
+          default: true
+        groupByZone:
+          type: boolean
+          default: false
+        groupByCarrier:
+          type: boolean
+          default: false
+        weights:
+          type: object
+          properties:
+            distance:
+              type: number
+              default: 0.3
+            workload:
+              type: number
+              default: 0.3
+            sla:
+              type: number
+              default: 0.4
+
+    OptimizationResult:
+      type: object
+      properties:
+        wave:
+          $ref: '#/components/schemas/Wave'
+        metrics:
+          $ref: '#/components/schemas/WaveMetrics'
+        improvement:
+          type: object
+          properties:
+            distanceReduction:
+              type: number
+              format: percentage
+            timeReduction:
+              type: number
+              format: percentage
+            message:
+              type: string
+
+    ReleaseResult:
+      type: object
+      properties:
+        waveId:
+          type: string
+        status:
+          type: string
+        assignedPickers:
+          type: array
+          items:
+            type: string
+        tasksCreated:
+          type: integer
+        sessionsCreated:
+          type: integer
+
+    WaveProgress:
+      type: object
+      properties:
+        waveId:
+          type: string
+        status:
+          $ref: '#/components/schemas/WaveStatus'
+        totalOrders:
+          type: integer
+        completedOrders:
+          type: integer
+        inProgressOrders:
+          type: integer
+        pendingOrders:
+          type: integer
+        completionPercentage:
+          type: number
+        estimatedTimeRemaining:
+          type: integer
+          description: Minutes remaining
+        activePickers:
+          type: array
+          items:
+            type: string
+        bottlenecks:
+          type: array
+          items:
+            type: object
+            properties:
+              zone:
+                type: string
+              congestion:
+                type: number
+              waitTime:
+                type: integer
+
+    PickerAssignment:
+      type: object
+      properties:
+        pickerId:
+          type: string
+        pickerName:
+          type: string
+        assignedOrders:
+          type: array
+          items:
+            type: string
+        zone:
+          type: string
+        estimatedDuration:
+          type: integer
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+        totalPages:
+          type: integer
+        first:
+          type: boolean
+        last:
+          type: boolean
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    Conflict:
+      description: Resource conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - bearerAuth: []
+  - apiKey: []

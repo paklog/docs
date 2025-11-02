@@ -1,0 +1,17 @@
+source:
+  type: pinot
+  config:
+    connection:
+      host_port: ${PINOT_BROKER_URL_DEV}
+    platform_instance: dev
+    include_tables:
+      - ".*"  # discover all Pinot tables
+    profiling:
+      enabled: false
+
+sink:
+  type: datahub-rest
+  config:
+    server: ${DATAHUB_GMS_DEV}
+    token: ${DATAHUB_TOKEN_DEV}
+

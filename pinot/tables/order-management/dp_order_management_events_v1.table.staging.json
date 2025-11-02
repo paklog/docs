@@ -1,0 +1,44 @@
+{
+  "tableName": "dp_order_management_events_v1",
+  "tableType": "REALTIME",
+  "tenants": {"server": "domain-fulfillment", "broker": "domain-fulfillment"},
+  "segmentsConfig": {
+    "timeColumnName": "event_time",
+    "replication": "2",
+    "retentionTimeUnit": "DAYS",
+    "retentionTimeValue": "30"
+  },
+  "tableIndexConfig": {
+    "invertedIndexColumns": ["event_type"],
+    "bloomFilterColumns": ["order_id", "event_id"],
+    "rangeIndexColumns": ["event_time"]
+  },
+  "ingestionConfig": {
+    "transformConfigs": [
+      {"columnName": "event_id", "transformFunction": "jsonPathString($, '$.id')"},
+      {"columnName": "event_type", "transformFunction": "jsonPathString($, '$.type')"},
+      {"columnName": "event_source", "transformFunction": "jsonPathString($, '$.source')"},
+      {"columnName": "event_subject", "transformFunction": "jsonPathString($, '$.subject')"},
+      {"columnName": "event_time", "transformFunction": "fromDateTime(jsonPathString($, '$.time'), 'yyyy-MM-dd''T''HH:mm:ss[.SSS]XXX')"},
+      {"columnName": "order_id", "transformFunction": "jsonPathString($, '$.data.order_id')"},
+      {"columnName": "seller_fulfillment_order_id", "transformFunction": "jsonPathString($, '$.data.seller_fulfillment_order_id')"},
+      {"columnName": "correlation_id", "transformFunction": "jsonPathString($, '$.extensions.correlationId')"},
+      {"columnName": "trace_id", "transformFunction": "jsonPathString($, '$.extensions.traceparent')"}
+    ]
+  },
+  "upsertConfig": {"mode": "FULL", "primaryKeyColumns": ["event_id"], "hashFunction": "NONE"},
+  "metadata": {"customConfigs": {"product.owner": "fulfillment-platform@paklog.com", "product.sla": "p95<2s", "product.kind": "source-aligned"}},
+  "streamConfigs": {
+    "streamType": "kafka",
+    "stream.kafka.topic.name": "fulfillment.order_management.v1.events",
+    "stream.kafka.consumer.type": "lowlevel",
+    "stream.kafka.decoder.class.name": "org.apache.pinot.plugin.stream.kafka.KafkaJSONMessageDecoder",
+    "stream.kafka.broker.list": "kafka-staging.paklog.com:9092",
+    "stream.kafka.security.protocol": "SASL_PLAINTEXT",
+    "stream.kafka.sasl.mechanism": "SCRAM-SHA-512",
+    "stream.kafka.sasl.jaas.config": "org.apache.kafka.common.security.scram.ScramLoginModule required username=\"${KAFKA_SASL_USERNAME}\" password=\"${KAFKA_SASL_PASSWORD}\";",
+    "realtime.segment.flush.threshold.time": "1h",
+    "realtime.segment.flush.threshold.rows": "500000"
+  }
+}
+
