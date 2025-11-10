@@ -15,6 +15,7 @@ Welcome to the PakLog Warehouse Management System (WMS) and Warehouse Execution 
 <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px;">
 <h3>📐 Architecture & Design</h3>
 <ul style="list-style: none; padding: 0;">
+<li><a href="diagrams/architecture/"><strong>🏗️ Architecture Diagrams</strong></a></li>
 <li><a href="diagrams/01-ARCHITECTURE-OVERVIEW">System Architecture</a></li>
 <li><a href="diagrams/02-SEQUENCE-DIAGRAMS">Sequence Diagrams</a></li>
 <li><a href="diagrams/03-DOMAIN-MODEL-DIAGRAMS">Domain Models</a></li>
@@ -39,11 +40,11 @@ Welcome to the PakLog Warehouse Management System (WMS) and Warehouse Execution 
 <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px;">
 <h3>🎯 Domain-Driven Design</h3>
 <ul style="list-style: none; padding: 0;">
-<li><a href="domain-driven-design/inventory/ddd">Inventory DDD</a></li>
-<li><a href="domain-driven-design/order-management/ddd">Order DDD</a></li>
-<li><a href="domain-driven-design/cartonization/ddd">Cartonization DDD</a></li>
-<li><a href="domain-driven-design/product-catalog/ddd">Product DDD</a></li>
-<li><a href="domain-driven-design/shipment-transportation/ddd">Shipment DDD</a></li>
+<li><a href="domain-driven-design/inventory-service/ddd">Inventory DDD</a></li>
+<li><a href="domain-driven-design/order-management-service/ddd">Order DDD</a></li>
+<li><a href="domain-driven-design/cartonization-service/ddd">Cartonization DDD</a></li>
+<li><a href="domain-driven-design/product-catalog-service/ddd">Product DDD</a></li>
+<li><a href="domain-driven-design/shipment-transportation-service/ddd">Shipment DDD</a></li>
 </ul>
 </div>
 

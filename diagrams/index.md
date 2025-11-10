@@ -10,7 +10,23 @@ This section contains comprehensive technical diagrams that illustrate the archi
 
 ## Available Diagrams
 
-### 0. [Complete System Overview](00-SYSTEM-OVERVIEW) **NEW**
+### 🏗️ [System Architecture Diagrams](architecture/) **NEW**
+Comprehensive architecture diagrams using Mermaid.js architecture-beta syntax:
+- [Overall System Architecture](architecture/overall-system-architecture)
+- [WMS Services Architecture](architecture/wms-services-architecture)
+- [WES Services Architecture](architecture/wes-services-architecture)
+- [Shared Services Architecture](architecture/shared-services-architecture)
+- [Supporting Services Architecture](architecture/supporting-services-architecture)
+
+### 📊 [Class Diagrams](class-diagrams-index) **NEW**
+Detailed class diagrams for all services using Mermaid syntax:
+- Domain models and aggregates
+- Command and query handlers
+- Service interactions
+- Design patterns implementation
+- [View All Service Class Diagrams](class-diagrams-index)
+
+### 0. [Complete System Overview](00-SYSTEM-OVERVIEW)
 Comprehensive view of all 27 microservices:
 - Complete microservices ecosystem map
 - Service categories (Foundation, Execution, Advanced, Intelligence)
@@ -32,6 +48,7 @@ Business process flow diagrams showing interactions between services:
 - Task Assignment Sequence
 - Pick Execution Workflow
 - Pack and Ship Process
+- [Extended WMS/WES Integration Sequences](02-SEQUENCE-DIAGRAMS-EXTENDED)
 
 ### 3. [Domain Model Diagrams](03-DOMAIN-MODEL-DIAGRAMS)
 Domain-Driven Design models and bounded contexts:

@@ -68,7 +68,7 @@ info:
     - **Task Execution Service**: Listens for step execution events
     - **Inventory Service**: Reacts to workflow started/completed events
     - **Order Management**: Receives workflow completion notifications
-    - **Warehouse Operations**: Processes shipping and fulfillment events
+    - **Shipment Transportation**: Processes shipping and fulfillment events
 
     ### Event Processing Guarantees
     - **At-least-once delivery**: Consumers must handle idempotent processing
@@ -677,7 +677,7 @@ components:
               stepName: "Create Shipment"
               failedAt: "2025-11-01T10:01:30Z"
               errorCode: "SERVICE_TIMEOUT"
-              errorMessage: "warehouse-operations service timeout after 5000ms"
+              errorMessage: "shipment-transportation service timeout after 5000ms"
               retryAttempt: 1
 
     WorkflowPausedEvent:

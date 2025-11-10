@@ -11,7 +11,7 @@
 
 ## Executive Summary
 
-This document outlines the comprehensive plan to decouple the monolithic Warehouse Operations Service into separate WMS (Warehouse Management System) and WES (Warehouse Execution System) services. The current architecture contains 10 bounded contexts within a single service, creating deployment coupling, scalability issues, and unclear ownership boundaries.
+This document outlines the comprehensive plan to decouple warehouse management functionality into separate WMS (Warehouse Management System) and WES (Warehouse Execution System) services. The current architecture mixes strategic planning and execution concerns, creating deployment coupling, scalability issues, and unclear ownership boundaries.
 
 ### Key Goals
 1. **Clear Separation of Concerns**: WMS for strategic planning, WES for real-time execution
@@ -36,28 +36,16 @@ This document outlines the comprehensive plan to decouple the monolithic Warehou
 paklog/
 ├── order-management/        ✅ Correctly aligned with WMS
 ├── inventory/              ✅ Correctly aligned with WMS
-├── warehouse-operations/   ❌ MONOLITHIC - Contains 10 contexts
-│   ├── Wave Planning       → Should be WMS
-│   ├── Picking            → Should be WES
-│   ├── Quality            → Should be WES
-│   ├── Packing            → Should be WES
-│   ├── Put Wall           → Should be WES
-│   ├── Location           → Should be SPLIT (Master: WMS, State: WES)
-│   ├── License Plate      → Should be WES
-│   ├── Work Management    → Should be WES
-│   ├── Workload          → Should be WMS
-│   └── Shared Kernel      → Should be Common Library
 ├── product-catalog/        ✅ Separate concern
 ├── cartonization/         ✅ Separate concern
 └── shipment-transportation/ ✅ Separate concern
 ```
 
 ### Key Problems
-1. **Monolithic Warehouse Operations**: 10 bounded contexts in one service
-2. **Mixed Responsibilities**: Strategic planning coupled with execution
-3. **Deployment Coupling**: Cannot deploy WMS changes without affecting WES
-4. **Scaling Limitations**: Cannot scale execution independently from planning
-5. **Team Bottlenecks**: Multiple teams working on same codebase
+1. **Mixed Responsibilities**: Strategic planning coupled with execution
+2. **Deployment Coupling**: Cannot deploy WMS changes without affecting WES
+3. **Scaling Limitations**: Cannot scale execution independently from planning
+4. **Team Bottlenecks**: Multiple teams working on same codebase
 
 ---
 
@@ -70,19 +58,19 @@ paklog/
 ├── wms-services/
 │   ├── order-management/        (existing - no change)
 │   ├── inventory-management/    (existing - no change)
-│   ├── wave-planning/           ✨ NEW - Extract from warehouse-operations
-│   ├── location-master/         ✨ NEW - Split from location context
-│   └── workload-planning/       ✨ NEW - Extract from warehouse-operations
+│   ├── wave-planning/           ✨ NEW - Strategic wave planning
+│   ├── location-master/         ✨ NEW - Location configuration
+│   └── workload-planning/       ✨ NEW - Capacity and labor planning
 │
 ├── wes-services/
-│   ├── task-execution/          ✨ NEW - Consolidate work management
-│   ├── pick-execution/          ✨ NEW - Extract picking + put wall
-│   ├── pack-ship/              ✨ NEW - Extract packing + quality
-│   ├── physical-tracking/       ✨ NEW - Extract LP + location state
+│   ├── task-execution/          ✨ NEW - Task orchestration and assignment
+│   ├── pick-execution/          ✨ NEW - Picking operations + put wall
+│   ├── pack-ship/              ✨ NEW - Packing + quality + shipping
+│   ├── physical-tracking/       ✨ NEW - License plates + location state
 │   └── material-handling/       ✨ NEW - Future automation (Phase 2)
 │
 ├── shared-services/
-│   ├── quality-management/      ✨ NEW - Extract quality context
+│   ├── quality-management/      ✨ NEW - Quality inspection workflows
 │   └── location-tracking/       ✨ NEW - Real-time location state
 │
 └── common/
@@ -113,7 +101,7 @@ paklog/
 ## Project 1: Wave Planning Service (WMS)
 
 ### Overview
-Extract wave planning and workload management from the monolithic Warehouse Operations Service to create a dedicated WMS service for strategic planning.
+Create a dedicated WMS service for wave planning and workload management to handle strategic planning decisions.
 
 ### Scope
 **In Scope:**
@@ -305,13 +293,13 @@ cd wave-planning-service
 spring init --dependencies=web,data-mongodb,kafka,actuator \
   --groupId=com.paklog.wms --artifactId=wave-planning-service
 
-# Copy domain models from warehouse-operations
-cp -r ../warehouse-operations/src/*/wave/* ./src/
+# Create domain models
+mkdir -p ./src/main/java/com/paklog/wms/wave/domain
 ```
 
 **Phase 1.2: Shadow Mode (Week 3-4)**
 ```java
-// In existing Warehouse Operations Service
+// In existing service
 @EventListener
 public void onWaveCreated(WaveCreatedEvent event) {
     // Existing logic continues
@@ -582,7 +570,7 @@ public class WaveEventHandler {
 ```
 
 ### Migration Strategy
-1. **Extract Work Management Context** from warehouse-operations
+1. **Create unified Work Management Context**
 2. **Unify task models** from Pick, Pack, and other contexts
 3. **Consolidate task assignment** logic
 4. **Create mobile API** for associates
@@ -1342,18 +1330,17 @@ gantt
 -- Create wave planning database
 CREATE DATABASE wave_planning_db;
 
--- Migrate wave data from warehouse_operations
-INSERT INTO wave_planning_db.waves
-SELECT
-    wave_id,
-    status,
-    order_ids,
-    priority,
-    strategy,
-    planned_release_time,
-    actual_release_time,
-    metrics
-FROM warehouse_operations_db.waves;
+-- Create wave tables
+CREATE TABLE waves (
+    wave_id VARCHAR(50) PRIMARY KEY,
+    status VARCHAR(20),
+    order_ids JSON,
+    priority VARCHAR(20),
+    strategy VARCHAR(50),
+    planned_release_time TIMESTAMP,
+    actual_release_time TIMESTAMP,
+    metrics JSON
+);
 ```
 
 ### Location Split

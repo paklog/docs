@@ -1090,7 +1090,7 @@ components:
           payload:
             specversion: "1.0"
             id: "wg-2025-11-01-uuid-7777"
-            source: "paklog/warehouse-operations"
+            source: "paklog/wes-services"
             type: "com.paklog.warehouse.waste.generated.v1"
             datacontenttype: "application/json"
             time: "2025-11-01T18:00:00Z"

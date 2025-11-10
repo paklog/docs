@@ -131,7 +131,7 @@ paths:
                   workflowDefinitionId: "picking-standard-v1.0"
                   workflowName: "Wave #456 Picking"
                   workflowType: "PICKING"
-                  triggeredBy: "warehouse-operations"
+                  triggeredBy: "wes-task-service"
                   correlationId: "wave-456"
                   inputParameters:
                     waveId: "456"
@@ -293,7 +293,7 @@ paths:
                       - stepId: "step-3"
                         stepName: "Ship Order"
                         status: "COMPLETED"
-                        serviceName: "warehouse-operations"
+                        serviceName: "shipment-transportation"
                         operation: "shipOrder"
                         retryCount: 1
                         executionDurationMs: 5000
